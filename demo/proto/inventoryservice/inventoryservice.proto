@@ -1,0 +1,26 @@
+syntax = "proto3";
+message Video {
+    int64 id = 1;
+    string name = 2;
+}
+
+message GetVideoListRequest {
+    string networkId = 1;
+}
+
+message GetVideoListResponse {
+    repeated Video videos = 1;
+}
+
+message GetVideoRequest {
+    string id = 1;
+}
+
+message GetVideoResponse {
+     Video video = 1;
+}
+
+service InventoryService {
+    rpc getVideoList (GetVideoListRequest) returns (GetVideoListResponse) {}
+    rpc getVideo (GetVideoRequest) returns (GetVideoResponse) {}
+}
