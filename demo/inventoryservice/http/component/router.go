@@ -32,9 +32,7 @@ var handler = func(r interface{}) func(http.ResponseWriter, *http.Request) {
 		mergeMuxVars(req)
 		request := pb.GetVideoRequest{}
 		theType := reflect.TypeOf(request)
-		log.Println(theType.String())
 		theValue := reflect.ValueOf(&request).Elem()
-		log.Println(theValue.String())
 		fieldNum := theType.NumField()
 		for i := 0; i < fieldNum; i++ {
 			fieldName := theType.Field(i).Name
