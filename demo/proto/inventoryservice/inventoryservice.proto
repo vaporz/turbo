@@ -1,4 +1,8 @@
 syntax = "proto3";
+// format:
+// method name: [method_name]
+// request: [method_name]Request
+// response: [method_name]Response
 message Video {
     int64 id = 1;
     string name = 2;

@@ -1,14 +1,15 @@
 package main
 
 import (
+	client "zx/demo/inventoryservice/http/component/clients"
 	c "zx/demo/inventoryservice/http/component"
 	"net/http"
 	"log"
 )
 
 func main() {
-	c.InitGrpcConnection()
-	defer c.CloseGrpcConnection()
+	client.InitGrpcConnection()
+	defer client.CloseGrpcConnection()
 	s := &http.Server{
 		Addr:    ":8081",
 		Handler: c.Router(), // TODO interceptors: loginRequired, loggerContext, formatter
