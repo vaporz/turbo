@@ -2,13 +2,12 @@ package clients
 
 import (
 	"google.golang.org/grpc"
-	pb "zx/demo/proto/inventoryservice"
 	"log"
 )
 
 var (
-	client           = new(grpcClient)
-	inventoryService pb.InventoryServiceClient
+	client      = new(grpcClient)
+	grpcService interface{}
 )
 
 type grpcClient struct {
@@ -29,15 +28,15 @@ func (g *grpcClient) close() error {
 	return g.conn.Close()
 }
 
-func InitGrpcConnection() error {
+func InitGrpcConnection(clientCreator func(conn *grpc.ClientConn) interface{}) error {
 	// TODO support multiple grpc clients
 	// TODO support service discovery
-	if inventoryService != nil {
+	if grpcService != nil {
 		return nil
 	}
 	// TODO read from config file
 	if err := client.dial("127.0.0.1:50051"); err == nil {
-		inventoryService = pb.NewInventoryServiceClient(client.conn)
+		grpcService = clientCreator(client.conn)
 	}
 	return nil
 }
@@ -46,9 +45,9 @@ func CloseGrpcConnection() error {
 	return client.close()
 }
 
-func InventoryService() pb.InventoryServiceClient {
-	if inventoryService == nil {
+func GrpcService() interface{} {
+	if grpcService == nil {
 		log.Fatalln("grpc connection not initiated!")
 	}
-	return inventoryService
+	return grpcService
 }

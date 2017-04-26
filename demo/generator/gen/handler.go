@@ -11,7 +11,7 @@ import (
 
 var Handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
-		switch methodName {
+		switch methodName { 
 		case "GetVideoList":
 			cm.ParseRequestForm(req)
 			request := pb.GetVideoListRequest{}
@@ -28,7 +28,7 @@ var Handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 			params := make([]reflect.Value, 2)
 			params[0] = reflect.ValueOf(req.Context())
 			params[1] = reflect.ValueOf(&request)
-			result := reflect.ValueOf(client.InventoryService()).MethodByName(methodName).Call(params)
+			result := reflect.ValueOf(client.GrpcService().(pb.InventoryServiceClient)).MethodByName(methodName).Call(params)
 
 			rsp := result[0].Interface().(*pb.GetVideoListResponse)
 			if result[1].Interface() == nil {
@@ -36,7 +36,8 @@ var Handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 			} else {
 				resp.Write([]byte(result[1].Interface().(error).Error() + "\n"))
 			}
-			case "GetVideo":
+			
+		case "GetVideo":
 			cm.ParseRequestForm(req)
 			request := pb.GetVideoRequest{}
 			theType := reflect.TypeOf(request)
@@ -52,7 +53,7 @@ var Handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 			params := make([]reflect.Value, 2)
 			params[0] = reflect.ValueOf(req.Context())
 			params[1] = reflect.ValueOf(&request)
-			result := reflect.ValueOf(client.InventoryService()).MethodByName(methodName).Call(params)
+			result := reflect.ValueOf(client.GrpcService().(pb.InventoryServiceClient)).MethodByName(methodName).Call(params)
 
 			rsp := result[0].Interface().(*pb.GetVideoResponse)
 			if result[1].Interface() == nil {

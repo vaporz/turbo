@@ -19,7 +19,7 @@ func main() {
 			panic(err)
 		}
 		var casesBuf bytes.Buffer
-		err = tmpl.Execute(&casesBuf, method{v})
+		err = tmpl.Execute(&casesBuf, method{serviceName, v})
 		casesStr = casesStr + casesBuf.String()
 	}
 	tmpl, err := template.New("handler").Parse(handler)
@@ -35,6 +35,7 @@ func main() {
 }
 
 var methodNames []string
+var serviceName string
 
 func loadServiceConfig() {
 	//currentDir, err := filepath.Abs(filepath.Dir("."))
@@ -43,6 +44,8 @@ func loadServiceConfig() {
 	//}
 	//log.Println(currentDir)
 	//TODO get filepath
+	// TODO read service_name=InventoryService
+	serviceName = "InventoryService"
 	f, err := os.Open("/Users/xiaozhang/goworkspace/src/zx/demo/inventoryservice/http/service.config")
 	if err != nil {
 		log.Println(err)
@@ -51,7 +54,7 @@ func loadServiceConfig() {
 	for {
 		line, err := buf.ReadString('\n')
 		line = strings.TrimSpace(line)
-		appendUrlServiceMap(line)
+		appendMethodNames(line)
 		if err != nil {
 			if err == io.EOF {
 				return
@@ -62,14 +65,15 @@ func loadServiceConfig() {
 	}
 }
 
-func appendUrlServiceMap(line string) {
+func appendMethodNames(line string) {
 	pair := strings.Split(line, "=")
 	methodName := strings.TrimSpace(pair[1])
 	methodNames = append(methodNames, methodName)
 }
 
 type method struct {
-	MethodName string
+	ServiceName string
+	MethodName  string
 }
 
 type casesContent struct {
@@ -89,15 +93,15 @@ import (
 
 var Handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
-		switch methodName {
-		{{.Cases}}
+		switch methodName { {{.Cases}}
 		default:
 			resp.Write([]byte(fmt.Sprintf("No such grpc method[%s]", methodName)))
 		}
 	}
 }`
 
-var cases string = `case "{{.MethodName}}":
+var cases string = `
+		case "{{.MethodName}}":
 			cm.ParseRequestForm(req)
 			request := pb.{{.MethodName}}Request{}
 			theType := reflect.TypeOf(request)
@@ -113,7 +117,7 @@ var cases string = `case "{{.MethodName}}":
 			params := make([]reflect.Value, 2)
 			params[0] = reflect.ValueOf(req.Context())
 			params[1] = reflect.ValueOf(&request)
-			result := reflect.ValueOf(client.InventoryService()).MethodByName(methodName).Call(params)
+			result := reflect.ValueOf(client.GrpcService().(pb.{{.ServiceName}}Client)).MethodByName(methodName).Call(params)
 
 			rsp := result[0].Interface().(*pb.{{.MethodName}}Response)
 			if result[1].Interface() == nil {
