@@ -2,7 +2,7 @@ package component
 
 import (
 	"github.com/gorilla/mux"
-	"zx/demo/inventoryservice/http/gen"
+	"zx/demo/generator/gen"
 )
 
 func Router() *mux.Router {
