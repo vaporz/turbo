@@ -8,6 +8,8 @@ import (
 )
 
 func main() {
+	c.LoadServiceConfig()
+
 	client.InitGrpcConnection()
 	defer client.CloseGrpcConnection()
 	s := &http.Server{

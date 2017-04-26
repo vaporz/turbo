@@ -7,7 +7,8 @@ import (
 
 func Router() *mux.Router {
 	r := mux.NewRouter()
-	r.HandleFunc("/videos", gen.Handler("getVideoList")).Methods("GET")
-	r.HandleFunc("/videos/{id:[0-9]+}", gen.Handler("GetVideo")).Methods("GET")
+	for _, v := range UrlServiceMap {
+		r.HandleFunc(v[1], gen.Handler(v[2])).Methods(v[0])
+	}
 	return r
 }
