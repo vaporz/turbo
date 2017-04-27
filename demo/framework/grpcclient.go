@@ -34,8 +34,7 @@ func InitGrpcConnection(clientCreator func(conn *grpc.ClientConn) interface{}) e
 	if grpcService != nil {
 		return nil
 	}
-	// TODO read from config file
-	if err := client.dial(configs["grpc_address"]); err == nil {
+	if err := client.dial(configs[ADDRESS]); err == nil {
 		grpcService = clientCreator(client.conn)
 	}
 	return nil

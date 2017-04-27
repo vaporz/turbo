@@ -14,14 +14,16 @@ func GenerateHandler() {
 			panic(err)
 		}
 		var casesBuf bytes.Buffer
-		err = tmpl.Execute(&casesBuf, method{configs["service_name"], v[2]})
+		err = tmpl.Execute(&casesBuf, method{configs[SERVICE_NAME], v[2]})
 		casesStr = casesStr + casesBuf.String()
 	}
 	tmpl, err := template.New("handler").Parse(handlerFunc)
 	if err != nil {
 		panic(err)
 	}
-	// TODO check if dir 'gen' exist, if not, create first
+	if _, err := os.Stat(serviceRootPath + "/gen"); os.IsNotExist(err) {
+		os.Mkdir(serviceRootPath+"/gen", 755)
+	}
 	f, _ := os.Create(serviceRootPath + "/gen/handler.go")
 	err = tmpl.Execute(f, handlerContent{Cases: casesStr})
 	if err != nil {

@@ -8,6 +8,9 @@ import (
 	"os"
 )
 
+const SERVICE_NAME string = "service_name"
+const ADDRESS string = "address"
+
 var UrlServiceMap [][3]string
 
 var serviceRootPath string
