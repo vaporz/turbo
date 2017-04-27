@@ -8,11 +8,11 @@ import (
 
 func StartGrpcHTTPServer(clientCreator func(conn *grpc.ClientConn) interface{}) {
 
-	InitGrpcConnection(clientCreator)
-	defer CloseGrpcConnection()
+	initGrpcConnection(clientCreator)
+	defer closeGrpcConnection()
 	s := &http.Server{
 		Addr:    ":8081",
-		Handler: Router(), // TODO register interceptors: loginRequired, loggerContext, formatter
+		Handler: router(), // TODO register interceptors: loginRequired, loggerContext, formatter
 	}
 	// TODO start a goroutine
 	log.Fatal(s.ListenAndServe())

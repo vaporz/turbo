@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func Router() *mux.Router {
+func router() *mux.Router {
 	r := mux.NewRouter()
 	for _, v := range UrlServiceMap {
 		r.HandleFunc(v[1], handler(v[2])).Methods(v[0])
