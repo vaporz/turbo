@@ -3,6 +3,7 @@ syntax = "proto3";
 // method name: [method_name]
 // request: [method_name]Request
 // response: [method_name]Response
+package gen;
 message Video {
     int64 id = 1;
     string name = 2;

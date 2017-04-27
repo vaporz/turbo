@@ -4,7 +4,8 @@ import (
 	f "zx/demo/framework"
 )
 
+// TODO support cmd tool
 func main() {
-	// TODO support cmd tool
+	f.LoadServiceConfig("zx/demo/framework/example/inventoryservice")
 	f.GenerateHandler()
 }

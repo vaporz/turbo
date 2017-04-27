@@ -5,7 +5,7 @@ import (
 	"log"
 	"google.golang.org/grpc"
 	"zx/demo/framework/example/inventoryservice/service/impl"
-	pb "zx/demo/framework/example/inventoryservice/proto"
+	p "zx/demo/framework/example/inventoryservice/gen"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -15,7 +15,7 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	grpcServer := grpc.NewServer()
-	pb.RegisterInventoryServiceServer(grpcServer, &impl.InventoryService{})
+	p.RegisterInventoryServiceServer(grpcServer, &impl.InventoryService{})
 
 	reflection.Register(grpcServer)
 	if err := grpcServer.Serve(lis); err != nil {

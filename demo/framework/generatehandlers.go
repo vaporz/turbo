@@ -4,22 +4,17 @@ import (
 	"text/template"
 	"bytes"
 	"os"
-	"bufio"
-	"strings"
-	"io"
-	"log"
 )
 
 func GenerateHandler() {
-	loadServiceConfig()
 	var casesStr string
-	for _, v := range methodNames {
+	for _, v := range UrlServiceMap {
 		tmpl, err := template.New("cases").Parse(cases)
 		if err != nil {
 			panic(err)
 		}
 		var casesBuf bytes.Buffer
-		err = tmpl.Execute(&casesBuf, method{serviceName, v})
+		err = tmpl.Execute(&casesBuf, method{configs["service_name"], v[2]})
 		casesStr = casesStr + casesBuf.String()
 	}
 	tmpl, err := template.New("handler").Parse(handlerFunc)
@@ -27,49 +22,12 @@ func GenerateHandler() {
 		panic(err)
 	}
 	// TODO check if dir 'gen' exist, if not, create first
-	f, _ := os.Create("/Users/xiaozhang/goworkspace/src/zx/demo/framework/example/inventoryservice/http/gen/handler.go")
-	err = tmpl.Execute(f, casesContent{casesStr})
+	f, _ := os.Create(serviceRootPath + "/gen/handler.go")
+	err = tmpl.Execute(f, handlerContent{Cases: casesStr})
 	if err != nil {
 		panic(err)
 	}
 
-}
-
-var methodNames []string
-var serviceName string
-
-func loadServiceConfig() {
-	//currentDir, err := filepath.Abs(filepath.Dir("."))
-	//if err != nil {
-	//	log.Fatal("load config fail")
-	//}
-	//log.Println(currentDir)
-	//TODO get filepath
-	// TODO read service_name=InventoryService
-	serviceName = "InventoryService"
-	f, err := os.Open("/Users/xiaozhang/goworkspace/src/zx/demo/framework/example/inventoryservice/http/urlmap.config")
-	if err != nil {
-		log.Println(err)
-	}
-	buf := bufio.NewReader(f)
-	for {
-		line, err := buf.ReadString('\n')
-		line = strings.TrimSpace(line)
-		appendMethodNames(line)
-		if err != nil {
-			if err == io.EOF {
-				return
-			}
-			log.Println(err)
-			break
-		}
-	}
-}
-
-func appendMethodNames(line string) {
-	pair := strings.Split(line, "=")
-	methodName := strings.TrimSpace(pair[1])
-	methodNames = append(methodNames, methodName)
 }
 
 type method struct {
@@ -77,7 +35,7 @@ type method struct {
 	MethodName  string
 }
 
-type casesContent struct {
+type handlerContent struct {
 	Cases string
 }
 
@@ -86,9 +44,7 @@ var handlerFunc string = `package gen
 import (
 	"reflect"
 	"net/http"
-	cm "zx/demo/framework"
-	pb "zx/demo/framework/example/inventoryservice/proto"
-	client "zx/demo/framework/clients"
+	f "zx/demo/framework"
 	"fmt"
 )
 
@@ -103,14 +59,14 @@ var Handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 
 var cases string = `
 		case "{{.MethodName}}":
-			cm.ParseRequestForm(req)
-			request := pb.{{.MethodName}}Request{}
+			f.ParseRequestForm(req)
+			request := {{.MethodName}}Request{}
 			theType := reflect.TypeOf(request)
 			theValue := reflect.ValueOf(&request).Elem()
 			fieldNum := theType.NumField()
 			for i := 0; i < fieldNum; i++ {
 				fieldName := theType.Field(i).Name
-				v, ok := req.Form[cm.ToSnakeCase(fieldName)]
+				v, ok := req.Form[f.ToSnakeCase(fieldName)]
 				if ok && len(v) > 0 {
 					theValue.FieldByName(fieldName).SetString(v[0])
 				}
@@ -118,9 +74,9 @@ var cases string = `
 			params := make([]reflect.Value, 2)
 			params[0] = reflect.ValueOf(req.Context())
 			params[1] = reflect.ValueOf(&request)
-			result := reflect.ValueOf(client.GrpcService().(pb.{{.ServiceName}}Client)).MethodByName(methodName).Call(params)
+			result := reflect.ValueOf(f.GrpcService().({{.ServiceName}}Client)).MethodByName(methodName).Call(params)
 
-			rsp := result[0].Interface().(*pb.{{.MethodName}}Response)
+			rsp := result[0].Interface().(*{{.MethodName}}Response)
 			if result[1].Interface() == nil {
 				resp.Write([]byte(rsp.String() + "\n"))
 			} else {

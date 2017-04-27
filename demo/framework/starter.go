@@ -1,20 +1,19 @@
 package framework
 
 import (
-	client "zx/demo/framework/clients"
 	"net/http"
 	"log"
 	"google.golang.org/grpc"
 )
 
 func StartGrpcHTTPServer(clientCreator func(conn *grpc.ClientConn) interface{}) {
-	LoadServiceConfig()
 
-	client.InitGrpcConnection(clientCreator)
-	defer client.CloseGrpcConnection()
+	InitGrpcConnection(clientCreator)
+	defer CloseGrpcConnection()
 	s := &http.Server{
 		Addr:    ":8081",
-		Handler: Router(), // TODO interceptors: loginRequired, loggerContext, formatter
+		Handler: Router(), // TODO register interceptors: loginRequired, loggerContext, formatter
 	}
+	// TODO start a goroutine
 	log.Fatal(s.ListenAndServe())
 }

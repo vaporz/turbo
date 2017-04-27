@@ -1,4 +1,4 @@
-package clients
+package framework
 
 import (
 	"google.golang.org/grpc"
@@ -35,7 +35,7 @@ func InitGrpcConnection(clientCreator func(conn *grpc.ClientConn) interface{}) e
 		return nil
 	}
 	// TODO read from config file
-	if err := client.dial("127.0.0.1:50051"); err == nil {
+	if err := client.dial(configs["grpc_address"]); err == nil {
 		grpcService = clientCreator(client.conn)
 	}
 	return nil
