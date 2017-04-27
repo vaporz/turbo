@@ -2,7 +2,7 @@ package impl
 
 import (
 	"golang.org/x/net/context"
-	is "zx/demo/proto/inventoryservice"
+	is "zx/demo/framework/example/inventoryservice/proto"
 	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

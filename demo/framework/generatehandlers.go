@@ -1,4 +1,4 @@
-package main
+package framework
 
 import (
 	"text/template"
@@ -10,7 +10,7 @@ import (
 	"log"
 )
 
-func main() {
+func GenerateHandler() {
 	loadServiceConfig()
 	var casesStr string
 	for _, v := range methodNames {
@@ -22,11 +22,12 @@ func main() {
 		err = tmpl.Execute(&casesBuf, method{serviceName, v})
 		casesStr = casesStr + casesBuf.String()
 	}
-	tmpl, err := template.New("handler").Parse(handler)
+	tmpl, err := template.New("handler").Parse(handlerFunc)
 	if err != nil {
 		panic(err)
 	}
-	f, _ := os.Create("/Users/xiaozhang/goworkspace/src/zx/demo/generator/gen/handler.go")
+	// TODO check if dir 'gen' exist, if not, create first
+	f, _ := os.Create("/Users/xiaozhang/goworkspace/src/zx/demo/framework/example/inventoryservice/http/gen/handler.go")
 	err = tmpl.Execute(f, casesContent{casesStr})
 	if err != nil {
 		panic(err)
@@ -46,7 +47,7 @@ func loadServiceConfig() {
 	//TODO get filepath
 	// TODO read service_name=InventoryService
 	serviceName = "InventoryService"
-	f, err := os.Open("/Users/xiaozhang/goworkspace/src/zx/demo/inventoryservice/http/service.config")
+	f, err := os.Open("/Users/xiaozhang/goworkspace/src/zx/demo/framework/example/inventoryservice/http/urlmap.config")
 	if err != nil {
 		log.Println(err)
 	}
@@ -80,14 +81,14 @@ type casesContent struct {
 	Cases string
 }
 
-var handler string = `package gen
+var handlerFunc string = `package gen
 
 import (
 	"reflect"
 	"net/http"
-	cm "zx/demo/common"
-	pb "zx/demo/proto/inventoryservice"
-	client "zx/demo/inventoryservice/http/component/clients"
+	cm "zx/demo/framework"
+	pb "zx/demo/framework/example/inventoryservice/proto"
+	client "zx/demo/framework/clients"
 	"fmt"
 )
 

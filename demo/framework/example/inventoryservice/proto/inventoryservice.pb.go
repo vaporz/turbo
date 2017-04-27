@@ -15,7 +15,7 @@ It has these top-level messages:
 	GetVideoRequest
 	GetVideoResponse
 */
-package inventoryservice
+package proto
 
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"

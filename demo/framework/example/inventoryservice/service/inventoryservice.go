@@ -1,12 +1,11 @@
 package main
 
 import (
-	_ "fmt"
 	"net"
 	"log"
 	"google.golang.org/grpc"
-	"zx/demo/inventoryservice/service/impl"
-	pb "zx/demo/proto/inventoryservice"
+	"zx/demo/framework/example/inventoryservice/service/impl"
+	pb "zx/demo/framework/example/inventoryservice/proto"
 	"google.golang.org/grpc/reflection"
 )
 

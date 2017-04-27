@@ -1,4 +1,4 @@
-package common
+package framework
 
 import (
 	"regexp"

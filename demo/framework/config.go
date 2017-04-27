@@ -1,4 +1,4 @@
-package component
+package framework
 
 import (
 	"log"
@@ -17,7 +17,7 @@ func LoadServiceConfig() {
 	//}
 	//log.Println(currentDir)
 	//TODO get filepath
-	f, err := os.Open("/Users/xiaozhang/goworkspace/src/zx/demo/inventoryservice/http/service.config")
+	f, err := os.Open("/Users/xiaozhang/goworkspace/src/zx/demo/framework/example/inventoryservice/http/urlmap.config")
 	if err != nil {
 		log.Println(err)
 	}

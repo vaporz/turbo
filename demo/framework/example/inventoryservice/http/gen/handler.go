@@ -3,9 +3,9 @@ package gen
 import (
 	"reflect"
 	"net/http"
-	cm "zx/demo/common"
-	pb "zx/demo/proto/inventoryservice"
-	client "zx/demo/inventoryservice/http/component/clients"
+	cm "zx/demo/framework"
+	pb "zx/demo/framework/example/inventoryservice/proto"
+	client "zx/demo/framework/clients"
 	"fmt"
 )
 
