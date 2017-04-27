@@ -1,4 +1,4 @@
-package framework
+package turbo
 
 import (
 	"text/template"
@@ -46,7 +46,7 @@ var handlerFunc string = `package gen
 import (
 	"reflect"
 	"net/http"
-	f "zx/demo/framework"
+	"turbo"
 	"fmt"
 )
 
@@ -61,14 +61,14 @@ var Handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 
 var cases string = `
 		case "{{.MethodName}}":
-			f.ParseRequestForm(req)
+			turbo.ParseRequestForm(req)
 			request := {{.MethodName}}Request{}
 			theType := reflect.TypeOf(request)
 			theValue := reflect.ValueOf(&request).Elem()
 			fieldNum := theType.NumField()
 			for i := 0; i < fieldNum; i++ {
 				fieldName := theType.Field(i).Name
-				v, ok := req.Form[f.ToSnakeCase(fieldName)]
+				v, ok := req.Form[turbo.ToSnakeCase(fieldName)]
 				if ok && len(v) > 0 {
 					theValue.FieldByName(fieldName).SetString(v[0])
 				}
@@ -76,7 +76,7 @@ var cases string = `
 			params := make([]reflect.Value, 2)
 			params[0] = reflect.ValueOf(req.Context())
 			params[1] = reflect.ValueOf(&request)
-			result := reflect.ValueOf(f.GrpcService().({{.ServiceName}}Client)).MethodByName(methodName).Call(params)
+			result := reflect.ValueOf(turbo.GrpcService().({{.ServiceName}}Client)).MethodByName(methodName).Call(params)
 
 			rsp := result[0].Interface().(*{{.MethodName}}Response)
 			if result[1].Interface() == nil {

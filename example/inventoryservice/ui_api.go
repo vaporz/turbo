@@ -1,12 +1,12 @@
 package main
 
 import (
-	g "zx/demo/framework/example/inventoryservice/gen"
+	g "turbo/example/inventoryservice/gen"
 	"google.golang.org/grpc"
-	f "zx/demo/framework"
 	"flag"
 	"os"
 	"fmt"
+	"turbo"
 )
 
 var (
@@ -19,9 +19,9 @@ func main() {
 		fmt.Println("package path is empty")
 		os.Exit(1)
 	}
-	f.LoadServiceConfig(*pkgPath)
-	f.InitHandler(g.Handler)
-	f.StartGrpcHTTPServer(grpcClient)
+	turbo.LoadServiceConfig(*pkgPath)
+	turbo.InitHandler(g.Handler)
+	turbo.StartGrpcHTTPServer(grpcClient)
 }
 
 func grpcClient(conn *grpc.ClientConn) interface{} {

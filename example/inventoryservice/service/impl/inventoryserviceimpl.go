@@ -2,7 +2,7 @@ package impl
 
 import (
 	"golang.org/x/net/context"
-	p "zx/demo/framework/example/inventoryservice/gen"
+	p "turbo/example/inventoryservice/gen"
 	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

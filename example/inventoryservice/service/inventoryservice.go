@@ -4,8 +4,8 @@ import (
 	"net"
 	"log"
 	"google.golang.org/grpc"
-	"zx/demo/framework/example/inventoryservice/service/impl"
-	p "zx/demo/framework/example/inventoryservice/gen"
+	"turbo/example/inventoryservice/service/impl"
+	p "turbo/example/inventoryservice/gen"
 	"google.golang.org/grpc/reflection"
 )
 
