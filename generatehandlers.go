@@ -6,7 +6,8 @@ import (
 	"os"
 )
 
-func GenerateHandler() {
+func GenerateHandler(pkgPath string) {
+	LoadServiceConfig(pkgPath)
 	var casesStr string
 	for _, v := range UrlServiceMap {
 		tmpl, err := template.New("cases").Parse(cases)
@@ -52,6 +53,17 @@ import (
 
 var Handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
+		turbo.ParseRequestForm(req)
+		if hijack := turbo.Hijacker(methodName); hijack!=nil {
+			hijack(resp, req)
+			return
+		}
+		preprocessor := turbo.Preprocessor(methodName)
+		if preprocessor != nil {
+			if err := preprocessor(resp, req); err != nil {
+				return
+			}
+		}
 		switch methodName { {{.Cases}}
 		default:
 			resp.Write([]byte(fmt.Sprintf("No such grpc method[%s]", methodName)))
@@ -61,7 +73,6 @@ var Handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 
 var cases string = `
 		case "{{.MethodName}}":
-			turbo.ParseRequestForm(req)
 			request := {{.MethodName}}Request{}
 			theType := reflect.TypeOf(request)
 			theValue := reflect.ValueOf(&request).Elem()

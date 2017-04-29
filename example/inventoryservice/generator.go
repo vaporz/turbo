@@ -6,6 +6,5 @@ import (
 
 // TODO support cmd tool
 func main() {
-	t.LoadServiceConfig("turbo/example/inventoryservice")
-	t.GenerateHandler()
+	t.GenerateHandler("turbo/example/inventoryservice")
 }

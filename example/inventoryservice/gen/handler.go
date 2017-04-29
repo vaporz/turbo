@@ -9,9 +9,19 @@ import (
 
 var Handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
+		turbo.ParseRequestForm(req)
+		if hijack := turbo.Hijacker(methodName); hijack!=nil {
+			hijack(resp, req)
+			return
+		}
+		preprocessor := turbo.Preprocessor(methodName)
+		if preprocessor != nil {
+			if err := preprocessor(resp, req); err != nil {
+				return
+			}
+		}
 		switch methodName { 
 		case "GetVideoList":
-			turbo.ParseRequestForm(req)
 			request := GetVideoListRequest{}
 			theType := reflect.TypeOf(request)
 			theValue := reflect.ValueOf(&request).Elem()
@@ -36,7 +46,6 @@ var Handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 			}
 			
 		case "GetVideo":
-			turbo.ParseRequestForm(req)
 			request := GetVideoRequest{}
 			theType := reflect.TypeOf(request)
 			theValue := reflect.ValueOf(&request).Elem()

@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"io"
 	"os"
+	"net/http"
 )
 
 const SERVICE_NAME string = "service_name"
@@ -18,6 +19,10 @@ var serviceRootPath string
 var servicePkgPath string
 
 var configs map[string]string = make(map[string]string)
+
+var requestPreprocessor map[string]func(http.ResponseWriter, *http.Request) error = make(map[string]func(http.ResponseWriter, *http.Request) error)
+
+var hijacker map[string]func(http.ResponseWriter, *http.Request) = make(map[string]func(http.ResponseWriter, *http.Request))
 
 // initPkgPath parse package path, if gopath contains multi paths, the last one will be used
 func initPkgPath(pkgPath string) {
@@ -34,7 +39,7 @@ func LoadServiceConfig(pkgPath string) {
 	initConfigs()
 }
 
-func initConfigs()  {
+func initConfigs() {
 	f, err := os.Open(serviceRootPath + "/service.config")
 	defer f.Close()
 	if err != nil {
@@ -56,7 +61,7 @@ func initConfigs()  {
 
 }
 
-func appendConfig(line string)  {
+func appendConfig(line string) {
 	pair := strings.Split(line, "=")
 	k := strings.TrimSpace(pair[0])
 	v := strings.TrimSpace(pair[1])
@@ -89,4 +94,26 @@ func appendUrlServiceMap(line string) {
 	urlPair := strings.Split(strings.TrimSpace(pair[0]), " ")
 	methodName := strings.TrimSpace(pair[1])
 	UrlServiceMap = append(UrlServiceMap, [3]string{urlPair[0], urlPair[1], methodName})
+}
+
+func SetPreprocessor(methodName string, pre func(http.ResponseWriter, *http.Request) error) {
+	requestPreprocessor[methodName] = pre
+}
+
+func Preprocessor(methodName string) func(http.ResponseWriter, *http.Request) error {
+	if p, ok := requestPreprocessor[methodName]; ok {
+		return p
+	}
+	return nil
+}
+
+func SetHijacker(methodName string, h func(http.ResponseWriter, *http.Request)) {
+	hijacker[methodName] = h
+}
+
+func Hijacker(methodName string) func(http.ResponseWriter, *http.Request) {
+	if h, ok := hijacker[methodName]; ok {
+		return h
+	}
+	return nil
 }
