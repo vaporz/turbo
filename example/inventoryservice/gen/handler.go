@@ -6,7 +6,9 @@ import (
 	"turbo"
 	"fmt"
 )
-
+/*
+this is a generated file, DO NOT EDIT!
+ */
 var Handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		turbo.ParseRequestForm(req)

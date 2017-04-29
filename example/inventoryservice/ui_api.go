@@ -21,12 +21,11 @@ func main() {
 		fmt.Println("package path is empty")
 		os.Exit(1)
 	}
-	turbo.LoadServiceConfig(*pkgPath)
-	turbo.InitHandler(g.Handler)
 	// TODO make a methodName list from .proto
 	turbo.SetHijacker("GetVideo", hijackGetVideo)
 	turbo.SetPreprocessor("GetVideo", checkGetVideo)
-	turbo.StartGrpcHTTPServer(grpcClient)
+
+	turbo.StartGrpcHTTPServer(*pkgPath, grpcClient, g.Handler)
 }
 
 func grpcClient(conn *grpc.ClientConn) interface{} {

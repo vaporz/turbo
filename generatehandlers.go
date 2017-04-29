@@ -7,7 +7,7 @@ import (
 )
 
 func GenerateHandler(pkgPath string) {
-	LoadServiceConfig(pkgPath)
+	loadServiceConfig(pkgPath)
 	var casesStr string
 	for _, v := range UrlServiceMap {
 		tmpl, err := template.New("cases").Parse(cases)
@@ -30,7 +30,6 @@ func GenerateHandler(pkgPath string) {
 	if err != nil {
 		panic(err)
 	}
-
 }
 
 type method struct {
@@ -50,7 +49,9 @@ import (
 	"turbo"
 	"fmt"
 )
-
+/*
+this is a generated file, DO NOT EDIT!
+ */
 var Handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		turbo.ParseRequestForm(req)

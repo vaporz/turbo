@@ -6,14 +6,15 @@ import (
 	"google.golang.org/grpc"
 )
 
-func StartGrpcHTTPServer(clientCreator func(conn *grpc.ClientConn) interface{}) {
-
+func StartGrpcHTTPServer(pkgPath string, clientCreator func(conn *grpc.ClientConn) interface{}, h func(methodName string) func(http.ResponseWriter, *http.Request)) {
+	loadServiceConfig(pkgPath)
+	initHandler(h)
 	initGrpcConnection(clientCreator)
 	defer closeGrpcConnection()
 	s := &http.Server{
-		Addr:    ":8081",
+		Addr:    ":8081", // TODO read from config
 		Handler: router(), // TODO register interceptors: loginRequired, loggerContext, formatter
 	}
-	// TODO start a goroutine
+	// TODO start a goroutine, start multi http server at different port
 	log.Fatal(s.ListenAndServe())
 }

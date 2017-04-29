@@ -15,6 +15,6 @@ func router() *mux.Router {
 
 var handler func(methodName string) func(http.ResponseWriter, *http.Request)
 
-func InitHandler(h func(methodName string) func(http.ResponseWriter, *http.Request)){
+func initHandler(h func(methodName string) func(http.ResponseWriter, *http.Request)){
 	handler = h
 }

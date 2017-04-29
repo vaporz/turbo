@@ -33,8 +33,9 @@ func initPkgPath(pkgPath string) {
 	servicePkgPath = pkgPath
 }
 
-func LoadServiceConfig(pkgPath string) {
+func loadServiceConfig(pkgPath string) {
 	initPkgPath(pkgPath)
+	// TODO use one config file
 	initUrlMap()
 	initConfigs()
 }
