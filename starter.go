@@ -12,7 +12,7 @@ func StartGrpcHTTPServer(pkgPath string, clientCreator func(conn *grpc.ClientCon
 	initGrpcConnection(clientCreator)
 	defer closeGrpcConnection()
 	s := &http.Server{
-		Addr:    ":8081", // TODO read from config
+		Addr:    ":" + configs[PORT],
 		Handler: router(), // TODO register interceptors: loginRequired, loggerContext, formatter
 	}
 	// TODO start a goroutine, start multi http server at different port

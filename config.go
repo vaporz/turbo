@@ -3,14 +3,16 @@ package turbo
 import (
 	"log"
 	"strings"
-	"bufio"
-	"io"
 	"os"
 	"net/http"
+	"github.com/kylelemons/go-gypsy/yaml"
 )
 
 const SERVICE_NAME string = "service_name"
-const ADDRESS string = "address"
+const SERVICE_ADDRESS string = "service_address"
+const PORT string = "port"
+
+var config yaml.File
 
 var UrlServiceMap [][3]string
 
@@ -35,66 +37,43 @@ func initPkgPath(pkgPath string) {
 
 func loadServiceConfig(pkgPath string) {
 	initPkgPath(pkgPath)
-	// TODO use one config file
+	conf, err := yaml.ReadFile(serviceRootPath + "/service.yaml")
+	if err != nil {
+		log.Fatalf("readfile(%q): %s", pkgPath, err)
+	}
+	config = *conf
 	initUrlMap()
 	initConfigs()
 }
 
 func initConfigs() {
-	f, err := os.Open(serviceRootPath + "/service.config")
-	defer f.Close()
+	cnf, err := yaml.Child(config.Root, "config")
 	if err != nil {
-		log.Println(err)
+		log.Fatalf("parse config error: %s", err)
 	}
-	buf := bufio.NewReader(f)
-	for {
-		line, err := buf.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				appendConfig(line)
-				return
-			}
-			log.Println(err)
-			break
-		}
-		appendConfig(line)
+	configMap := cnf.(yaml.Map)
+	for k, v := range configMap {
+		configs[k] = (v.(yaml.Scalar)).String()
 	}
-
-}
-
-func appendConfig(line string) {
-	pair := strings.Split(line, "=")
-	k := strings.TrimSpace(pair[0])
-	v := strings.TrimSpace(pair[1])
-	configs[k] = v
 }
 
 func initUrlMap() {
-	f, err := os.Open(serviceRootPath + "/urlmap.config")
-	defer f.Close()
+	node, err := yaml.Child(config.Root, "urlmapping")
 	if err != nil {
-		log.Println(err)
+		log.Fatalf("parse urlmapping error: %s", err)
 	}
-	buf := bufio.NewReader(f)
-	for {
-		line, err := buf.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				appendUrlServiceMap(strings.TrimSpace(line))
-				return
-			}
-			log.Println(err)
-			break
-		}
-		appendUrlServiceMap(strings.TrimSpace(line))
+	urlMap := node.(yaml.List)
+	for _, line := range urlMap {
+		appendUrlServiceMap(strings.TrimSpace(yaml.Render(line)))
 	}
 }
 
 func appendUrlServiceMap(line string) {
-	pair := strings.Split(line, "=")
-	urlPair := strings.Split(strings.TrimSpace(pair[0]), " ")
-	methodName := strings.TrimSpace(pair[1])
-	UrlServiceMap = append(UrlServiceMap, [3]string{urlPair[0], urlPair[1], methodName})
+	values := strings.Split(line, " ")
+	HTTPMethod := strings.TrimSpace(values[0])
+	url := strings.TrimSpace(values[1])
+	methodName := strings.TrimSpace(values[2])
+	UrlServiceMap = append(UrlServiceMap, [3]string{HTTPMethod, url, methodName})
 }
 
 func SetPreprocessor(methodName string, pre func(http.ResponseWriter, *http.Request) error) {

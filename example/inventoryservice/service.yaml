@@ -1,0 +1,8 @@
+config:
+  port: 8081
+  service_name: InventoryService
+  service_address: 127.0.0.1:50051
+
+urlmapping:
+  - GET /videos GetVideoList
+  - GET /videos/{id:[0-9]+} GetVideo
