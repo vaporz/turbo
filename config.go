@@ -11,6 +11,7 @@ import (
 const SERVICE_NAME string = "service_name"
 const SERVICE_ADDRESS string = "service_address"
 const PORT string = "port"
+const COMMON string = "common"
 
 var config yaml.File
 
@@ -25,6 +26,29 @@ var configs map[string]string = make(map[string]string)
 var requestPreprocessor map[string]func(http.ResponseWriter, *http.Request) error = make(map[string]func(http.ResponseWriter, *http.Request) error)
 
 var hijacker map[string]func(http.ResponseWriter, *http.Request) = make(map[string]func(http.ResponseWriter, *http.Request))
+
+var interceptorMap map[string][]interceptor = make(map[string][]interceptor)
+
+func SetInterceptor(methodName string, interceptors ...interceptor) {
+	interceptorMap[methodName] = interceptors
+}
+
+func SetCommonInterceptor(interceptors ...interceptor) {
+	interceptorMap[COMMON] = interceptors
+}
+
+func Interceptors(methodName string) ([]interceptor, bool) {
+	interceptors, ok := interceptorMap[methodName]
+	return interceptors, ok
+}
+
+func CommonInterceptors() ([]interceptor, bool) {
+	return Interceptors(COMMON)
+}
+
+func EmptyInterceptors() []interceptor {
+	return []interceptor{}
+}
 
 // initPkgPath parse package path, if gopath contains multi paths, the last one will be used
 func initPkgPath(pkgPath string) {

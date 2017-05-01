@@ -15,6 +15,21 @@ func router() *mux.Router {
 
 var handler func(methodName string) func(http.ResponseWriter, *http.Request)
 
-func initHandler(h func(methodName string) func(http.ResponseWriter, *http.Request)){
+func initHandler(h func(methodName string) func(http.ResponseWriter, *http.Request)) {
 	handler = h
+}
+
+type interceptor interface {
+	Before(http.ResponseWriter, *http.Request) error
+	After(http.ResponseWriter, *http.Request) error
+}
+
+type BaseInterceptor struct{}
+
+func (i BaseInterceptor) Before(http.ResponseWriter, *http.Request) error {
+	return nil
+}
+
+func (i BaseInterceptor) After(http.ResponseWriter, *http.Request) error {
+	return nil
 }
