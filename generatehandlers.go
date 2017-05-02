@@ -1,9 +1,9 @@
 package turbo
 
 import (
-	"text/template"
 	"bytes"
 	"os"
+	"text/template"
 )
 
 func GenerateHandler(pkgPath string) {

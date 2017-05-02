@@ -2,11 +2,12 @@ package turbo
 
 import (
 	"github.com/gorilla/mux"
-	"net/http"
 	"log"
+	"net/http"
 )
 
-func router() *mux.Router {
+func router(switcherFunc func(methodName string, resp http.ResponseWriter, req *http.Request)) *mux.Router {
+	switcher = switcherFunc
 	r := mux.NewRouter()
 	for _, v := range UrlServiceMap {
 		r.HandleFunc(v[1], handler(v[2])).Methods(v[0])
@@ -15,10 +16,6 @@ func router() *mux.Router {
 }
 
 var switcher func(methodName string, resp http.ResponseWriter, req *http.Request)
-
-func initSwitcher(s func(string, http.ResponseWriter, *http.Request)) {
-	switcher = s
-}
 
 type Interceptor interface {
 	Before(http.ResponseWriter, *http.Request) error

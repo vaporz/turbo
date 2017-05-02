@@ -1,10 +1,10 @@
 package turbo
 
 import (
-	"regexp"
-	"strings"
 	"github.com/gorilla/mux"
 	"net/http"
+	"regexp"
+	"strings"
 )
 
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")

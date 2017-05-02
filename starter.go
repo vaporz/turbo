@@ -1,20 +1,34 @@
 package turbo
 
 import (
-	"net/http"
-	"log"
+	"fmt"
 	"google.golang.org/grpc"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func StartGrpcHTTPServer(pkgPath string, clientCreator func(conn *grpc.ClientConn) interface{}, switcher func(string, http.ResponseWriter, *http.Request)) {
 	loadServiceConfig(pkgPath)
-	initSwitcher(switcher)
 	initGrpcConnection(clientCreator)
 	defer closeGrpcConnection()
+	startHTTPServer(configs[PORT], router(switcher))
+}
+
+func startHTTPServer(port string, router http.Handler) {
 	s := &http.Server{
-		Addr:    ":" + configs[PORT],
-		Handler: router(),
+		Addr:    ":" + port,
+		Handler: router,
 	}
-	// TODO start a goroutine, start multi http server at different port
-	log.Fatal(s.ListenAndServe())
+	go s.ListenAndServe()
+	//wait for exit
+	exit := make(chan os.Signal, 1)
+	signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
+	select {
+	case <-exit:
+		fmt.Println("Received CTRL-C")
+		break
+	}
+	fmt.Println("Server exit")
 }
