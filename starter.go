@@ -6,9 +6,9 @@ import (
 	"google.golang.org/grpc"
 )
 
-func StartGrpcHTTPServer(pkgPath string, clientCreator func(conn *grpc.ClientConn) interface{}, h func(methodName string) func(http.ResponseWriter, *http.Request)) {
+func StartGrpcHTTPServer(pkgPath string, clientCreator func(conn *grpc.ClientConn) interface{}, switcher func(string, http.ResponseWriter, *http.Request)) {
 	loadServiceConfig(pkgPath)
-	initHandler(h)
+	initSwitcher(switcher)
 	initGrpcConnection(clientCreator)
 	defer closeGrpcConnection()
 	s := &http.Server{

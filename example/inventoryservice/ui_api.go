@@ -29,7 +29,7 @@ func main() {
 	turbo.SetCommonInterceptor(logInterceptor{}, loginInterceptor{})
 	turbo.SetInterceptor("GetVideo", loginInterceptor{})
 
-	turbo.StartGrpcHTTPServer(*pkgPath, grpcClient, g.Handler)
+	turbo.StartGrpcHTTPServer(*pkgPath, grpcClient, g.Switcher)
 }
 
 func grpcClient(conn *grpc.ClientConn) interface{} {

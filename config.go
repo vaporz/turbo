@@ -27,27 +27,27 @@ var requestPreprocessor map[string]func(http.ResponseWriter, *http.Request) erro
 
 var hijacker map[string]func(http.ResponseWriter, *http.Request) = make(map[string]func(http.ResponseWriter, *http.Request))
 
-var interceptorMap map[string][]interceptor = make(map[string][]interceptor)
+var interceptorMap map[string][]Interceptor = make(map[string][]Interceptor)
 
-func SetInterceptor(methodName string, interceptors ...interceptor) {
+func SetInterceptor(methodName string, interceptors ...Interceptor) {
 	interceptorMap[methodName] = interceptors
 }
 
-func SetCommonInterceptor(interceptors ...interceptor) {
+func SetCommonInterceptor(interceptors ...Interceptor) {
 	interceptorMap[COMMON] = interceptors
 }
 
-func Interceptors(methodName string) ([]interceptor, bool) {
+func Interceptors(methodName string) ([]Interceptor, bool) {
 	interceptors, ok := interceptorMap[methodName]
 	return interceptors, ok
 }
 
-func CommonInterceptors() ([]interceptor, bool) {
+func CommonInterceptors() ([]Interceptor, bool) {
 	return Interceptors(COMMON)
 }
 
-func EmptyInterceptors() []interceptor {
-	return []interceptor{}
+func EmptyInterceptors() []Interceptor {
+	return []Interceptor{}
 }
 
 // initPkgPath parse package path, if gopath contains multi paths, the last one will be used

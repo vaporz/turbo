@@ -18,14 +18,14 @@ func GenerateHandler(pkgPath string) {
 		err = tmpl.Execute(&casesBuf, method{configs[SERVICE_NAME], v[2]})
 		casesStr = casesStr + casesBuf.String()
 	}
-	tmpl, err := template.New("handler").Parse(handlerFunc)
+	tmpl, err := template.New("switcher").Parse(switcherFunc)
 	if err != nil {
 		panic(err)
 	}
 	if _, err := os.Stat(serviceRootPath + "/gen"); os.IsNotExist(err) {
 		os.Mkdir(serviceRootPath+"/gen", 755)
 	}
-	f, _ := os.Create(serviceRootPath + "/gen/handler.go")
+	f, _ := os.Create(serviceRootPath + "/gen/switcher.go")
 	err = tmpl.Execute(f, handlerContent{Cases: casesStr})
 	if err != nil {
 		panic(err)
@@ -41,61 +41,19 @@ type handlerContent struct {
 	Cases string
 }
 
-var handlerFunc string = `package gen
+var switcherFunc string = `package gen
 
 import (
 	"reflect"
 	"net/http"
 	"turbo"
 	"fmt"
-	"log"
 )
 
 /*
 this is a generated file, DO NOT EDIT!
  */
-var Handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
-	return func(resp http.ResponseWriter, req *http.Request) {
-		turbo.ParseRequestForm(req)
-		interceptors, ok := turbo.Interceptors(methodName)
-		if !ok {
-			interceptors, ok = turbo.CommonInterceptors()
-		}
-		if !ok {
-			interceptors = turbo.EmptyInterceptors()
-		}
-
-		for _, i := range interceptors {
-			err := i.Before(resp, req)
-			if err != nil {
-				log.Println("error in interceptor!" + err.Error())
-				return
-			}
-		}
-		skipSwitch := false
-		if hijack := turbo.Hijacker(methodName); hijack != nil {
-			hijack(resp, req)
-			skipSwitch = true
-		} else if preprocessor := turbo.Preprocessor(methodName); preprocessor != nil {
-			if err := preprocessor(resp, req); err != nil {
-				skipSwitch = true
-			}
-		}
-		if !skipSwitch {
-			doSwitch(methodName, resp, req)
-		}
-		l := len(interceptors)
-		for i := l - 1; i > 0; i-- {
-			err := interceptors[i].After(resp, req)
-			if err != nil {
-				log.Println("error in interceptor!")
-				return
-			}
-		}
-	}
-}
-
-func doSwitch(methodName string, resp http.ResponseWriter, req *http.Request) {
+var Switcher = func(methodName string, resp http.ResponseWriter, req *http.Request) {
 	switch methodName { {{.Cases}}
 	default:
 		resp.Write([]byte(fmt.Sprintf("No such grpc method[%s]", methodName)))
@@ -120,7 +78,6 @@ var cases string = `
 		params[0] = reflect.ValueOf(req.Context())
 		params[1] = reflect.ValueOf(&request)
 		result := reflect.ValueOf(turbo.GrpcService().({{.ServiceName}}Client)).MethodByName(methodName).Call(params)
-
 		rsp := result[0].Interface().(*{{.MethodName}}Response)
 		if result[1].Interface() == nil {
 			resp.Write([]byte(rsp.String() + "\n"))
