@@ -1,0 +1,7 @@
+config:
+  port: 8081
+  service_name: YourService
+  service_address: 127.0.0.1:50051
+
+urlmapping:
+  - GET /hello SayHello

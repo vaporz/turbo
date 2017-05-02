@@ -23,7 +23,7 @@ func GenerateHandler(pkgPath string) {
 		panic(err)
 	}
 	if _, err := os.Stat(serviceRootPath + "/gen"); os.IsNotExist(err) {
-		os.Mkdir(serviceRootPath+"/gen", 755)
+		os.Mkdir(serviceRootPath+"/gen", 0755)
 	}
 	f, _ := os.Create(serviceRootPath + "/gen/switcher.go")
 	err = tmpl.Execute(f, handlerContent{Cases: casesStr})

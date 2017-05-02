@@ -10,7 +10,7 @@ import (
 var generateCmd = &cobra.Command{
 	Use:     "generate [package_name]",
 	Aliases: []string{"g"},
-	Short:   "generate handler.go",
+	Short:   "generate switcher.go",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
 			return errors.New("package_name missing")

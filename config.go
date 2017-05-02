@@ -61,7 +61,7 @@ func initPkgPath(pkgPath string) {
 
 func loadServiceConfig(pkgPath string) {
 	initPkgPath(pkgPath)
-	// TODO use viper to load config file, reload urlMap on file change, https://github.com/spf13/viper
+	// TODO use viper to load config file, https://github.com/spf13/viper
 	conf, err := yaml.ReadFile(serviceRootPath + "/service.yaml")
 	if err != nil {
 		log.Fatalf("readfile(%q): %s", pkgPath, err)
