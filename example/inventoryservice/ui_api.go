@@ -9,7 +9,7 @@ import (
 	"turbo"
 	"net/http"
 	"errors"
-	"log"
+	i "turbo/example/inventoryservice/interceptor"
 )
 
 var (
@@ -26,38 +26,14 @@ func main() {
 	turbo.SetHijacker("GetVideo", hijackGetVideo)
 	turbo.SetPreprocessor("GetVideo", checkGetVideo)
 
-	turbo.SetCommonInterceptor(logInterceptor{}, loginInterceptor{})
-	turbo.SetInterceptor("GetVideo", loginInterceptor{})
+	turbo.SetCommonInterceptor(i.LogInterceptor{}, i.LoginInterceptor{})
+	turbo.SetInterceptor("GetVideo", i.LoginInterceptor{})
 
 	turbo.StartGrpcHTTPServer(*pkgPath, grpcClient, g.Switcher)
 }
 
 func grpcClient(conn *grpc.ClientConn) interface{} {
 	return g.NewInventoryServiceClient(conn)
-}
-
-type logInterceptor struct {
-	turbo.BaseInterceptor
-}
-
-func (l logInterceptor) Before(resp http.ResponseWriter, req *http.Request) error {
-	log.Println("loginterceptor before!!!!")
-	return nil
-}
-
-type loginInterceptor struct {
-	turbo.BaseInterceptor
-}
-
-func (l loginInterceptor) Before(resp http.ResponseWriter, req *http.Request) error {
-	log.Println("login interceptor before!!!!")
-	//return errors.New("login interceptor error!")
-	return nil
-}
-
-func (l loginInterceptor) After(resp http.ResponseWriter, req *http.Request) error {
-	log.Println("login interceptor after!!!!")
-	return nil
 }
 
 func hijackGetVideo(resp http.ResponseWriter, req *http.Request) {
