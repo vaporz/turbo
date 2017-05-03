@@ -3,7 +3,7 @@ package main
 import (
 	"turbo"
 	"google.golang.org/grpc"
-	"yourservice/gen"
+	"turbo/example/yourservice/gen"
 )
 
 func main() {

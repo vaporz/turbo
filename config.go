@@ -53,7 +53,7 @@ func EmptyInterceptors() []Interceptor {
 	return []Interceptor{}
 }
 
-func initServiceName(serviceNameStr string){
+func initServiceName(serviceNameStr string) {
 	serviceName = serviceNameStr
 }
 

@@ -2,8 +2,8 @@ package turbo
 
 import (
 	"os"
-	"text/template"
 	"strings"
+	"text/template"
 )
 
 func Init(pkgPath, serviceName string) {
@@ -14,10 +14,10 @@ func Init(pkgPath, serviceName string) {
 }
 
 func createFolders() {
-	os.Mkdir(servicePkgPath, 0755)
-	os.Mkdir(servicePkgPath+"/gen", 0755)
-	os.Mkdir(servicePkgPath+"/service", 0755)
-	os.Mkdir(servicePkgPath+"/service/impl", 0755)
+	os.Mkdir(serviceRootPath, 0755)
+	os.Mkdir(serviceRootPath+"/gen", 0755)
+	os.Mkdir(serviceRootPath+"/service", 0755)
+	os.Mkdir(serviceRootPath+"/service/impl", 0755)
 }
 
 func createFiles() {

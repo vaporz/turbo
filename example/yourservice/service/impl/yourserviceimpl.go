@@ -2,7 +2,7 @@ package impl
 
 import (
 	"golang.org/x/net/context"
-	"yourservice/gen"
+	"turbo/example/yourservice/gen"
 )
 
 type YourService struct {

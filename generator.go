@@ -3,9 +3,9 @@ package turbo
 import (
 	"bytes"
 	"os"
-	"text/template"
 	"os/exec"
 	"strings"
+	"text/template"
 )
 
 func Generate(pkgPath, serviceName string) {
@@ -21,7 +21,7 @@ func Generate(pkgPath, serviceName string) {
 /*
 generate switcher.go, [service_name].pb.go, service/[service_name].go, " +
 		"service/impl/[service_name]impl.go
- */
+*/
 func generateSwitcher() {
 	var casesStr string
 	for _, v := range UrlServiceMap {
@@ -123,14 +123,14 @@ func generateServiceMain() {
 		panic(err)
 	}
 	f, _ := os.Create(serviceRootPath + "/service/" + nameLower + ".go")
-	err = tmpl.Execute(f, serviceMainValues{NameLower: nameLower, Port: "50051", ServiceName: serviceName})
+	err = tmpl.Execute(f, serviceMainValues{PkgPath: servicePkgPath, Port: "50051", ServiceName: serviceName})
 	if err != nil {
 		panic(err)
 	}
 }
 
 type serviceMainValues struct {
-	NameLower   string
+	PkgPath     string
 	Port        string
 	ServiceName string
 }
@@ -141,8 +141,8 @@ import (
 	"net"
 	"log"
 	"google.golang.org/grpc"
-	"{{.NameLower}}/service/impl"
-	"{{.NameLower}}/gen"
+	"{{.PkgPath}}/service/impl"
+	"{{.PkgPath}}/gen"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -168,14 +168,14 @@ func generateServiceImpl() {
 		panic(err)
 	}
 	f, _ := os.Create(serviceRootPath + "/service/impl/" + nameLower + "impl.go")
-	err = tmpl.Execute(f, serviceImplValues{NameLower: nameLower, ServiceName: serviceName})
+	err = tmpl.Execute(f, serviceImplValues{PkgPath: servicePkgPath, ServiceName: serviceName})
 	if err != nil {
 		panic(err)
 	}
 }
 
 type serviceImplValues struct {
-	NameLower   string
+	PkgPath     string
 	ServiceName string
 }
 
@@ -183,7 +183,7 @@ var serviceImpl string = `package impl
 
 import (
 	"golang.org/x/net/context"
-	"{{.NameLower}}/gen"
+	"{{.PkgPath}}/gen"
 )
 
 type {{.ServiceName}} struct {
@@ -201,14 +201,13 @@ func generateHTTPMain() {
 		panic(err)
 	}
 	f, _ := os.Create(serviceRootPath + "/" + nameLower + "api.go")
-	err = tmpl.Execute(f, _HTTPMainValues{NameLower: nameLower, ServiceName: serviceName, PkgPath: servicePkgPath})
+	err = tmpl.Execute(f, _HTTPMainValues{ServiceName: serviceName, PkgPath: servicePkgPath})
 	if err != nil {
 		panic(err)
 	}
 }
 
 type _HTTPMainValues struct {
-	NameLower   string
 	ServiceName string
 	PkgPath     string
 }
@@ -218,7 +217,7 @@ var _HTTPMain string = `package main
 import (
 	"turbo"
 	"google.golang.org/grpc"
-	"{{.NameLower}}/gen"
+	"{{.PkgPath}}/gen"
 )
 
 func main() {
