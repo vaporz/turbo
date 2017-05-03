@@ -17,9 +17,12 @@ var config yaml.File
 
 var UrlServiceMap [][3]string
 
+// absolute path
 var serviceRootPath string
 
 var servicePkgPath string
+
+var serviceName string
 
 var configs map[string]string = make(map[string]string)
 
@@ -50,8 +53,13 @@ func EmptyInterceptors() []Interceptor {
 	return []Interceptor{}
 }
 
+func initServiceName(serviceNameStr string){
+	serviceName = serviceNameStr
+}
+
 // initPkgPath parse package path, if gopath contains multi paths, the last one will be used
 func initPkgPath(pkgPath string) {
+
 	goPath := os.Getenv("GOPATH")
 	paths := strings.Split(goPath, ":")
 	l := len(paths)

@@ -6,16 +6,15 @@ import (
 	"errors"
 )
 
-// generateCmd represents the generate command
 var generateCmd = &cobra.Command{
-	Use:     "generate [package_name]",
+	Use:     "generate [package_path] [service_name]",
 	Aliases: []string{"g"},
-	Short:   "generate switcher.go",
+	Short: "Generate Golang codes according to service.yaml and [service_name].proto",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) < 1 {
-			return errors.New("package_name missing")
+		if len(args) < 2 {
+			return errors.New("Usage: generate [package_path] [service_name]")
 		}
-		turbo.GenerateHandler(args[0])
+		turbo.Generate(args[0], args[1])
 		return nil
 	},
 }
