@@ -10,7 +10,8 @@ import (
 )
 
 func StartGrpcHTTPServer(pkgPath string, clientCreator func(conn *grpc.ClientConn) interface{}, switcher func(string, http.ResponseWriter, *http.Request)) {
-	loadServiceConfig(pkgPath)
+	initPkgPath(pkgPath)
+	LoadServiceConfig()
 	initGrpcConnection(clientCreator)
 	defer closeGrpcConnection()
 	startHTTPServer(configs[PORT], router(switcher))

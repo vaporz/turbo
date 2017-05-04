@@ -22,8 +22,6 @@ var serviceRootPath string
 
 var servicePkgPath string
 
-var serviceName string
-
 var configs map[string]string = make(map[string]string)
 
 var requestPreprocessor map[string]func(http.ResponseWriter, *http.Request) error = make(map[string]func(http.ResponseWriter, *http.Request) error)
@@ -53,13 +51,17 @@ func EmptyInterceptors() []Interceptor {
 	return []Interceptor{}
 }
 
-func initServiceName(serviceNameStr string) {
-	serviceName = serviceNameStr
+func LoadServiceConfigWith(pkgPath string) {
+	BeforeLoadConfig(pkgPath)
+	LoadServiceConfig()
+}
+
+func BeforeLoadConfig(pkgPath string) {
+	initPkgPath(pkgPath)
 }
 
 // initPkgPath parse package path, if gopath contains multi paths, the last one will be used
 func initPkgPath(pkgPath string) {
-
 	goPath := os.Getenv("GOPATH")
 	paths := strings.Split(goPath, ":")
 	l := len(paths)
@@ -67,12 +69,11 @@ func initPkgPath(pkgPath string) {
 	servicePkgPath = pkgPath
 }
 
-func loadServiceConfig(pkgPath string) {
-	initPkgPath(pkgPath)
+func LoadServiceConfig() {
 	// TODO use viper to load config file, https://github.com/spf13/viper
 	conf, err := yaml.ReadFile(serviceRootPath + "/service.yaml")
 	if err != nil {
-		log.Fatalf("readfile(%q): %s", pkgPath, err)
+		log.Fatalf("readfile(%q): %s", serviceRootPath+"/service.yaml", err)
 	}
 	config = *conf
 	initUrlMap()

@@ -8,21 +8,93 @@ import (
 	"text/template"
 )
 
-func Generate(pkgPath, serviceName string) {
-	loadServiceConfig(pkgPath)
-	initServiceName(serviceName)
-	generateSwitcher()
-	generateProtobufStub()
+func CreateProject(pkgPath, serviceName string) {
+	BeforeLoadConfig(pkgPath)
+	createFolders()
+	createFiles(serviceName)
+	LoadServiceConfig()
+	GenerateSwitcher()
+	GenerateProtobufStub()
 	generateServiceMain()
 	generateServiceImpl()
 	generateHTTPMain()
 }
 
+func createFolders() {
+	os.Mkdir(serviceRootPath, 0755)
+	os.Mkdir(serviceRootPath+"/gen", 0755)
+	os.Mkdir(serviceRootPath+"/service", 0755)
+	os.Mkdir(serviceRootPath+"/service/impl", 0755)
+}
+
+func createFiles(serviceName string) {
+	createServiceYaml(serviceName)
+	createProto(serviceName)
+}
+
+func createServiceYaml(serviceName string) {
+	tmpl, err := template.New("yaml").Parse(serviceYaml)
+	if err != nil {
+		panic(err)
+	}
+	f, _ := os.Create(serviceRootPath + "/service.yaml")
+	err = tmpl.Execute(f, serviceYamlValues{ServiceName: serviceName})
+	if err != nil {
+		panic(err)
+	}
+}
+
+type serviceYamlValues struct {
+	ServiceName string
+}
+
+var serviceYaml string = `config:
+  port: 8081
+  service_name: {{.ServiceName}}
+  service_address: 127.0.0.1:50051
+
+urlmapping:
+  - GET /hello SayHello
+`
+
+func createProto(serviceName string) {
+	nameLower := strings.ToLower(serviceName)
+	tmpl, err := template.New("proto").Parse(proto)
+	if err != nil {
+		panic(err)
+	}
+	f, _ := os.Create(serviceRootPath + "/" + nameLower + ".proto")
+	err = tmpl.Execute(f, protoValues{ServiceName: serviceName})
+	if err != nil {
+		panic(err)
+	}
+}
+
+type protoValues struct {
+	ServiceName string
+}
+
+var proto string = `syntax = "proto3";
+package gen;
+
+message SayHelloRequest {
+    string yourName = 1;
+}
+
+message SayHelloResponse {
+    string message = 1;
+}
+
+service {{.ServiceName}} {
+    rpc sayHello (SayHelloRequest) returns (SayHelloResponse) {}
+}
+`
+
 /*
 generate switcher.go, [service_name].pb.go, service/[service_name].go, " +
 		"service/impl/[service_name]impl.go
 */
-func generateSwitcher() {
+func GenerateSwitcher() {
 	var casesStr string
 	for _, v := range UrlServiceMap {
 		tmpl, err := template.New("cases").Parse(cases)
@@ -100,8 +172,8 @@ var cases string = `
 			resp.Write([]byte(result[1].Interface().(error).Error() + "\n"))
 		}`
 
-func generateProtobufStub() {
-	nameLower := strings.ToLower(serviceName)
+func GenerateProtobufStub() {
+	nameLower := strings.ToLower(configs[SERVICE_NAME])
 	cmd := "protoc -I " + serviceRootPath + " " + serviceRootPath + "/" + nameLower + ".proto --go_out=plugins=grpc:" + serviceRootPath + "/gen"
 	excuteCmd("bash", "-c", cmd)
 }
@@ -117,13 +189,13 @@ func excuteCmd(cmd string, args ...string) {
 }
 
 func generateServiceMain() {
-	nameLower := strings.ToLower(serviceName)
+	nameLower := strings.ToLower(configs[SERVICE_NAME])
 	tmpl, err := template.New("main").Parse(serviceMain)
 	if err != nil {
 		panic(err)
 	}
 	f, _ := os.Create(serviceRootPath + "/service/" + nameLower + ".go")
-	err = tmpl.Execute(f, serviceMainValues{PkgPath: servicePkgPath, Port: "50051", ServiceName: serviceName})
+	err = tmpl.Execute(f, serviceMainValues{PkgPath: servicePkgPath, Port: "50051", ServiceName: configs[SERVICE_NAME]})
 	if err != nil {
 		panic(err)
 	}
@@ -162,13 +234,13 @@ func main() {
 `
 
 func generateServiceImpl() {
-	nameLower := strings.ToLower(serviceName)
+	nameLower := strings.ToLower(configs[SERVICE_NAME])
 	tmpl, err := template.New("impl").Parse(serviceImpl)
 	if err != nil {
 		panic(err)
 	}
 	f, _ := os.Create(serviceRootPath + "/service/impl/" + nameLower + "impl.go")
-	err = tmpl.Execute(f, serviceImplValues{PkgPath: servicePkgPath, ServiceName: serviceName})
+	err = tmpl.Execute(f, serviceImplValues{PkgPath: servicePkgPath, ServiceName: configs[SERVICE_NAME]})
 	if err != nil {
 		panic(err)
 	}
@@ -195,13 +267,13 @@ func (s *{{.ServiceName}}) SayHello(ctx context.Context, req *gen.SayHelloReques
 `
 
 func generateHTTPMain() {
-	nameLower := strings.ToLower(serviceName)
+	nameLower := strings.ToLower(configs[SERVICE_NAME])
 	tmpl, err := template.New("httpmain").Parse(_HTTPMain)
 	if err != nil {
 		panic(err)
 	}
 	f, _ := os.Create(serviceRootPath + "/" + nameLower + "api.go")
-	err = tmpl.Execute(f, _HTTPMainValues{ServiceName: serviceName, PkgPath: servicePkgPath})
+	err = tmpl.Execute(f, _HTTPMainValues{ServiceName: configs[SERVICE_NAME], PkgPath: servicePkgPath})
 	if err != nil {
 		panic(err)
 	}

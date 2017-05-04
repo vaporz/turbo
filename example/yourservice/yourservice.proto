@@ -9,6 +9,15 @@ message SayHelloResponse {
     string message = 1;
 }
 
+message EatAppleRequest {
+    string num = 1;
+}
+
+message EatAppleResponse {
+    string message = 1;
+}
+
 service YourService {
     rpc sayHello (SayHelloRequest) returns (SayHelloResponse) {}
+    rpc eatApple (EatAppleRequest) returns (EatAppleResponse) {}
 }
