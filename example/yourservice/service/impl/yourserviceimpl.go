@@ -13,5 +13,5 @@ func (s *YourService) SayHello(ctx context.Context, req *gen.SayHelloRequest) (*
 }
 
 func (s *YourService) EatApple(ctx context.Context, req *gen.EatAppleRequest) (*gen.EatAppleResponse, error) {
-	return &gen.EatAppleResponse{Message: "Good taste!"}, nil
+	return &gen.EatAppleResponse{Message: "Good taste! Apple num=" + req.Num}, nil
 }

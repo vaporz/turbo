@@ -87,7 +87,7 @@ func doHijackerPreprocessor(methodName string, resp http.ResponseWriter, req *ht
 
 func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Request) error {
 	l := len(interceptors)
-	for i := l - 1; i > 0; i-- {
+	for i := l - 1; i >= 0; i-- {
 		err := interceptors[i].After(resp, req)
 		if err != nil {
 			log.Println("error in interceptor!")

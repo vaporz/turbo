@@ -110,6 +110,7 @@ func appendUrlServiceMap(line string) {
 	UrlServiceMap = append(UrlServiceMap, [3]string{HTTPMethod, url, methodName})
 }
 
+// TODO assign by URL
 func SetPreprocessor(methodName string, pre func(http.ResponseWriter, *http.Request) error) {
 	requestPreprocessor[methodName] = pre
 }
@@ -121,6 +122,7 @@ func Preprocessor(methodName string) func(http.ResponseWriter, *http.Request) er
 	return nil
 }
 
+// TODO assign by URL
 func SetHijacker(methodName string, h func(http.ResponseWriter, *http.Request)) {
 	hijacker[methodName] = h
 }

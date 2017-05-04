@@ -5,4 +5,4 @@ config:
 
 urlmapping:
   - GET /hello SayHello
-  - GET /eat_apple EatApple
+  - GET /eat_apple/{num:[0-9]+} EatApple
