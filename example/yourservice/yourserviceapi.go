@@ -11,9 +11,10 @@ import (
 )
 
 func main() {
+	// TODO support HTTP method
 	turbo.Intercept("/eat_apple/{num:[0-9]+}", i.LogInterceptor{})
-	//turbo.SetPreprocessor("EatApple", checkNum)
-	//turbo.SetHijacker("EatApple", hijackEatApple)
+	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", checkNum)
+	turbo.SetHijacker("/eat_apple/{num:[0-9]+}", hijackEatApple)
 	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.Switcher)
 }
 
@@ -40,7 +41,7 @@ func checkNum(resp http.ResponseWriter, req *http.Request) error {
 		return errors.New("invalid num")
 	}
 	if num > 5 {
-		resp.Write([]byte("Too many apples!"))
+		resp.Write([]byte("Too many apples!\n"))
 		return errors.New("Too many apples")
 	}
 	return nil

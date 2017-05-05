@@ -26,9 +26,8 @@ func main() {
 	turbo.SetHijacker("GetVideo", hijackGetVideo)
 	turbo.SetPreprocessor("GetVideo", checkGetVideo)
 
-	// TODO assign interceptors by path
 	turbo.SetCommonInterceptor(i.LogInterceptor{}, i.LoginInterceptor{})
-	turbo.Intercept("GetVideo", i.LoginInterceptor{})
+	turbo.Intercept("/videos/{id:[0-9]+}", i.LoginInterceptor{})
 
 	turbo.StartGrpcHTTPServer(*pkgPath, grpcClient, g.Switcher)
 }

@@ -40,7 +40,7 @@ var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 		if err != nil {
 			return
 		}
-		skipSwitch := doHijackerPreprocessor(methodName, resp, req)
+		skipSwitch := doHijackerPreprocessor(resp, req)
 		if !skipSwitch {
 			switcher(methodName, resp, req)
 		}
@@ -70,11 +70,11 @@ func doBefore(interceptors []Interceptor, resp http.ResponseWriter, req *http.Re
 	return nil
 }
 
-func doHijackerPreprocessor(methodName string, resp http.ResponseWriter, req *http.Request) bool {
-	if hijack := Hijacker(methodName); hijack != nil {
+func doHijackerPreprocessor(resp http.ResponseWriter, req *http.Request) bool {
+	if hijack := Hijacker(req); hijack != nil {
 		hijack(resp, req)
 		return true
-	} else if preprocessor := Preprocessor(methodName); preprocessor != nil {
+	} else if preprocessor := Preprocessor(req); preprocessor != nil {
 		if err := preprocessor(resp, req); err != nil {
 			return true
 		}

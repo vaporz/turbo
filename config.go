@@ -24,17 +24,15 @@ var servicePkgPath string
 
 var configs map[string]string = make(map[string]string)
 
-var requestPreprocessor map[string]func(http.ResponseWriter, *http.Request) error = make(map[string]func(http.ResponseWriter, *http.Request) error)
-
-var hijacker map[string]func(http.ResponseWriter, *http.Request) = make(map[string]func(http.ResponseWriter, *http.Request))
-
-var commonInterceptors []Interceptor = []Interceptor{}
-
-var interceptorMap *mux.Router = mux.NewRouter()
+//var requestPreprocessor map[string]func(http.ResponseWriter, *http.Request) error = make(map[string]func(http.ResponseWriter, *http.Request) error)
 
 type emptyHandler struct{}
 
 func (e emptyHandler) ServeHTTP(http.ResponseWriter, *http.Request) {}
+
+var commonInterceptors []Interceptor = []Interceptor{}
+
+var interceptorMap *mux.Router = mux.NewRouter()
 
 type interceptorList struct {
 	emptyHandler
@@ -121,26 +119,42 @@ func appendUrlServiceMap(line string) {
 	UrlServiceMap = append(UrlServiceMap, [3]string{HTTPMethod, url, methodName})
 }
 
-// TODO assign by URL
-func SetPreprocessor(methodName string, pre func(http.ResponseWriter, *http.Request) error) {
-	requestPreprocessor[methodName] = pre
+var preprocessorMap *mux.Router = mux.NewRouter()
+
+type preprocessor struct {
+	emptyHandler
+	value func(http.ResponseWriter, *http.Request) error
 }
 
-func Preprocessor(methodName string) func(http.ResponseWriter, *http.Request) error {
-	if p, ok := requestPreprocessor[methodName]; ok {
-		return p
+func SetPreprocessor(urlPattern string, pre func(http.ResponseWriter, *http.Request) error) {
+	preprocessorMap.Handle(urlPattern, &preprocessor{value: pre})
+}
+
+func Preprocessor(req *http.Request) func(http.ResponseWriter, *http.Request) error {
+	var m mux.RouteMatch
+	if preprocessorMap.Match(req, &m) {
+		p, _ := m.Handler.(*preprocessor)
+		return p.value
 	}
 	return nil
 }
 
-// TODO assign by URL
-func SetHijacker(methodName string, h func(http.ResponseWriter, *http.Request)) {
-	hijacker[methodName] = h
+var hijackerMap *mux.Router = mux.NewRouter()
+
+type hijacker struct {
+	emptyHandler
+	value func(http.ResponseWriter, *http.Request)
 }
 
-func Hijacker(methodName string) func(http.ResponseWriter, *http.Request) {
-	if h, ok := hijacker[methodName]; ok {
-		return h
+func SetHijacker(urlPattern string, h func(http.ResponseWriter, *http.Request)) {
+	hijackerMap.Handle(urlPattern, &hijacker{value: h})
+}
+
+func Hijacker(req *http.Request) func(http.ResponseWriter, *http.Request) {
+	var m mux.RouteMatch
+	if hijackerMap.Match(req, &m) {
+		h, _ := m.Handler.(*hijacker)
+		return h.value
 	}
 	return nil
 }
