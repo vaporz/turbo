@@ -1,9 +1,10 @@
 # Turbo
+// TODO README outdated, to be updated.
 ## Features
  * Turbo generates a reverse-proxy server which translates a HTTP request into a grpc request.
  * [Interceptor](#interceptor).
  * [PreProcessor and Hijacker](#preprocessor_and_hijacker): customizable url-grpc mapping process.
- * (TODO) Support different IDL tools, such as protocol buffers, thrift, etc.
+ * Support gRPC and thrift.
 
 ## Create a service on the fly
 ### 0, Before the start
@@ -125,8 +126,9 @@ Interceptors can be assigned to
  * 1, All URLs
  * 2, An URL path (which means a group of URLs)
  * 3, One URL
- * 4, One URL on HTTP methods (TODO)
+ * 4, One URL on HTTP methods
 
+// TODO 注册时，如果path以“／”结尾则表示拦截整个路径下的所有url
 The more precise it is, the higher priority it has.<br>
 If interceptor A is assigned to URL '/abc' on HTTP method "GET", and interceptor B is assigned to all URLs,
  then A is executed when "GET /abc", and B is executed when "POST /abc".
