@@ -12,9 +12,9 @@ import (
 
 func main() {
 	// TODO support HTTP method
-	turbo.Intercept("/eat_apple/{num:[0-9]+}", i.LogInterceptor{})
-	turbo.Intercept("/a/a", i.LogInterceptor{Msg: "url interceptor"})
-	turbo.Intercept("/a/", i.LogInterceptor{Msg: "path interceptor"})
+	turbo.Intercept([]string{"GET"}, "/eat_apple/{num:[0-9]+}", i.LogInterceptor{})
+	turbo.Intercept([]string{"GET"},"/a/a", i.LogInterceptor{Msg: "url interceptor"})
+	turbo.Intercept([]string{},"/a/", i.LogInterceptor{Msg: "path interceptor"})
 	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", checkNum)
 	turbo.SetHijacker("/eat_apple/{num:[0-9]+}", hijackEatApple)
 	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.Switcher)

@@ -119,11 +119,15 @@ type interceptorList struct {
 	interceptors []Interceptor
 }
 
-func Intercept(urlPattern string, list ...Interceptor) {
+func Intercept(methods []string, urlPattern string, list ...Interceptor) {
+	var route *mux.Route
 	if strings.HasSuffix(urlPattern, "/") {
-		interceptorMap.PathPrefix(urlPattern).Handler(&interceptorList{interceptors: list}).Methods()
+		route = interceptorMap.PathPrefix(urlPattern).Handler(&interceptorList{interceptors: list})
 	} else {
-		interceptorMap.Handle(urlPattern, &interceptorList{interceptors: list})
+		route = interceptorMap.Handle(urlPattern, &interceptorList{interceptors: list})
+	}
+	if len(methods) > 0 {
+		route.Methods(methods...)
 	}
 }
 
