@@ -11,10 +11,11 @@ type LogInterceptor struct {
 	// Before() or After() only, or none of them.
 	// If you were to implement both, you can remove this line.
 	turbo.BaseInterceptor
+	Msg string
 }
 
 func (l LogInterceptor) Before(resp http.ResponseWriter, req *http.Request) error {
-	log.Println("[Before] Request URL:" + req.URL.Path)
+	log.Println("[Before][" + l.Msg + "] Request URL:" + req.URL.Path)
 	return nil
 }
 

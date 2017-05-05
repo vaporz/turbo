@@ -13,6 +13,8 @@ import (
 func main() {
 	// TODO support HTTP method
 	turbo.Intercept("/eat_apple/{num:[0-9]+}", i.LogInterceptor{})
+	turbo.Intercept("/a/a", i.LogInterceptor{Msg: "url interceptor"})
+	turbo.Intercept("/a/", i.LogInterceptor{Msg: "path interceptor"})
 	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", checkNum)
 	turbo.SetHijacker("/eat_apple/{num:[0-9]+}", hijackEatApple)
 	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.Switcher)
@@ -35,8 +37,8 @@ func hijackEatApple(resp http.ResponseWriter, req *http.Request) {
 }
 
 func checkNum(resp http.ResponseWriter, req *http.Request) error {
-	num,err := strconv.Atoi(req.Form["num"][0])
-	if err!=nil {
+	num, err := strconv.Atoi(req.Form["num"][0])
+	if err != nil {
 		resp.Write([]byte("'num' is not numberic"))
 		return errors.New("invalid num")
 	}

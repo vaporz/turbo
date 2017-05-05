@@ -120,7 +120,11 @@ type interceptorList struct {
 }
 
 func Intercept(urlPattern string, list ...Interceptor) {
-	interceptorMap.Handle(urlPattern, &interceptorList{interceptors: list})
+	if strings.HasSuffix(urlPattern, "/") {
+		interceptorMap.PathPrefix(urlPattern).Handler(&interceptorList{interceptors: list}).Methods()
+	} else {
+		interceptorMap.Handle(urlPattern, &interceptorList{interceptors: list})
+	}
 }
 
 func Interceptors(req *http.Request) []Interceptor {
