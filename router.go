@@ -35,7 +35,7 @@ func (i BaseInterceptor) After(http.ResponseWriter, *http.Request) error {
 var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		ParseRequestForm(req)
-		interceptors := getInterceptors(methodName)
+		interceptors := getInterceptors(req)
 		err := doBefore(interceptors, resp, req)
 		if err != nil {
 			return
@@ -51,13 +51,10 @@ var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func getInterceptors(methodName string) []Interceptor {
-	interceptors, ok := Interceptors(methodName)
-	if !ok {
-		interceptors, ok = CommonInterceptors()
-	}
-	if !ok {
-		interceptors = EmptyInterceptors()
+func getInterceptors(req *http.Request) []Interceptor {
+	interceptors := Interceptors(req)
+	if len(interceptors) == 0 {
+		interceptors = CommonInterceptors()
 	}
 	return interceptors
 }

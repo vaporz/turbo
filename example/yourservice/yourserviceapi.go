@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	turbo.SetInterceptor("EatApple", i.LogInterceptor{})
+	turbo.Intercept("/eat_apple/{num:[0-9]+}", i.LogInterceptor{})
 	//turbo.SetPreprocessor("EatApple", checkNum)
 	//turbo.SetHijacker("EatApple", hijackEatApple)
 	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.Switcher)

@@ -1,6 +1,7 @@
 package turbo
 
 import (
+	"github.com/gorilla/mux"
 	"github.com/kylelemons/go-gypsy/yaml"
 	"log"
 	"net/http"
@@ -11,7 +12,6 @@ import (
 const SERVICE_NAME string = "service_name"
 const SERVICE_ADDRESS string = "service_address"
 const PORT string = "port"
-const COMMON string = "common"
 
 var config yaml.File
 
@@ -28,27 +28,38 @@ var requestPreprocessor map[string]func(http.ResponseWriter, *http.Request) erro
 
 var hijacker map[string]func(http.ResponseWriter, *http.Request) = make(map[string]func(http.ResponseWriter, *http.Request))
 
-var interceptorMap map[string][]Interceptor = make(map[string][]Interceptor)
+var commonInterceptors []Interceptor = []Interceptor{}
 
-func SetInterceptor(methodName string, interceptors ...Interceptor) {
-	interceptorMap[methodName] = interceptors
+var interceptorMap *mux.Router = mux.NewRouter()
+
+type emptyHandler struct{}
+
+func (e emptyHandler) ServeHTTP(http.ResponseWriter, *http.Request) {}
+
+type interceptorList struct {
+	emptyHandler
+	interceptors []Interceptor
+}
+
+func Intercept(urlPattern string, list ...Interceptor) {
+	interceptorMap.Handle(urlPattern, &interceptorList{interceptors: list})
 }
 
 func SetCommonInterceptor(interceptors ...Interceptor) {
-	interceptorMap[COMMON] = interceptors
+	commonInterceptors = interceptors
 }
 
-func Interceptors(methodName string) ([]Interceptor, bool) {
-	interceptors, ok := interceptorMap[methodName]
-	return interceptors, ok
-}
-
-func CommonInterceptors() ([]Interceptor, bool) {
-	return Interceptors(COMMON)
-}
-
-func EmptyInterceptors() []Interceptor {
+func Interceptors(req *http.Request) []Interceptor {
+	var m mux.RouteMatch
+	if interceptorMap.Match(req, &m) {
+		list, _ := m.Handler.(*interceptorList)
+		return list.interceptors
+	}
 	return []Interceptor{}
+}
+
+func CommonInterceptors() []Interceptor {
+	return commonInterceptors
 }
 
 func LoadServiceConfigWith(pkgPath string) {

@@ -28,7 +28,7 @@ func main() {
 
 	// TODO assign interceptors by path
 	turbo.SetCommonInterceptor(i.LogInterceptor{}, i.LoginInterceptor{})
-	turbo.SetInterceptor("GetVideo", i.LoginInterceptor{})
+	turbo.Intercept("GetVideo", i.LoginInterceptor{})
 
 	turbo.StartGrpcHTTPServer(*pkgPath, grpcClient, g.Switcher)
 }
