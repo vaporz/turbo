@@ -1,14 +1,13 @@
 # Turbo
 ## Features
-TODO in-page link
  * Turbo generates a reverse-proxy server which translates a HTTP request into a grpc request.
- * Interceptor.
- * PreProcessor and Hijacker: customizable url-grpc mapping process.
+ * [Interceptor](#interceptor).
+ * [PreProcessor and Hijacker](#preprocessor_and_hijacker): customizable url-grpc mapping process.
  * (TODO) Support different IDL tools, such as protocol buffers, thrift, etc.
 
 ## Create a service on the fly
 ### 0, Before the start
-Obviously, you have to install [Golang](https://golang.org) and [Protocol buffers](https://developers.google.com/protocol-buffers/) firstly.
+Obviously, you have to install [Golang](https://golang.org) and [Protocol buffers](https://developers.google.com/protocol-buffers/) first.
 ### 1, Install Turbo
 ```sh
 git clone https://github.com/vaporz/turbo.git
@@ -78,45 +77,41 @@ For example, add a new API, change an existing API, change url-grpc mapping, etc
 ## How to add a new API
 #### 1, Define new gRPC API
 Modify "yourservice.proto", add new method "eatApple":
-```proto
-message EatAppleRequest {
-    string num = 1;
-}
-
-message EatAppleResponse {
-    string message = 1;
-}
-
-service YourService {
-    rpc sayHello (SayHelloRequest) returns (SayHelloResponse) {}
-    rpc eatApple (EatAppleRequest) returns (EatAppleResponse) {}
-}
+```diff
++message EatAppleRequest {
++    string num = 1;
++}
++
++message EatAppleResponse {
++    string message = 1;
++}
+ 
+ service YourService {
+     rpc sayHello (SayHelloRequest) returns (SayHelloResponse) {}
++    rpc eatApple (EatAppleRequest) returns (EatAppleResponse) {}
+ }
 ```
 #### 2, Add new url-grpc mapping
 Modify "service.yaml":
-```config
-urlmapping:
-  - GET /hello SayHello
-  - GET /eat_apple/{num:[0-9]+} EatApple
+```diff
+ urlmapping:
+   - GET /hello SayHello
++  - GET /eat_apple/{num:[0-9]+} EatApple
 ```
 #### 3, Generate new codes
 ```sh
-turbo generate package/path/to/yourservice YourService
+turbo generate package/path/to/yourservice
 ```
 
 #### 4, Implement new gRPC method
 Modify "yourserviceimpl.go":
 ```go
-func (s *YourService) SayHello(ctx context.Context, req *gen.SayHelloRequest) (*gen.SayHelloResponse, error) {
-	return &gen.SayHelloResponse{Message: "Hello, " + req.YourName}, nil
-}
-
 func (s *YourService) EatApple(ctx context.Context, req *gen.EatAppleRequest) (*gen.EatAppleResponse, error) {
 	return &gen.EatAppleResponse{Message: "Good taste! Apple num=" + req.Num}, nil
 }
 ```
 
-Now, stop and restart both HTTP and gRPC server:
+Now, stop and restart both HTTP and gRPC server, then test:
 ```sh
 $ go run service/yourservice.go
 $ go run yourserviceapi.go
@@ -124,11 +119,11 @@ $ curl "http://localhost:8081/eat_apple/5"
 message:"Good taste! Apple num=5"
 ```
 
-## Interceptor
+## <a name="interceptro"></a>Interceptor
 Interceptors provide hook functions which run before or after a request.<br>
 Interceptors can be assigned to
  * 1, All URLs
- * 2, An URL path (TODO, which means a group of URLs)
+ * 2, An URL path (which means a group of URLs)
  * 3, One URL
  * 4, One URL on HTTP methods (TODO)
 
@@ -166,11 +161,11 @@ func (l LogInterceptor) After(resp http.ResponseWriter, req *http.Request) error
 ```
 Then assign this interceptor to URL "/eat_apple/{num:[0-9]+}":<br>
 Edit "yourservice/yourserviceapi.go":
-```go
-func main() {
-	turbo.SetInterceptor("EatApple", i.LogInterceptor{}) // TODO assign by URL
-	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.Switcher)
-}
+```diff
+ func main() {
++	turbo.Intercept("/eat_apple/{num:[0-9]+}", i.LogInterceptor{})
+ 	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.Switcher)
+ }
 ```
 Lastly, restart HTTP server and test:
 ```sh
@@ -198,7 +193,7 @@ Test:
 $ curl "http://localhost:8081/eat_apple/5"
 Encounter an error from LogInterceptor!
 ```
-## Preprocessor and Hijacker
+## <a name="preprocessor_and_hijacker"></a>Preprocessor and Hijacker
 What if I want to do something particularly for some API?<br>
 Preprocessor/Hijacker comes to help!<br>
 If both Preprocessors and hijackers are assigned to an URL, only the last hijacker assigned is active.
@@ -210,25 +205,25 @@ Preprocessors can be used to do something particularly for an API. For example, 
 setting default values, parsing values, logging, etc.
 
 Let's check the value of 'num' with a preprocessor:
-```go
-func main() {
-	turbo.SetInterceptor("EatApple", i.LogInterceptor{})
-	turbo.SetPreprocessor("EatApple", checkNum)
-	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.Switcher)
-}
+```diff
+ func main() {
+ 	turbo.Intercept("/eat_apple/{num:[0-9]+}", i.LogInterceptor{})
++	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", checkNum)
+ 	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.Switcher)
+ }
 
-func checkNum(resp http.ResponseWriter, req *http.Request) error {
-	num,err := strconv.Atoi(req.Form["num"][0])
-	if err!=nil {
-		resp.Write([]byte("'num' is not numberic"))
-		return errors.New("invalid num")
-	}
-	if num > 5 {
-		resp.Write([]byte("Too many apples!"))
-		return errors.New("Too many apples")
-	}
-	return nil
-}
++func checkNum(resp http.ResponseWriter, req *http.Request) error {
++	num,err := strconv.Atoi(req.Form["num"][0])
++	if err!=nil {
++		resp.Write([]byte("'num' is not numberic"))
++		return errors.New("invalid num")
++	}
++	if num > 5 {
++		resp.Write([]byte("Too many apples!"))
++		return errors.New("Too many apples")
++	}
++	return nil
++}
 ```
 As usual, restart HTTP server, and test:
 ```sh
@@ -244,25 +239,25 @@ You can do everything, which means you also have to call gRPC method yourself.
 
 In this example, URL "/eat_apple/{num:[0-9]+}" is hijacked, no matter what the value is in query string,
 the value of parameter "num" is set to "999".
-```go
-func main() {
-	turbo.SetInterceptor("EatApple", i.LogInterceptor{})
-	turbo.SetPreprocessor("EatApple", checkNum)
-	turbo.SetHijacker("EatApple", hijackEatApple)
-	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.Switcher)
-}
+```diff
+ func main() {
+ 	turbo.Intercept("/eat_apple/{num:[0-9]+}", i.LogInterceptor{})
+ 	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", checkNum)
++	turbo.SetHijacker("/eat_apple/{num:[0-9]+}", hijackEatApple)
+ 	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.Switcher)
+ }
 
-func hijackEatApple(resp http.ResponseWriter, req *http.Request) {
-	client := turbo.GrpcService().(gen.YourServiceClient)
-	r := new(gen.EatAppleRequest)
-	r.Num = "999"
-	res, err := client.EatApple(req.Context(), r)
-	if err == nil {
-		resp.Write([]byte(res.String() + "\n"))
-	} else {
-		resp.Write([]byte(err.Error() + "\n"))
-	}
-}
++func hijackEatApple(resp http.ResponseWriter, req *http.Request) {
++	client := turbo.GrpcService().(gen.YourServiceClient)
++	r := new(gen.EatAppleRequest)
++	r.Num = "999"
++	res, err := client.EatApple(req.Context(), r)
++	if err == nil {
++		resp.Write([]byte(res.String() + "\n"))
++	} else {
++		resp.Write([]byte(err.Error() + "\n"))
++	}
++}
 ```
 Restart and test:
 ```sh

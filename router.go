@@ -73,6 +73,7 @@ func doBefore(interceptors []Interceptor, resp http.ResponseWriter, req *http.Re
 func doHijackerPreprocessor(resp http.ResponseWriter, req *http.Request) bool {
 	if hijack := Hijacker(req); hijack != nil {
 		hijack(resp, req)
+		// TODO warn if there are preprocessor
 		return true
 	} else if preprocessor := Preprocessor(req); preprocessor != nil {
 		if err := preprocessor(resp, req); err != nil {
