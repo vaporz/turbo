@@ -9,7 +9,7 @@ import (
 )
 
 func CreateProject(pkgPath, serviceName string) {
-	BeforeLoadConfig(pkgPath)
+	InitPkgPath(pkgPath)
 	createFolders()
 	createFiles(serviceName)
 	LoadServiceConfig()

@@ -17,21 +17,6 @@ func router(switcherFunc func(methodName string, resp http.ResponseWriter, req *
 
 var switcher func(methodName string, resp http.ResponseWriter, req *http.Request)
 
-type Interceptor interface {
-	Before(http.ResponseWriter, *http.Request) error
-	After(http.ResponseWriter, *http.Request) error
-}
-
-type BaseInterceptor struct{}
-
-func (i BaseInterceptor) Before(http.ResponseWriter, *http.Request) error {
-	return nil
-}
-
-func (i BaseInterceptor) After(http.ResponseWriter, *http.Request) error {
-	return nil
-}
-
 var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		ParseRequestForm(req)

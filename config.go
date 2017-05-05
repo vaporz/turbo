@@ -24,52 +24,16 @@ var servicePkgPath string
 
 var configs map[string]string = make(map[string]string)
 
-//var requestPreprocessor map[string]func(http.ResponseWriter, *http.Request) error = make(map[string]func(http.ResponseWriter, *http.Request) error)
-
-type emptyHandler struct{}
-
-func (e emptyHandler) ServeHTTP(http.ResponseWriter, *http.Request) {}
-
-var commonInterceptors []Interceptor = []Interceptor{}
-
-var interceptorMap *mux.Router = mux.NewRouter()
-
-type interceptorList struct {
-	emptyHandler
-	interceptors []Interceptor
-}
-
-func Intercept(urlPattern string, list ...Interceptor) {
-	interceptorMap.Handle(urlPattern, &interceptorList{interceptors: list})
-}
-
-func SetCommonInterceptor(interceptors ...Interceptor) {
-	commonInterceptors = interceptors
-}
-
-func Interceptors(req *http.Request) []Interceptor {
-	var m mux.RouteMatch
-	if interceptorMap.Match(req, &m) {
-		list, _ := m.Handler.(*interceptorList)
-		return list.interceptors
-	}
-	return []Interceptor{}
-}
-
-func CommonInterceptors() []Interceptor {
-	return commonInterceptors
-}
-
 func LoadServiceConfigWith(pkgPath string) {
-	BeforeLoadConfig(pkgPath)
+	InitPkgPath(pkgPath)
 	LoadServiceConfig()
 }
 
-func BeforeLoadConfig(pkgPath string) {
+func InitPkgPath(pkgPath string) {
 	initPkgPath(pkgPath)
 }
 
-// initPkgPath parse package path, if gopath contains multi paths, the last one will be used
+// initPkgPath parse package path, if $GOPATH contains multi paths, the last one will be used
 func initPkgPath(pkgPath string) {
 	goPath := os.Getenv("GOPATH")
 	paths := strings.Split(goPath, ":")
@@ -117,6 +81,55 @@ func appendUrlServiceMap(line string) {
 	url := strings.TrimSpace(values[1])
 	methodName := strings.TrimSpace(values[2])
 	UrlServiceMap = append(UrlServiceMap, [3]string{HTTPMethod, url, methodName})
+}
+
+type emptyHandler struct{}
+
+func (e emptyHandler) ServeHTTP(http.ResponseWriter, *http.Request) {}
+
+type Interceptor interface {
+	Before(http.ResponseWriter, *http.Request) error
+	After(http.ResponseWriter, *http.Request) error
+}
+
+type BaseInterceptor struct{}
+
+func (i BaseInterceptor) Before(http.ResponseWriter, *http.Request) error {
+	return nil
+}
+
+func (i BaseInterceptor) After(http.ResponseWriter, *http.Request) error {
+	return nil
+}
+
+var commonInterceptors []Interceptor = []Interceptor{}
+
+func SetCommonInterceptor(interceptors ...Interceptor) {
+	commonInterceptors = interceptors
+}
+
+func CommonInterceptors() []Interceptor {
+	return commonInterceptors
+}
+
+var interceptorMap *mux.Router = mux.NewRouter()
+
+type interceptorList struct {
+	emptyHandler
+	interceptors []Interceptor
+}
+
+func Intercept(urlPattern string, list ...Interceptor) {
+	interceptorMap.Handle(urlPattern, &interceptorList{interceptors: list})
+}
+
+func Interceptors(req *http.Request) []Interceptor {
+	var m mux.RouteMatch
+	if interceptorMap.Match(req, &m) {
+		list, _ := m.Handler.(*interceptorList)
+		return list.interceptors
+	}
+	return []Interceptor{}
 }
 
 var preprocessorMap *mux.Router = mux.NewRouter()
