@@ -10,7 +10,9 @@ message SayHelloResponse {
 }
 
 message EatAppleRequest {
-    string num = 1;
+    int32 num = 1;
+    string stringValue = 2;
+    bool boolValue = 3;
 }
 
 message EatAppleResponse {

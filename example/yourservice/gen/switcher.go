@@ -20,8 +20,13 @@ var Switcher = func(methodName string, resp http.ResponseWriter, req *http.Reque
 		for i := 0; i < fieldNum; i++ {
 			fieldName := theType.Field(i).Name
 			v, ok := req.Form[turbo.ToSnakeCase(fieldName)]
-			if ok && len(v) > 0 {
-				theValue.FieldByName(fieldName).SetString(v[0])
+			if !ok || len(v) <= 0 {
+				continue
+			}
+			err := turbo.SetValue(theValue, fieldName, v[0])
+			if err != nil {
+				resp.Write([]byte(err.Error() + "\n"))
+				return
 			}
 		}
 		params := make([]reflect.Value, 2)
@@ -42,8 +47,13 @@ var Switcher = func(methodName string, resp http.ResponseWriter, req *http.Reque
 		for i := 0; i < fieldNum; i++ {
 			fieldName := theType.Field(i).Name
 			v, ok := req.Form[turbo.ToSnakeCase(fieldName)]
-			if ok && len(v) > 0 {
-				theValue.FieldByName(fieldName).SetString(v[0])
+			if !ok || len(v) <= 0 {
+				continue
+			}
+			err := turbo.SetValue(theValue, fieldName, v[0])
+			if err != nil {
+				resp.Write([]byte(err.Error() + "\n"))
+				return
 			}
 		}
 		params := make([]reflect.Value, 2)

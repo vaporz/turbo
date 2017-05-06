@@ -4,6 +4,9 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"reflect"
+	"strconv"
+	"errors"
 )
 
 func router(switcherFunc func(methodName string, resp http.ResponseWriter, req *http.Request)) *mux.Router {
@@ -76,6 +79,32 @@ func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Req
 			log.Println("error in interceptor!")
 			return err
 		}
+	}
+	return nil
+}
+
+func SetValue(theValue reflect.Value, fieldName, v string) error {
+	switch theValue.FieldByName(fieldName).Kind() {
+	case reflect.Int,
+		reflect.Int8,
+		reflect.Int16,
+		reflect.Int32,
+		reflect.Int64:
+		i, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return errors.New("error int!!")
+		}
+		theValue.FieldByName(fieldName).SetInt(i)
+	case reflect.String:
+		theValue.FieldByName(fieldName).SetString(v)
+	case reflect.Bool:
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return errors.New("error bool!!")
+		}
+		theValue.FieldByName(fieldName).SetBool(b)
+	default:
+		return errors.New("error!!")
 	}
 	return nil
 }

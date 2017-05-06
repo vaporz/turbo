@@ -3,6 +3,7 @@ package impl
 import (
 	"golang.org/x/net/context"
 	"turbo/example/yourservice/gen"
+	"strconv"
 )
 
 type YourService struct {
@@ -13,5 +14,6 @@ func (s *YourService) SayHello(ctx context.Context, req *gen.SayHelloRequest) (*
 }
 
 func (s *YourService) EatApple(ctx context.Context, req *gen.EatAppleRequest) (*gen.EatAppleResponse, error) {
-	return &gen.EatAppleResponse{Message: "Good taste! Apple num=" + req.Num}, nil
+	msg := "Good taste! Apple num=" + strconv.Itoa(int(req.Num)) + ", string=" + req.StringValue + ", bool=" + strconv.FormatBool(req.BoolValue)
+	return &gen.EatAppleResponse{Message: msg}, nil
 }

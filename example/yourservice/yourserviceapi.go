@@ -13,8 +13,8 @@ import (
 func main() {
 	// TODO support HTTP method
 	turbo.Intercept([]string{"GET"}, "/eat_apple/{num:[0-9]+}", i.LogInterceptor{})
-	turbo.Intercept([]string{"GET"},"/a/a", i.LogInterceptor{Msg: "url interceptor"})
-	turbo.Intercept([]string{},"/a/", i.LogInterceptor{Msg: "path interceptor"})
+	turbo.Intercept([]string{"GET"}, "/a/a", i.LogInterceptor{Msg: "url interceptor"})
+	turbo.Intercept([]string{}, "/a/", i.LogInterceptor{Msg: "path interceptor"})
 	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", checkNum)
 	turbo.SetHijacker("/eat_apple/{num:[0-9]+}", hijackEatApple)
 	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.Switcher)
@@ -27,7 +27,7 @@ func grpcClient(conn *grpc.ClientConn) interface{} {
 func hijackEatApple(resp http.ResponseWriter, req *http.Request) {
 	client := turbo.GrpcService().(gen.YourServiceClient)
 	r := new(gen.EatAppleRequest)
-	r.Num = "999"
+	r.Num = 999
 	res, err := client.EatApple(req.Context(), r)
 	if err == nil {
 		resp.Write([]byte(res.String() + "\n"))

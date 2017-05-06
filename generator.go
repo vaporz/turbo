@@ -96,13 +96,17 @@ generate switcher.go, [service_name].pb.go, service/[service_name].go, " +
 */
 func GenerateSwitcher() {
 	var casesStr string
+	methodNames := make(map[string]int)
 	for _, v := range UrlServiceMap {
+		methodNames[v[2]] = 0
+	}
+	for v := range methodNames {
 		tmpl, err := template.New("cases").Parse(cases)
 		if err != nil {
 			panic(err)
 		}
 		var casesBuf bytes.Buffer
-		err = tmpl.Execute(&casesBuf, method{configs[SERVICE_NAME], v[2]})
+		err = tmpl.Execute(&casesBuf, method{configs[SERVICE_NAME], v})
 		casesStr = casesStr + casesBuf.String()
 	}
 	tmpl, err := template.New("switcher").Parse(switcherFunc)
@@ -157,8 +161,13 @@ var cases string = `
 		for i := 0; i < fieldNum; i++ {
 			fieldName := theType.Field(i).Name
 			v, ok := req.Form[turbo.ToSnakeCase(fieldName)]
-			if ok && len(v) > 0 {
-				theValue.FieldByName(fieldName).SetString(v[0])
+			if !ok || len(v) <= 0 {
+				continue
+			}
+			err := turbo.SetValue(theValue, fieldName, v[0])
+			if err != nil {
+				resp.Write([]byte(err.Error() + "\n"))
+				return
 			}
 		}
 		params := make([]reflect.Value, 2)
