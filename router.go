@@ -92,7 +92,7 @@ func SetValue(theValue reflect.Value, fieldName, v string) error {
 		reflect.Int64:
 		i, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
-			return errors.New("error int!!")
+			return errors.New("error int")
 		}
 		theValue.FieldByName(fieldName).SetInt(i)
 	case reflect.String:
@@ -100,11 +100,26 @@ func SetValue(theValue reflect.Value, fieldName, v string) error {
 	case reflect.Bool:
 		b, err := strconv.ParseBool(v)
 		if err != nil {
-			return errors.New("error bool!!")
+			return errors.New("error bool")
 		}
 		theValue.FieldByName(fieldName).SetBool(b)
+	case reflect.Float32, reflect.Float64:
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return errors.New("error float")
+		}
+		theValue.FieldByName(fieldName).SetFloat(f)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		u, err := strconv.ParseUint(v, 10, 64)
+		if err != nil {
+			return errors.New("error uint")
+		}
+		theValue.FieldByName(fieldName).SetUint(u)
+	case reflect.Slice, reflect.Interface, reflect.Struct:
+		// only basic types supported
+		return errors.New("type not supported")
 	default:
-		return errors.New("error!!")
+		return errors.New("error")
 	}
 	return nil
 }
