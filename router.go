@@ -1,12 +1,12 @@
 package turbo
 
 import (
+	"errors"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"reflect"
 	"strconv"
-	"errors"
 )
 
 func router(switcherFunc func(methodName string, resp http.ResponseWriter, req *http.Request)) *mux.Router {
@@ -83,8 +83,8 @@ func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Req
 	return nil
 }
 
-func SetValue(theValue reflect.Value, fieldName, v string) error {
-	switch theValue.FieldByName(fieldName).Kind() {
+func SetValue(fieldValue reflect.Value, v string) error {
+	switch fieldValue.Kind() {
 	case reflect.Int,
 		reflect.Int8,
 		reflect.Int16,
@@ -94,27 +94,27 @@ func SetValue(theValue reflect.Value, fieldName, v string) error {
 		if err != nil {
 			return errors.New("error int")
 		}
-		theValue.FieldByName(fieldName).SetInt(i)
+		fieldValue.SetInt(i)
 	case reflect.String:
-		theValue.FieldByName(fieldName).SetString(v)
+		fieldValue.SetString(v)
 	case reflect.Bool:
 		b, err := strconv.ParseBool(v)
 		if err != nil {
 			return errors.New("error bool")
 		}
-		theValue.FieldByName(fieldName).SetBool(b)
+		fieldValue.SetBool(b)
 	case reflect.Float32, reflect.Float64:
 		f, err := strconv.ParseFloat(v, 64)
 		if err != nil {
 			return errors.New("error float")
 		}
-		theValue.FieldByName(fieldName).SetFloat(f)
+		fieldValue.SetFloat(f)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		u, err := strconv.ParseUint(v, 10, 64)
 		if err != nil {
 			return errors.New("error uint")
 		}
-		theValue.FieldByName(fieldName).SetUint(u)
+		fieldValue.SetUint(u)
 	case reflect.Slice, reflect.Interface, reflect.Struct:
 		// only basic types supported
 		return errors.New("type not supported")
@@ -122,4 +122,93 @@ func SetValue(theValue reflect.Value, fieldName, v string) error {
 		return errors.New("error")
 	}
 	return nil
+}
+
+func ReflectValue(fieldValue reflect.Value, v string) (value reflect.Value, err error) {
+	switch fieldValue.Kind() {
+	case reflect.Int16:
+		var i int64
+		if v == "" {
+			i = 0
+		} else {
+			i, err = strconv.ParseInt(v, 10, 16)
+			if err != nil {
+				return reflect.ValueOf(i), errors.New("error int")
+			}
+		}
+		return reflect.ValueOf(int16(i)), nil
+	case reflect.Int32:
+		var i int64
+		if v == "" {
+			i = 0
+		} else {
+			i, err = strconv.ParseInt(v, 10, 32)
+			if err != nil {
+				return reflect.ValueOf(i), errors.New("error int")
+			}
+		}
+		return reflect.ValueOf(int32(i)), nil
+	case reflect.Int64:
+		var i int64
+		if v == "" {
+			i = 0
+		} else {
+			i, err = strconv.ParseInt(v, 10, 64)
+			if err != nil {
+				return reflect.ValueOf(i), errors.New("error int")
+			}
+		}
+		return reflect.ValueOf(int64(i)), nil
+	case reflect.String:
+		return reflect.ValueOf(v), nil
+	case reflect.Bool:
+		var b bool
+		if v == "" {
+			b = false
+		} else {
+			b, err = strconv.ParseBool(v)
+			if err != nil {
+				return reflect.ValueOf(b), errors.New("error bool")
+			}
+		}
+		return reflect.ValueOf(bool(b)), nil
+	case reflect.Float32:
+		var f float64
+		if v == "" {
+			f = 0
+		} else {
+			f, err = strconv.ParseFloat(v, 64)
+			if err != nil {
+				return reflect.ValueOf(f), errors.New("error float")
+			}
+		}
+		return reflect.ValueOf(float32(f)), nil
+	case reflect.Float64:
+		var f float64
+		if v == "" {
+			f = 0
+		} else {
+			f, err = strconv.ParseFloat(v, 64)
+			if err != nil {
+				return reflect.ValueOf(f), errors.New("error float")
+			}
+		}
+		return reflect.ValueOf(float64(f)), nil
+		//case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		//	var u uint64
+		//	if v == "" {
+		//		u = 0
+		//	} else {
+		//		u, err := strconv.ParseUint(v, 10, 64)
+		//		if err != nil {
+		//			return reflect.ValueOf(u), errors.New("error uint")
+		//		}
+		//	}
+		//	return reflect.ValueOf(u), nil
+	case reflect.Slice, reflect.Interface, reflect.Struct:
+		// only basic types supported
+		return reflect.ValueOf(0), errors.New("type not supported")
+	default:
+		return reflect.ValueOf(0), errors.New("error")
+	}
 }

@@ -8,28 +8,53 @@ import (
 	"text/template"
 )
 
-func CreateProject(pkgPath, serviceName string) {
+func CreateProject(pkgPath, serviceName, serverType string) {
 	InitPkgPath(pkgPath)
-	createFolders()
-	createFiles(serviceName)
+	createRootFolder()
+	createServiceYaml(serviceName)
 	LoadServiceConfig()
-	GenerateSwitcher()
-	GenerateProtobufStub()
-	generateServiceMain()
-	generateServiceImpl()
-	generateHTTPMain()
+	if serverType == "grpc" {
+		CreateGrpcProject(serviceName)
+	}else if serverType == "thrift" {
+		CreateThriftProject(serviceName)
+	}
 }
 
-func createFolders() {
+func CreateGrpcProject(serviceName string){
+	createGrpcFolders()
+	createProto(serviceName)
+	GenerateGrpcSwitcher()
+	GenerateProtobufStub()
+	generateGrpcServiceMain()
+	generateGrpcServiceImpl()
+	generateGrpcHTTPMain()
+}
+
+func CreateThriftProject(serviceName string){
+	createThriftFolders()
+	createThrift(serviceName)
+	GenerateThriftSwitcher()
+	GenerateThriftStub()
+	generateThriftServiceMain()
+	generateThriftServiceImpl()
+	generateThriftHTTPMain()
+}
+
+func createRootFolder() {
 	os.Mkdir(serviceRootPath, 0755)
 	os.Mkdir(serviceRootPath+"/gen", 0755)
-	os.Mkdir(serviceRootPath+"/service", 0755)
-	os.Mkdir(serviceRootPath+"/service/impl", 0755)
 }
 
-func createFiles(serviceName string) {
-	createServiceYaml(serviceName)
-	createProto(serviceName)
+func createGrpcFolders() {
+	os.Mkdir(serviceRootPath+"/grpcapi", 0755)
+	os.Mkdir(serviceRootPath+"/grpcservice", 0755)
+	os.Mkdir(serviceRootPath+"/grpcservice/impl", 0755)
+}
+
+func createThriftFolders() {
+	os.Mkdir(serviceRootPath+"/thriftapi", 0755)
+	os.Mkdir(serviceRootPath+"/thriftservice", 0755)
+	os.Mkdir(serviceRootPath+"/thriftservice/impl", 0755)
 }
 
 func createServiceYaml(serviceName string) {
@@ -50,8 +75,10 @@ type serviceYamlValues struct {
 
 var serviceYaml string = `config:
   port: 8081
-  service_name: {{.ServiceName}}
-  service_address: 127.0.0.1:50051
+  grpc_service_name: {{.ServiceName}}
+  grpc_service_address: 127.0.0.1:50051
+  thrift_service_name: {{.ServiceName}}
+  thrift_service_address: 127.0.0.1:50052
 
 urlmapping:
   - GET /hello SayHello
@@ -90,33 +117,61 @@ service {{.ServiceName}} {
 }
 `
 
+func createThrift(serviceName string) {
+	nameLower := strings.ToLower(serviceName)
+	tmpl, err := template.New("thrift").Parse(thriftFile)
+	if err != nil {
+		panic(err)
+	}
+	f, _ := os.Create(serviceRootPath + "/" + nameLower + ".thrift")
+	err = tmpl.Execute(f, thriftValues{ServiceName: serviceName})
+	if err != nil {
+		panic(err)
+	}
+}
+
+type thriftValues struct {
+	ServiceName string
+}
+
+var thriftFile string = `namespace go gen
+
+struct SayHelloResponse {
+  1: string message,
+}
+
+service {{.ServiceName}} {
+    SayHelloResponse sayHello (1:string yourName)
+}
+`
+
 /*
-generate switcher.go, [service_name].pb.go, service/[service_name].go, " +
-		"service/impl/[service_name]impl.go
+generate grpcswitcher.go, [service_name].pb.go, grpcservice/[service_name].go, " +
+		"grpcservice/impl/[service_name]impl.go
 */
-func GenerateSwitcher() {
+func GenerateGrpcSwitcher() {
 	var casesStr string
 	methodNames := make(map[string]int)
 	for _, v := range UrlServiceMap {
 		methodNames[v[2]] = 0
 	}
 	for v := range methodNames {
-		tmpl, err := template.New("cases").Parse(cases)
+		tmpl, err := template.New("cases").Parse(grpcCases)
 		if err != nil {
 			panic(err)
 		}
 		var casesBuf bytes.Buffer
-		err = tmpl.Execute(&casesBuf, method{configs[SERVICE_NAME], v})
+		err = tmpl.Execute(&casesBuf, method{configs[GRPC_SERVICE_NAME], v})
 		casesStr = casesStr + casesBuf.String()
 	}
-	tmpl, err := template.New("switcher").Parse(switcherFunc)
+	tmpl, err := template.New("switcher").Parse(grpcSwitcherFunc)
 	if err != nil {
 		panic(err)
 	}
 	if _, err := os.Stat(serviceRootPath + "/gen"); os.IsNotExist(err) {
 		os.Mkdir(serviceRootPath+"/gen", 0755)
 	}
-	f, _ := os.Create(serviceRootPath + "/gen/switcher.go")
+	f, _ := os.Create(serviceRootPath + "/gen/grpcswitcher.go")
 	err = tmpl.Execute(f, handlerContent{Cases: casesStr})
 	if err != nil {
 		panic(err)
@@ -129,10 +184,11 @@ type method struct {
 }
 
 type handlerContent struct {
-	Cases string
+	Cases   string
+	PkgPath string
 }
 
-var switcherFunc string = `package gen
+var grpcSwitcherFunc string = `package gen
 
 import (
 	"reflect"
@@ -144,7 +200,7 @@ import (
 /*
 this is a generated file, DO NOT EDIT!
  */
-var Switcher = func(methodName string, resp http.ResponseWriter, req *http.Request) {
+var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) {
 	switch methodName { {{.Cases}}
 	default:
 		resp.Write([]byte(fmt.Sprintf("No such grpc method[%s]", methodName)))
@@ -152,7 +208,7 @@ var Switcher = func(methodName string, resp http.ResponseWriter, req *http.Reque
 }
 `
 
-var cases string = `
+var grpcCases string = `
 	case "{{.MethodName}}":
 		request := {{.MethodName}}Request{}
 		theType := reflect.TypeOf(request)
@@ -164,7 +220,7 @@ var cases string = `
 			if !ok || len(v) <= 0 {
 				continue
 			}
-			err := turbo.SetValue(theValue, fieldName, v[0])
+			err := turbo.SetValue(theValue.FieldByName(fieldName), v[0])
 			if err != nil {
 				resp.Write([]byte(err.Error() + "\n"))
 				return
@@ -182,8 +238,92 @@ var cases string = `
 		}`
 
 func GenerateProtobufStub() {
-	nameLower := strings.ToLower(configs[SERVICE_NAME])
+	nameLower := strings.ToLower(configs[GRPC_SERVICE_NAME])
 	cmd := "protoc -I " + serviceRootPath + " " + serviceRootPath + "/" + nameLower + ".proto --go_out=plugins=grpc:" + serviceRootPath + "/gen"
+	excuteCmd("bash", "-c", cmd)
+}
+
+func GenerateThriftSwitcher() {
+	var casesStr string
+	methodNames := make(map[string]int)
+	for _, v := range UrlServiceMap {
+		methodNames[v[2]] = 0
+	}
+	for v := range methodNames {
+		tmpl, err := template.New("cases").Parse(thriftCases)
+		if err != nil {
+			panic(err)
+		}
+		var casesBuf bytes.Buffer
+		err = tmpl.Execute(&casesBuf, method{configs[THRIFT_SERVICE_NAME], v})
+		casesStr = casesStr + casesBuf.String()
+	}
+	tmpl, err := template.New("switcher").Parse(thriftSwitcherFunc)
+	if err != nil {
+		panic(err)
+	}
+	if _, err := os.Stat(serviceRootPath + "/gen"); os.IsNotExist(err) {
+		os.Mkdir(serviceRootPath+"/gen", 0755)
+	}
+	f, _ := os.Create(serviceRootPath + "/gen/thriftswitcher.go")
+	err = tmpl.Execute(f, handlerContent{Cases: casesStr, PkgPath: servicePkgPath})
+	if err != nil {
+		panic(err)
+	}
+}
+
+var thriftSwitcherFunc string = `package gen
+
+import (
+	"{{.PkgPath}}/gen/gen-go/gen"
+	"reflect"
+	"net/http"
+	"turbo"
+	"fmt"
+)
+
+/*
+this is a generated file, DO NOT EDIT!
+ */
+var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) {
+	switch methodName { {{.Cases}}
+	default:
+		resp.Write([]byte(fmt.Sprintf("No such grpc method[%s]", methodName)))
+	}
+}
+`
+
+var thriftCases string = `
+	case "{{.MethodName}}":
+		args := gen.{{.ServiceName}}{{.MethodName}}Args{}
+		argsType := reflect.TypeOf(args)
+		argsValue := reflect.ValueOf(args)
+		fieldNum := argsType.NumField()
+		params := make([]reflect.Value, fieldNum)
+		for i := 0; i < fieldNum; i++ {
+			fieldName := argsType.Field(i).Name
+			v, ok := req.Form[turbo.ToSnakeCase(fieldName)]
+			if !ok || len(v) <= 0 {
+				v = []string{""}
+			}
+			value, err := turbo.ReflectValue(argsValue.FieldByName(fieldName), v[0])
+			if err != nil {
+				resp.Write([]byte("\n"))
+				return
+			}
+			params[i] = value
+		}
+		result := reflect.ValueOf(turbo.ThriftService().(*gen.{{.ServiceName}}Client)).MethodByName(methodName).Call(params)
+		rsp := result[0].Interface().(*gen.{{.MethodName}}Response)
+		if result[1].Interface() == nil {
+			resp.Write([]byte(rsp.String() + "\n"))
+		} else {
+			resp.Write([]byte(result[1].Interface().(error).Error() + "\n"))
+		}`
+
+func GenerateThriftStub() {
+	nameLower := strings.ToLower(configs[THRIFT_SERVICE_NAME])
+	cmd := "thrift -r --gen go -o" + " " + serviceRootPath + "/" + "gen " + serviceRootPath + "/" + nameLower + ".thrift"
 	excuteCmd("bash", "-c", cmd)
 }
 
@@ -197,14 +337,14 @@ func excuteCmd(cmd string, args ...string) {
 	}
 }
 
-func generateServiceMain() {
-	nameLower := strings.ToLower(configs[SERVICE_NAME])
+func generateGrpcServiceMain() {
+	nameLower := strings.ToLower(configs[GRPC_SERVICE_NAME])
 	tmpl, err := template.New("main").Parse(serviceMain)
 	if err != nil {
 		panic(err)
 	}
-	f, _ := os.Create(serviceRootPath + "/service/" + nameLower + ".go")
-	err = tmpl.Execute(f, serviceMainValues{PkgPath: servicePkgPath, Port: "50051", ServiceName: configs[SERVICE_NAME]})
+	f, _ := os.Create(serviceRootPath + "/grpcservice/" + nameLower + ".go")
+	err = tmpl.Execute(f, serviceMainValues{PkgPath: servicePkgPath, Port: "50051", ServiceName: configs[GRPC_SERVICE_NAME]})
 	if err != nil {
 		panic(err)
 	}
@@ -222,7 +362,7 @@ import (
 	"net"
 	"log"
 	"google.golang.org/grpc"
-	"{{.PkgPath}}/service/impl"
+	"{{.PkgPath}}/grpcservice/impl"
 	"{{.PkgPath}}/gen"
 	"google.golang.org/grpc/reflection"
 )
@@ -242,14 +382,56 @@ func main() {
 }
 `
 
-func generateServiceImpl() {
-	nameLower := strings.ToLower(configs[SERVICE_NAME])
+func generateThriftServiceMain() {
+	nameLower := strings.ToLower(configs[THRIFT_SERVICE_NAME])
+	tmpl, err := template.New("main").Parse(thriftServiceMain)
+	if err != nil {
+		panic(err)
+	}
+	f, _ := os.Create(serviceRootPath + "/thriftservice/" + nameLower + ".go")
+	err = tmpl.Execute(f, thriftServiceMainValues{PkgPath: servicePkgPath, Port: "50052", ServiceName: configs[THRIFT_SERVICE_NAME]})
+	if err != nil {
+		panic(err)
+	}
+}
+
+type thriftServiceMainValues struct {
+	PkgPath     string
+	Port        string
+	ServiceName string
+}
+
+var thriftServiceMain string = `package main
+
+import (
+	"{{.PkgPath}}/thriftservice/impl"
+	"{{.PkgPath}}/gen/gen-go/gen"
+	"git.apache.org/thrift.git/lib/go/thrift"
+	"log"
+	"os"
+)
+
+func main() {
+	transport, err := thrift.NewTServerSocket(":{{.Port}}")
+	if err != nil {
+		log.Println("socket error")
+		os.Exit(1)
+	}
+
+	server := thrift.NewTSimpleServer4(gen.New{{.ServiceName}}Processor(impl.{{.ServiceName}}{}), transport,
+		thrift.NewTTransportFactory(),thrift.NewTBinaryProtocolFactoryDefault())
+	server.Serve()
+}
+`
+
+func generateGrpcServiceImpl() {
+	nameLower := strings.ToLower(configs[GRPC_SERVICE_NAME])
 	tmpl, err := template.New("impl").Parse(serviceImpl)
 	if err != nil {
 		panic(err)
 	}
-	f, _ := os.Create(serviceRootPath + "/service/impl/" + nameLower + "impl.go")
-	err = tmpl.Execute(f, serviceImplValues{PkgPath: servicePkgPath, ServiceName: configs[SERVICE_NAME]})
+	f, _ := os.Create(serviceRootPath + "/grpcservice/impl/" + nameLower + "impl.go")
+	err = tmpl.Execute(f, serviceImplValues{PkgPath: servicePkgPath, ServiceName: configs[GRPC_SERVICE_NAME]})
 	if err != nil {
 		panic(err)
 	}
@@ -271,18 +453,50 @@ type {{.ServiceName}} struct {
 }
 
 func (s *{{.ServiceName}}) SayHello(ctx context.Context, req *gen.SayHelloRequest) (*gen.SayHelloResponse, error) {
-	return &gen.SayHelloResponse{Message: "Hello, " + req.YourName}, nil
+	return &gen.SayHelloResponse{Message: "[grpc server]Hello, " + req.YourName}, nil
 }
 `
 
-func generateHTTPMain() {
-	nameLower := strings.ToLower(configs[SERVICE_NAME])
+func generateThriftServiceImpl() {
+	nameLower := strings.ToLower(configs[THRIFT_SERVICE_NAME])
+	tmpl, err := template.New("impl").Parse(thriftServiceImpl)
+	if err != nil {
+		panic(err)
+	}
+	f, _ := os.Create(serviceRootPath + "/thriftservice/impl/" + nameLower + "impl.go")
+	err = tmpl.Execute(f, thriftServiceImplValues{PkgPath: servicePkgPath, ServiceName: configs[THRIFT_SERVICE_NAME]})
+	if err != nil {
+		panic(err)
+	}
+}
+
+type thriftServiceImplValues struct {
+	PkgPath     string
+	ServiceName string
+}
+
+var thriftServiceImpl string = `package impl
+
+import (
+	"{{.PkgPath}}/gen/gen-go/gen"
+)
+
+type {{.ServiceName}} struct {
+}
+
+func (s {{.ServiceName}}) SayHello(yourName string) (r *gen.SayHelloResponse, err error) {
+	return &gen.SayHelloResponse{Message: "[thrift server]Hello, " + yourName}, nil
+}
+`
+
+func generateGrpcHTTPMain() {
+	nameLower := strings.ToLower(configs[GRPC_SERVICE_NAME])
 	tmpl, err := template.New("httpmain").Parse(_HTTPMain)
 	if err != nil {
 		panic(err)
 	}
-	f, _ := os.Create(serviceRootPath + "/" + nameLower + "api.go")
-	err = tmpl.Execute(f, _HTTPMainValues{ServiceName: configs[SERVICE_NAME], PkgPath: servicePkgPath})
+	f, _ := os.Create(serviceRootPath + "/grpcapi/" + nameLower + "api.go")
+	err = tmpl.Execute(f, _HTTPMainValues{ServiceName: configs[GRPC_SERVICE_NAME], PkgPath: servicePkgPath})
 	if err != nil {
 		panic(err)
 	}
@@ -302,10 +516,41 @@ import (
 )
 
 func main() {
-	turbo.StartGrpcHTTPServer("{{.PkgPath}}", grpcClient, gen.Switcher)
+	turbo.StartGrpcHTTPServer("{{.PkgPath}}", grpcClient, gen.GrpcSwitcher)
 }
 
 func grpcClient(conn *grpc.ClientConn) interface{} {
 	return gen.New{{.ServiceName}}Client(conn)
+}
+`
+
+func generateThriftHTTPMain() {
+	nameLower := strings.ToLower(configs[THRIFT_SERVICE_NAME])
+	tmpl, err := template.New("httpmain").Parse(thriftHTTPMain)
+	if err != nil {
+		panic(err)
+	}
+	f, _ := os.Create(serviceRootPath + "/thriftapi/" + nameLower + "api.go")
+	err = tmpl.Execute(f, _HTTPMainValues{ServiceName: configs[THRIFT_SERVICE_NAME], PkgPath: servicePkgPath})
+	if err != nil {
+		panic(err)
+	}
+}
+
+var thriftHTTPMain string = `package main
+
+import (
+	"turbo"
+	"{{.PkgPath}}/gen"
+	t "{{.PkgPath}}/gen/gen-go/gen"
+	"git.apache.org/thrift.git/lib/go/thrift"
+)
+
+func main() {
+	turbo.StartThriftHTTPServer("{{.PkgPath}}", thriftClient, gen.ThriftSwitcher)
+}
+
+func thriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) interface{} {
+	return t.New{{.ServiceName}}ClientFactory(trans, f)
 }
 `

@@ -4,7 +4,7 @@ import (
 	"net"
 	"log"
 	"google.golang.org/grpc"
-	"turbo/example/yourservice/service/impl"
+	"turbo/example/yourservice/grpcservice/impl"
 	"turbo/example/yourservice/gen"
 	"google.golang.org/grpc/reflection"
 )

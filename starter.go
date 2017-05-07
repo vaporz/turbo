@@ -2,6 +2,7 @@ package turbo
 
 import (
 	"fmt"
+	"git.apache.org/thrift.git/lib/go/thrift"
 	"google.golang.org/grpc"
 	"net/http"
 	"os"
@@ -12,8 +13,24 @@ import (
 func StartGrpcHTTPServer(pkgPath string, clientCreator func(conn *grpc.ClientConn) interface{}, switcher func(string, http.ResponseWriter, *http.Request)) {
 	initPkgPath(pkgPath)
 	LoadServiceConfig()
-	initGrpcConnection(clientCreator)
-	defer closeGrpcConnection()
+	err := initGrpcService(clientCreator)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	defer closeGrpcService()
+	startHTTPServer(configs[PORT], router(switcher))
+}
+
+func StartThriftHTTPServer(pkgPath string, clientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}, switcher func(string, http.ResponseWriter, *http.Request)) {
+	initPkgPath(pkgPath)
+	LoadServiceConfig()
+	err := initThriftService(clientCreator)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	defer closeThriftService()
 	startHTTPServer(configs[PORT], router(switcher))
 }
 

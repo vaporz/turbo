@@ -10,7 +10,7 @@ import (
 /*
 this is a generated file, DO NOT EDIT!
  */
-var Switcher = func(methodName string, resp http.ResponseWriter, req *http.Request) {
+var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) {
 	switch methodName { 
 	case "SayHello":
 		request := SayHelloRequest{}
@@ -23,7 +23,7 @@ var Switcher = func(methodName string, resp http.ResponseWriter, req *http.Reque
 			if !ok || len(v) <= 0 {
 				continue
 			}
-			err := turbo.SetValue(theValue, fieldName, v[0])
+			err := turbo.SetValue(theValue.FieldByName(fieldName), v[0])
 			if err != nil {
 				resp.Write([]byte(err.Error() + "\n"))
 				return
@@ -50,7 +50,7 @@ var Switcher = func(methodName string, resp http.ResponseWriter, req *http.Reque
 			if !ok || len(v) <= 0 {
 				continue
 			}
-			err := turbo.SetValue(theValue, fieldName, v[0])
+			err := turbo.SetValue(theValue.FieldByName(fieldName), v[0])
 			if err != nil {
 				resp.Write([]byte(err.Error() + "\n"))
 				return

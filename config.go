@@ -9,8 +9,10 @@ import (
 	"strings"
 )
 
-const SERVICE_NAME string = "service_name"
-const SERVICE_ADDRESS string = "service_address"
+const GRPC_SERVICE_NAME string = "grpc_service_name"
+const GRPC_SERVICE_ADDRESS string = "grpc_service_address"
+const THRIFT_SERVICE_NAME string = "thrift_service_name"
+const THRIFT_SERVICE_ADDRESS string = "thrift_service_address"
 const PORT string = "port"
 
 var config yaml.File

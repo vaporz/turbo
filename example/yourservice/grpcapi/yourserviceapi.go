@@ -6,8 +6,8 @@ import (
 	"turbo/example/yourservice/gen"
 	i "turbo/example/yourservice/interceptor"
 	"net/http"
-	"errors"
 	"strconv"
+	"errors"
 )
 
 func main() {
@@ -17,7 +17,7 @@ func main() {
 	turbo.Intercept([]string{}, "/a/", i.LogInterceptor{Msg: "path interceptor"})
 	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", checkNum)
 	turbo.SetHijacker("/eat_apple/{num:[0-9]+}", hijackEatApple)
-	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.Switcher)
+	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.GrpcSwitcher)
 }
 
 func grpcClient(conn *grpc.ClientConn) interface{} {

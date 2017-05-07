@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	client      = new(grpcClient)
+	gClient     = new(grpcClient)
 	grpcService interface{}
 )
 
@@ -28,20 +28,21 @@ func (g *grpcClient) close() error {
 	return g.conn.Close()
 }
 
-func initGrpcConnection(clientCreator func(conn *grpc.ClientConn) interface{}) error {
+func initGrpcService(clientCreator func(conn *grpc.ClientConn) interface{}) error {
 	// TODO support multiple grpc clients
-	// TODO support service discovery
+	// TODO support grpcservice discovery
 	if grpcService != nil {
 		return nil
 	}
-	if err := client.dial(configs[SERVICE_ADDRESS]); err == nil {
-		grpcService = clientCreator(client.conn)
+	err := gClient.dial(configs[GRPC_SERVICE_ADDRESS])
+	if err == nil {
+		grpcService = clientCreator(gClient.conn)
 	}
-	return nil
+	return err
 }
 
-func closeGrpcConnection() error {
-	return client.close()
+func closeGrpcService() error {
+	return gClient.close()
 }
 
 func GrpcService() interface{} {
