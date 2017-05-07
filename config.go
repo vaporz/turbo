@@ -85,10 +85,7 @@ func appendUrlServiceMap(line string) {
 	UrlServiceMap = append(UrlServiceMap, [3]string{HTTPMethod, url, methodName})
 }
 
-type emptyHandler struct{}
-
-func (e emptyHandler) ServeHTTP(http.ResponseWriter, *http.Request) {}
-
+// -------Interceptor---------
 type Interceptor interface {
 	Before(http.ResponseWriter, *http.Request) error
 	After(http.ResponseWriter, *http.Request) error
@@ -116,68 +113,64 @@ func CommonInterceptors() []Interceptor {
 
 var interceptorMap *mux.Router = mux.NewRouter()
 
-type interceptorList struct {
-	emptyHandler
-	interceptors []Interceptor
-}
+type interceptorList []Interceptor
+
+func (i interceptorList) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
 func Intercept(methods []string, urlPattern string, list ...Interceptor) {
 	var route *mux.Route
 	if strings.HasSuffix(urlPattern, "/") {
-		route = interceptorMap.PathPrefix(urlPattern).Handler(&interceptorList{interceptors: list})
+		route = interceptorMap.PathPrefix(urlPattern).Handler(interceptorList(list))
 	} else {
-		route = interceptorMap.Handle(urlPattern, &interceptorList{interceptors: list})
+		route = interceptorMap.Handle(urlPattern, interceptorList(list))
 	}
 	if len(methods) > 0 {
 		route.Methods(methods...)
 	}
 }
 
-func Interceptors(req *http.Request) []Interceptor {
+func Interceptors(req *http.Request) interceptorList {
 	var m mux.RouteMatch
 	if interceptorMap.Match(req, &m) {
-		list, _ := m.Handler.(*interceptorList)
-		return list.interceptors
+		return m.Handler.(interceptorList)
 	}
 	return []Interceptor{}
 }
 
+// -------PreProcessor---------
 var preprocessorMap *mux.Router = mux.NewRouter()
 
-type preprocessor struct {
-	emptyHandler
-	value func(http.ResponseWriter, *http.Request) error
-}
+type preprocessor func(http.ResponseWriter, *http.Request) error
+
+func (p preprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
 func SetPreprocessor(urlPattern string, pre func(http.ResponseWriter, *http.Request) error) {
-	preprocessorMap.Handle(urlPattern, &preprocessor{value: pre})
+	preprocessorMap.Handle(urlPattern, preprocessor(pre))
 }
 
 func Preprocessor(req *http.Request) func(http.ResponseWriter, *http.Request) error {
 	var m mux.RouteMatch
 	if preprocessorMap.Match(req, &m) {
-		p, _ := m.Handler.(*preprocessor)
-		return p.value
+		return m.Handler.(preprocessor)
 	}
 	return nil
 }
 
+// -------Hijacker---------
 var hijackerMap *mux.Router = mux.NewRouter()
 
-type hijacker struct {
-	emptyHandler
-	value func(http.ResponseWriter, *http.Request)
-}
+type hijacker func(http.ResponseWriter, *http.Request)
+
+func (h hijacker) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
 func SetHijacker(urlPattern string, h func(http.ResponseWriter, *http.Request)) {
-	hijackerMap.Handle(urlPattern, &hijacker{value: h})
+	hijackerMap.Handle(urlPattern, hijacker(h))
 }
 
 func Hijacker(req *http.Request) func(http.ResponseWriter, *http.Request) {
 	var m mux.RouteMatch
 	if hijackerMap.Match(req, &m) {
-		h, _ := m.Handler.(*hijacker)
-		return h.value
+		return m.Handler.(hijacker)
 	}
 	return nil
 }

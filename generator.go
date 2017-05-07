@@ -15,12 +15,12 @@ func CreateProject(pkgPath, serviceName, serverType string) {
 	LoadServiceConfig()
 	if serverType == "grpc" {
 		CreateGrpcProject(serviceName)
-	}else if serverType == "thrift" {
+	} else if serverType == "thrift" {
 		CreateThriftProject(serviceName)
 	}
 }
 
-func CreateGrpcProject(serviceName string){
+func CreateGrpcProject(serviceName string) {
 	createGrpcFolders()
 	createProto(serviceName)
 	GenerateGrpcSwitcher()
@@ -30,7 +30,7 @@ func CreateGrpcProject(serviceName string){
 	generateGrpcHTTPMain()
 }
 
-func CreateThriftProject(serviceName string){
+func CreateThriftProject(serviceName string) {
 	createThriftFolders()
 	createThrift(serviceName)
 	GenerateThriftSwitcher()
