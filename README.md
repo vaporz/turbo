@@ -1,5 +1,4 @@
 # Turbo
-// TODO README outdated, to be updated.
 ## Features
  * Turbo generates a reverse-proxy server which translates a HTTP request into a grpc request.
  * [Interceptor](#interceptor).
