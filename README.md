@@ -8,6 +8,14 @@
 ## Create a service on the fly
 ### 0, Before the start
 Obviously, you have to install [Golang](https://golang.org) and [Protocol buffers](https://developers.google.com/protocol-buffers/) first.
+
+### 0, Install required packages
+```sh
+go get github.com/kylelemons/go-gypsy/yaml
+go get github.com/gorilla/mux
+go get google.golang.org/grpc
+```
+
 ### 1, Install Turbo
 ```sh
 git clone https://github.com/vaporz/turbo.git
