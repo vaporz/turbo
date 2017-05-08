@@ -8,8 +8,7 @@
 ## Create a service on the fly
 ### 0, Before the start
 Obviously, you have to install [Golang](https://golang.org) and [Protocol buffers](https://developers.google.com/protocol-buffers/) first.
-
-### 0, Install required packages
+And install required packages.
 ```sh
 go get github.com/kylelemons/go-gypsy/yaml
 go get github.com/gorilla/mux
