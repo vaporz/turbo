@@ -18,7 +18,7 @@ go install
 
 ### 2, Create your service
 ```sh
-$ turbo create package/path/to/yourservice YourService
+$ turbo create package/path/to/yourservice YourService grpc
 ```
 Directory "$GOPATH/src/package/path/to/yourservice" should appear.<br>
 There're also some codes in this folder, similar with this example:<br>
@@ -54,8 +54,8 @@ There are some rules when you use turbo.
  e.g. In a request like "GET /book?ID=1234", turbo will see this query string as "id=1234".
 
 ## Command line tools
-### turbo create [package_name] [service_name]
-'turbo create' creates a project with runnable HTTP server and gRPC server.<br>
+### turbo create [package_name] [service_name] (grpc/thrift)
+'turbo create' creates a project with runnable HTTP server and gRPC/Thrift server.<br>
 Project structure:
 ```sh
 yourservice
@@ -70,7 +70,7 @@ yourservice
 ├── yourservice.proto
 └── yourserviceapi.go
 ```
-### turbo generate [package_name]
+### turbo generate [package_name]  (grpc/thrift)
 'turbo generate' generates switcher.go and [service_name].pb.go to 'gen' directory.<br>
 This command is useful when either service.yaml or [service_name].proto is changed.<br>
 For example, add a new API, change an existing API, change url-grpc mapping, etc.
@@ -128,7 +128,6 @@ Interceptors can be assigned to
  * 3, One URL
  * 4, One URL on HTTP methods
 
-// TODO 注册时，如果path以“／”结尾则表示拦截整个路径下的所有url
 The more precise it is, the higher priority it has.<br>
 If interceptor A is assigned to URL '/abc' on HTTP method "GET", and interceptor B is assigned to all URLs,
  then A is executed when "GET /abc", and B is executed when "POST /abc".

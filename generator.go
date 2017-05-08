@@ -41,20 +41,17 @@ func CreateThriftProject(serviceName string) {
 }
 
 func createRootFolder() {
-	os.Mkdir(serviceRootPath, 0755)
-	os.Mkdir(serviceRootPath+"/gen", 0755)
+	os.MkdirAll(serviceRootPath+"/gen", 0755)
 }
 
 func createGrpcFolders() {
-	os.Mkdir(serviceRootPath+"/grpcapi", 0755)
-	os.Mkdir(serviceRootPath+"/grpcservice", 0755)
-	os.Mkdir(serviceRootPath+"/grpcservice/impl", 0755)
+	os.MkdirAll(serviceRootPath+"/grpcapi", 0755)
+	os.MkdirAll(serviceRootPath+"/grpcservice/impl", 0755)
 }
 
 func createThriftFolders() {
-	os.Mkdir(serviceRootPath+"/thriftapi", 0755)
-	os.Mkdir(serviceRootPath+"/thriftservice", 0755)
-	os.Mkdir(serviceRootPath+"/thriftservice/impl", 0755)
+	os.MkdirAll(serviceRootPath+"/thriftapi", 0755)
+	os.MkdirAll(serviceRootPath+"/thriftservice/impl", 0755)
 }
 
 func createServiceYaml(serviceName string) {
