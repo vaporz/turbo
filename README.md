@@ -1,5 +1,4 @@
 # Turbo
-// TODO README outdated, to be updated.
 ## Features
  * Turbo generates a reverse-proxy server which translates a HTTP request into a grpc request.
  * [Interceptor](#interceptor).
@@ -9,6 +8,13 @@
 ## Create a service on the fly
 ### 0, Before the start
 Obviously, you have to install [Golang](https://golang.org) and [Protocol buffers](https://developers.google.com/protocol-buffers/) first.
+And install required packages.
+```sh
+go get github.com/kylelemons/go-gypsy/yaml
+go get github.com/gorilla/mux
+go get google.golang.org/grpc
+```
+
 ### 1, Install Turbo
 ```sh
 git clone https://github.com/vaporz/turbo.git
