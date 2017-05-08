@@ -219,7 +219,7 @@ var grpcCases string = `
 			}
 			err := turbo.SetValue(theValue.FieldByName(fieldName), v[0])
 			if err != nil {
-				resp.Write([]byte(err.Error() + "\n"))
+				resp.Write([]byte(err.Error()))
 				return
 			}
 		}
@@ -229,9 +229,9 @@ var grpcCases string = `
 		result := reflect.ValueOf(turbo.GrpcService().({{.ServiceName}}Client)).MethodByName(methodName).Call(params)
 		rsp := result[0].Interface().(*{{.MethodName}}Response)
 		if result[1].Interface() == nil {
-			resp.Write([]byte(rsp.String() + "\n"))
+			resp.Write([]byte(rsp.String()))
 		} else {
-			resp.Write([]byte(result[1].Interface().(error).Error() + "\n"))
+			resp.Write([]byte(result[1].Interface().(error).Error()))
 		}`
 
 func GenerateProtobufStub() {
@@ -305,7 +305,7 @@ var thriftCases string = `
 			}
 			value, err := turbo.ReflectValue(argsValue.FieldByName(fieldName), v[0])
 			if err != nil {
-				resp.Write([]byte("\n"))
+				resp.Write([]byte(err.Error()))
 				return
 			}
 			params[i] = value
@@ -313,9 +313,9 @@ var thriftCases string = `
 		result := reflect.ValueOf(turbo.ThriftService().(*gen.{{.ServiceName}}Client)).MethodByName(methodName).Call(params)
 		rsp := result[0].Interface().(*gen.{{.MethodName}}Response)
 		if result[1].Interface() == nil {
-			resp.Write([]byte(rsp.String() + "\n"))
+			resp.Write([]byte(rsp.String()))
 		} else {
-			resp.Write([]byte(result[1].Interface().(error).Error() + "\n"))
+			resp.Write([]byte(result[1].Interface().(error).Error()))
 		}`
 
 func GenerateThriftStub() {

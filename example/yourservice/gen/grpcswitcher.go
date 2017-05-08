@@ -25,7 +25,7 @@ var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.R
 			}
 			err := turbo.SetValue(theValue.FieldByName(fieldName), v[0])
 			if err != nil {
-				resp.Write([]byte(err.Error() + "\n"))
+				resp.Write([]byte(err.Error()))
 				return
 			}
 		}
@@ -35,9 +35,9 @@ var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.R
 		result := reflect.ValueOf(turbo.GrpcService().(YourServiceClient)).MethodByName(methodName).Call(params)
 		rsp := result[0].Interface().(*SayHelloResponse)
 		if result[1].Interface() == nil {
-			resp.Write([]byte(rsp.String() + "\n"))
+			resp.Write([]byte(rsp.String()))
 		} else {
-			resp.Write([]byte(result[1].Interface().(error).Error() + "\n"))
+			resp.Write([]byte(result[1].Interface().(error).Error()))
 		}
 	case "EatApple":
 		request := EatAppleRequest{}
@@ -52,7 +52,7 @@ var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.R
 			}
 			err := turbo.SetValue(theValue.FieldByName(fieldName), v[0])
 			if err != nil {
-				resp.Write([]byte(err.Error() + "\n"))
+				resp.Write([]byte(err.Error()))
 				return
 			}
 		}
@@ -62,9 +62,9 @@ var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.R
 		result := reflect.ValueOf(turbo.GrpcService().(YourServiceClient)).MethodByName(methodName).Call(params)
 		rsp := result[0].Interface().(*EatAppleResponse)
 		if result[1].Interface() == nil {
-			resp.Write([]byte(rsp.String() + "\n"))
+			resp.Write([]byte(rsp.String()))
 		} else {
-			resp.Write([]byte(result[1].Interface().(error).Error() + "\n"))
+			resp.Write([]byte(result[1].Interface().(error).Error()))
 		}
 	default:
 		resp.Write([]byte(fmt.Sprintf("No such grpc method[%s]", methodName)))

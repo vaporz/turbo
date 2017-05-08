@@ -22,7 +22,7 @@ var generateCmd = &cobra.Command{
 			turbo.GenerateThriftSwitcher()
 			turbo.GenerateThriftStub()
 		}
-		return nil
+		return errors.New("Usage: generate [package_path] (grpc|thrift)")
 	},
 }
 

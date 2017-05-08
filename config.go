@@ -144,11 +144,11 @@ type preprocessor func(http.ResponseWriter, *http.Request) error
 
 func (p preprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
-func SetPreprocessor(urlPattern string, pre func(http.ResponseWriter, *http.Request) error) {
-	preprocessorMap.Handle(urlPattern, preprocessor(pre))
+func SetPreprocessor(urlPattern string, pre preprocessor) {
+	preprocessorMap.Handle(urlPattern, pre)
 }
 
-func Preprocessor(req *http.Request) func(http.ResponseWriter, *http.Request) error {
+func Preprocessor(req *http.Request) preprocessor {
 	var m mux.RouteMatch
 	if preprocessorMap.Match(req, &m) {
 		return m.Handler.(preprocessor)
@@ -163,11 +163,11 @@ type hijacker func(http.ResponseWriter, *http.Request)
 
 func (h hijacker) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
-func SetHijacker(urlPattern string, h func(http.ResponseWriter, *http.Request)) {
-	hijackerMap.Handle(urlPattern, hijacker(h))
+func SetHijacker(urlPattern string, h hijacker) {
+	hijackerMap.Handle(urlPattern, h)
 }
 
-func Hijacker(req *http.Request) func(http.ResponseWriter, *http.Request) {
+func Hijacker(req *http.Request) hijacker {
 	var m mux.RouteMatch
 	if hijackerMap.Match(req, &m) {
 		return m.Handler.(hijacker)
