@@ -10,6 +10,7 @@ import (
 
 func CreateProject(pkgPath, serviceName, serverType string) {
 	InitPkgPath(pkgPath)
+	// TODO what if serviceName is start with a lower case character?
 	// TODO panic if root folder already exists
 	createRootFolder()
 	createServiceYaml(serviceName)
