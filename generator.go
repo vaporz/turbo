@@ -194,6 +194,7 @@ import (
 	"net/http"
 	"turbo"
 	"fmt"
+	"encoding/json"
 )
 
 /*
@@ -231,7 +232,12 @@ var grpcCases string = `
 		result := reflect.ValueOf(turbo.GrpcService().({{.ServiceName}}Client)).MethodByName(methodName).Call(params)
 		rsp := result[0].Interface().(*{{.MethodName}}Response)
 		if result[1].Interface() == nil {
-			resp.Write([]byte(rsp.String()))
+			jsonBytes, err := json.Marshal(rsp)
+			if err != nil {
+				resp.Write([]byte(result[1].Interface().(error).Error()))
+				return
+			}
+			resp.Write(jsonBytes)
 		} else {
 			resp.Write([]byte(result[1].Interface().(error).Error()))
 		}`
@@ -279,6 +285,7 @@ import (
 	"net/http"
 	"turbo"
 	"fmt"
+	"encoding/json"
 )
 
 /*
@@ -315,7 +322,12 @@ var thriftCases string = `
 		result := reflect.ValueOf(turbo.ThriftService().(*gen.{{.ServiceName}}Client)).MethodByName(methodName).Call(params)
 		rsp := result[0].Interface().(*gen.{{.MethodName}}Response)
 		if result[1].Interface() == nil {
-			resp.Write([]byte(rsp.String()))
+			jsonBytes, err := json.Marshal(rsp)
+			if err != nil {
+				resp.Write([]byte(result[1].Interface().(error).Error()))
+				return
+			}
+			resp.Write(jsonBytes)
 		} else {
 			resp.Write([]byte(result[1].Interface().(error).Error()))
 		}`

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"turbo"
 	"fmt"
+	"encoding/json"
 )
 
 /*
@@ -35,7 +36,12 @@ var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.R
 		result := reflect.ValueOf(turbo.GrpcService().(YourServiceClient)).MethodByName(methodName).Call(params)
 		rsp := result[0].Interface().(*SayHelloResponse)
 		if result[1].Interface() == nil {
-			resp.Write([]byte(rsp.String()))
+			jsonBytes, err := json.Marshal(rsp)
+			if err != nil {
+				resp.Write([]byte(result[1].Interface().(error).Error()))
+				return
+			}
+			resp.Write(jsonBytes)
 		} else {
 			resp.Write([]byte(result[1].Interface().(error).Error()))
 		}
@@ -62,7 +68,12 @@ var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.R
 		result := reflect.ValueOf(turbo.GrpcService().(YourServiceClient)).MethodByName(methodName).Call(params)
 		rsp := result[0].Interface().(*EatAppleResponse)
 		if result[1].Interface() == nil {
-			resp.Write([]byte(rsp.String()))
+			jsonBytes, err := json.Marshal(rsp)
+			if err != nil {
+				resp.Write([]byte(result[1].Interface().(error).Error()))
+				return
+			}
+			resp.Write(jsonBytes)
 		} else {
 			resp.Write([]byte(result[1].Interface().(error).Error()))
 		}

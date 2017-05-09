@@ -21,8 +21,10 @@ var generateCmd = &cobra.Command{
 		} else if args[1] == "thrift" {
 			turbo.GenerateThriftSwitcher()
 			turbo.GenerateThriftStub()
+		} else {
+			return errors.New("Invalid server type, should be (grpc|thrift)")
 		}
-		return errors.New("Usage: generate [package_path] (grpc|thrift)")
+		return nil
 	},
 }
 
