@@ -113,26 +113,26 @@ func CommonInterceptors() []Interceptor {
 
 var interceptorMap *mux.Router = mux.NewRouter()
 
-type interceptorList []Interceptor
+type interceptors []Interceptor
 
-func (i interceptorList) ServeHTTP(http.ResponseWriter, *http.Request) {}
+func (i interceptors) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
 func Intercept(methods []string, urlPattern string, list ...Interceptor) {
 	var route *mux.Route
 	if strings.HasSuffix(urlPattern, "/") {
-		route = interceptorMap.PathPrefix(urlPattern).Handler(interceptorList(list))
+		route = interceptorMap.PathPrefix(urlPattern).Handler(interceptors(list))
 	} else {
-		route = interceptorMap.Handle(urlPattern, interceptorList(list))
+		route = interceptorMap.Handle(urlPattern, interceptors(list))
 	}
 	if len(methods) > 0 {
 		route.Methods(methods...)
 	}
 }
 
-func Interceptors(req *http.Request) interceptorList {
+func Interceptors(req *http.Request) interceptors {
 	var m mux.RouteMatch
 	if interceptorMap.Match(req, &m) {
-		return m.Handler.(interceptorList)
+		return m.Handler.(interceptors)
 	}
 	return []Interceptor{}
 }

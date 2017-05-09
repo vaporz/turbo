@@ -10,16 +10,18 @@ import (
 	"strconv"
 )
 
-func router(switcherFunc func(methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)) *mux.Router {
-	switcher = switcherFunc
+type switcher func(methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
+
+var switcherFunc switcher
+
+func router(s switcher) *mux.Router {
+	switcherFunc = s
 	r := mux.NewRouter()
 	for _, v := range UrlServiceMap {
 		r.HandleFunc(v[1], handler(v[2])).Methods(v[0])
 	}
 	return r
 }
-
-var switcher func(methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
 
 var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
@@ -33,7 +35,7 @@ var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 		}
 		skipSwitch := doHijackerPreprocessor(resp, req)
 		if !skipSwitch {
-			serviceResp, err := switcher(methodName, resp, req)
+			serviceResp, err := switcherFunc(methodName, resp, req)
 			if err == nil {
 				doPostprocessor(resp, req, serviceResp)
 			} else {
