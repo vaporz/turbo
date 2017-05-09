@@ -30,6 +30,8 @@ var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 		}
 		skipSwitch := doHijackerPreprocessor(resp, req)
 		if !skipSwitch {
+			// TODO step 1, give a chance to customize output
+			// TODO step 2, user can define a struct, which defines how data is mapped from response to this struct, and how this struct is parsed into xml/json
 			switcher(methodName, resp, req)
 		}
 		err = doAfter(interceptors, resp, req)

@@ -10,6 +10,7 @@ import (
 
 func CreateProject(pkgPath, serviceName, serverType string) {
 	InitPkgPath(pkgPath)
+	// TODO panic if root folder already exists
 	createRootFolder()
 	createServiceYaml(serviceName)
 	LoadServiceConfig()
