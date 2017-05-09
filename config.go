@@ -156,6 +156,25 @@ func Preprocessor(req *http.Request) preprocessor {
 	return nil
 }
 
+// -------PostProcessor---------
+var postprocessorMap *mux.Router = mux.NewRouter()
+
+type postprocessor func(http.ResponseWriter, *http.Request)
+
+func (p postprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}
+
+func SetPostprocessor(urlPattern string, post postprocessor) {
+	postprocessorMap.Handle(urlPattern, post)
+}
+
+func Postprocessor(req *http.Request) postprocessor {
+	var m mux.RouteMatch
+	if postprocessorMap.Match(req, &m) {
+		return m.Handler.(postprocessor)
+	}
+	return nil
+}
+
 // -------Hijacker---------
 var hijackerMap *mux.Router = mux.NewRouter()
 

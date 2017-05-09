@@ -194,17 +194,18 @@ import (
 	"net/http"
 	"turbo"
 	"fmt"
-	"encoding/json"
+	"errors"
 )
 
 /*
 this is a generated file, DO NOT EDIT!
  */
-var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) {
+var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
 	switch methodName { {{.Cases}}
 	default:
 		resp.Write([]byte(fmt.Sprintf("No such grpc method[%s]", methodName)))
 	}
+	return nil, errors.New("Unknown methodName[" + methodName + "]")
 }
 `
 
@@ -222,24 +223,17 @@ var grpcCases string = `
 			}
 			err := turbo.SetValue(theValue.FieldByName(fieldName), v[0])
 			if err != nil {
-				resp.Write([]byte(err.Error()))
-				return
+				return nil, err
 			}
 		}
 		params := make([]reflect.Value, 2)
 		params[0] = reflect.ValueOf(req.Context())
 		params[1] = reflect.ValueOf(&request)
 		result := reflect.ValueOf(turbo.GrpcService().({{.ServiceName}}Client)).MethodByName(methodName).Call(params)
-		rsp := result[0].Interface().(*{{.MethodName}}Response)
 		if result[1].Interface() == nil {
-			jsonBytes, err := json.Marshal(rsp)
-			if err != nil {
-				resp.Write([]byte(result[1].Interface().(error).Error()))
-				return
-			}
-			resp.Write(jsonBytes)
+			return result[0].Interface(), nil
 		} else {
-			resp.Write([]byte(result[1].Interface().(error).Error()))
+			return nil, result[1].Interface().(error)
 		}`
 
 func GenerateProtobufStub() {
@@ -285,17 +279,18 @@ import (
 	"net/http"
 	"turbo"
 	"fmt"
-	"encoding/json"
+	"errors"
 )
 
 /*
 this is a generated file, DO NOT EDIT!
  */
-var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) {
+var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
 	switch methodName { {{.Cases}}
 	default:
 		resp.Write([]byte(fmt.Sprintf("No such grpc method[%s]", methodName)))
 	}
+	return nil, errors.New("Unknown methodName[" + methodName + "]")
 }
 `
 
@@ -314,22 +309,15 @@ var thriftCases string = `
 			}
 			value, err := turbo.ReflectValue(argsValue.FieldByName(fieldName), v[0])
 			if err != nil {
-				resp.Write([]byte(err.Error()))
-				return
+				return nil, err
 			}
 			params[i] = value
 		}
 		result := reflect.ValueOf(turbo.ThriftService().(*gen.{{.ServiceName}}Client)).MethodByName(methodName).Call(params)
-		rsp := result[0].Interface().(*gen.{{.MethodName}}Response)
 		if result[1].Interface() == nil {
-			jsonBytes, err := json.Marshal(rsp)
-			if err != nil {
-				resp.Write([]byte(result[1].Interface().(error).Error()))
-				return
-			}
-			resp.Write(jsonBytes)
+			return result[0].Interface(), nil
 		} else {
-			resp.Write([]byte(result[1].Interface().(error).Error()))
+			return nil, result[1].Interface().(error)
 		}`
 
 func GenerateThriftStub() {

@@ -1,6 +1,7 @@
 package turbo
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/gorilla/mux"
 	"log"
@@ -9,7 +10,7 @@ import (
 	"strconv"
 )
 
-func router(switcherFunc func(methodName string, resp http.ResponseWriter, req *http.Request)) *mux.Router {
+func router(switcherFunc func(methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)) *mux.Router {
 	switcher = switcherFunc
 	r := mux.NewRouter()
 	for _, v := range UrlServiceMap {
@@ -18,24 +19,31 @@ func router(switcherFunc func(methodName string, resp http.ResponseWriter, req *
 	return r
 }
 
-var switcher func(methodName string, resp http.ResponseWriter, req *http.Request)
+var switcher func(methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
 
 var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		ParseRequestForm(req)
 		interceptors := getInterceptors(req)
+		// TODO if N doBefore() run, then N doAfter should run too
 		err := doBefore(interceptors, resp, req)
 		if err != nil {
+			log.Println(err.Error())
 			return
 		}
 		skipSwitch := doHijackerPreprocessor(resp, req)
 		if !skipSwitch {
-			// TODO step 1, give a chance to customize output
-			// TODO step 2, user can define a struct, which defines how data is mapped from response to this struct, and how this struct is parsed into xml/json
-			switcher(methodName, resp, req)
+			serviceResp, err := switcher(methodName, resp, req)
+			if err == nil {
+				doPostprocessor(resp, req, serviceResp)
+			} else {
+				log.Println(err.Error())
+				// do not 'return' here, this is not a bug
+			}
 		}
 		err = doAfter(interceptors, resp, req)
 		if err != nil {
+			log.Println(err.Error())
 			return
 		}
 	}
@@ -65,12 +73,36 @@ func doHijackerPreprocessor(resp http.ResponseWriter, req *http.Request) bool {
 		hijack(resp, req)
 		// TODO warn if there are preprocessor
 		return true
-	} else if preprocessor := Preprocessor(req); preprocessor != nil {
-		if err := preprocessor(resp, req); err != nil {
+	} else if pre := Preprocessor(req); pre != nil {
+		if err := pre(resp, req); err != nil {
+			log.Println(err.Error())
 			return true
 		}
 	}
 	return false
+}
+
+func doPostprocessor(resp http.ResponseWriter, req *http.Request, serviceResponse interface{}) {
+	// 1, run postprocessor, if any
+	post := Postprocessor(req)
+	if post != nil {
+		post(resp, req)
+		return
+	}
+
+	// 2, parse serviceResponse with registered struct
+	//if user defined struct registerd {
+	// TODO user can define a struct, which defines how data is mapped
+	// from response to this struct, and how this struct is parsed into xml/json
+	// return
+	//}
+
+	//3, return as json
+	jsonBytes, err := json.Marshal(serviceResponse)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	resp.Write(jsonBytes)
 }
 
 func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Request) error {

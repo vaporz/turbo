@@ -14,6 +14,6 @@ func (s *YourService) SayHello(ctx context.Context, req *gen.SayHelloRequest) (*
 }
 
 func (s *YourService) EatApple(ctx context.Context, req *gen.EatAppleRequest) (*gen.EatAppleResponse, error) {
-	msg := fmt.Sprintf("[thrift server]Good taste! Apple num=%d, string=%s, bool=%t", req.Num, req.StringValue, req.BoolValue)
+	msg := fmt.Sprintf("[grpc server]Good taste! Apple num=%d, string=%s, bool=%t", req.Num, req.StringValue, req.BoolValue)
 	return &gen.EatAppleResponse{Message: msg}, nil
 }

@@ -5,13 +5,13 @@ import (
 	"net/http"
 	"turbo"
 	"fmt"
-	"encoding/json"
+	"errors"
 )
 
 /*
 this is a generated file, DO NOT EDIT!
  */
-var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) {
+var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
 	switch methodName { 
 	case "SayHello":
 		request := SayHelloRequest{}
@@ -26,24 +26,17 @@ var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.R
 			}
 			err := turbo.SetValue(theValue.FieldByName(fieldName), v[0])
 			if err != nil {
-				resp.Write([]byte(err.Error()))
-				return
+				return nil, err
 			}
 		}
 		params := make([]reflect.Value, 2)
 		params[0] = reflect.ValueOf(req.Context())
 		params[1] = reflect.ValueOf(&request)
 		result := reflect.ValueOf(turbo.GrpcService().(YourServiceClient)).MethodByName(methodName).Call(params)
-		rsp := result[0].Interface().(*SayHelloResponse)
 		if result[1].Interface() == nil {
-			jsonBytes, err := json.Marshal(rsp)
-			if err != nil {
-				resp.Write([]byte(result[1].Interface().(error).Error()))
-				return
-			}
-			resp.Write(jsonBytes)
+			return result[0].Interface(), nil
 		} else {
-			resp.Write([]byte(result[1].Interface().(error).Error()))
+			return nil, result[1].Interface().(error)
 		}
 	case "EatApple":
 		request := EatAppleRequest{}
@@ -58,26 +51,20 @@ var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.R
 			}
 			err := turbo.SetValue(theValue.FieldByName(fieldName), v[0])
 			if err != nil {
-				resp.Write([]byte(err.Error()))
-				return
+				return nil, err
 			}
 		}
 		params := make([]reflect.Value, 2)
 		params[0] = reflect.ValueOf(req.Context())
 		params[1] = reflect.ValueOf(&request)
 		result := reflect.ValueOf(turbo.GrpcService().(YourServiceClient)).MethodByName(methodName).Call(params)
-		rsp := result[0].Interface().(*EatAppleResponse)
 		if result[1].Interface() == nil {
-			jsonBytes, err := json.Marshal(rsp)
-			if err != nil {
-				resp.Write([]byte(result[1].Interface().(error).Error()))
-				return
-			}
-			resp.Write(jsonBytes)
+			return result[0].Interface(), nil
 		} else {
-			resp.Write([]byte(result[1].Interface().(error).Error()))
+			return nil, result[1].Interface().(error)
 		}
 	default:
 		resp.Write([]byte(fmt.Sprintf("No such grpc method[%s]", methodName)))
 	}
+	return nil, errors.New("Unknown methodName[" + methodName + "]")
 }
