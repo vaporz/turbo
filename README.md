@@ -12,11 +12,12 @@
 Obviously, you have to install [Golang](https://golang.org) and [Protocol buffers](https://developers.google.com/protocol-buffers/) first.<br>
 And install required packages.
 ```sh
-go get github.com/vaporz/turbo
 go get github.com/kylelemons/go-gypsy/yaml
 go get github.com/gorilla/mux
 go get google.golang.org/grpc
 go get git.apache.org/thrift.git/lib/go/thrift
+go get github.com/spf13/cobra
+go get github.com/spf13/viper
 ```
 
 ### 1, Install Turbo command line tools
@@ -148,7 +149,7 @@ Edit "yourservice/interceptor/log.go":
 package interceptor
 
 import (
-	"github.com/vaporz/turbo"
+	"turbo"
 	"log"
 	"net/http"
 )

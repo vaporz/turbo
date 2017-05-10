@@ -1,7 +1,7 @@
 package impl
 
 import (
-	"github.com/vaporz/turbo/example/yourservice/gen/gen-go/gen"
+	"turbo/example/yourservice/gen/gen-go/gen"
 	"fmt"
 )
 

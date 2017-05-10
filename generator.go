@@ -192,7 +192,7 @@ var grpcSwitcherFunc string = `package gen
 import (
 	"reflect"
 	"net/http"
-	"github.com/vaporz/turbo"
+	"turbo"
 	"errors"
 )
 
@@ -275,7 +275,7 @@ import (
 	"{{.PkgPath}}/gen/gen-go/gen"
 	"reflect"
 	"net/http"
-	"github.com/vaporz/turbo"
+	"turbo"
 	"errors"
 )
 
@@ -505,7 +505,7 @@ type _HTTPMainValues struct {
 var _HTTPMain string = `package main
 
 import (
-	"github.com/vaporz/turbo"
+	"turbo"
 	"google.golang.org/grpc"
 	"{{.PkgPath}}/gen"
 )
@@ -535,8 +535,8 @@ func generateThriftHTTPMain() {
 var thriftHTTPMain string = `package main
 
 import (
-	"github.com/vaporz/turbo"
-	"github.com/vaporz/{{.PkgPath}}/gen"
+	"turbo"
+	"{{.PkgPath}}/gen"
 	t "{{.PkgPath}}/gen/gen-go/gen"
 	"git.apache.org/thrift.git/lib/go/thrift"
 )

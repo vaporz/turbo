@@ -3,10 +3,9 @@ language: go
 go:
   - 1.8.x
 
-go_import_path: github.com/vaporz/turbo
+go_import_path: turbo
 
 install:
-  - go get github.com/vaporz/turbo
   - go get github.com/kylelemons/go-gypsy/yaml
   - go get github.com/gorilla/mux
   - go get google.golang.org/grpc

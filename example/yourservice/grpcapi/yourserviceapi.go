@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/vaporz/turbo"
+	"turbo"
 	"google.golang.org/grpc"
-	"github.com/vaporz/turbo/example/yourservice/gen"
-	i "github.com/vaporz/turbo/example/yourservice/interceptor"
+	"turbo/example/yourservice/gen"
+	i "turbo/example/yourservice/interceptor"
 	"net/http"
 	"strconv"
 	"errors"
@@ -17,7 +17,7 @@ func main() {
 	turbo.Intercept([]string{}, "/a/", i.LogInterceptor{Msg: "path interceptor"})
 	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", checkNum)
 	//turbo.SetHijacker("/eat_apple/{num:[0-9]+}", hijackEatApple)
-	turbo.StartGrpcHTTPServer("github.com/vaporz/turbo/example/yourservice", grpcClient, gen.GrpcSwitcher)
+	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.GrpcSwitcher)
 }
 
 func grpcClient(conn *grpc.ClientConn) interface{} {

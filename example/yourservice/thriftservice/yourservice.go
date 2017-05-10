@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/vaporz/turbo/example/yourservice/thriftservice/impl"
-	"github.com/vaporz/turbo/example/yourservice/gen/gen-go/gen"
+	"turbo/example/yourservice/thriftservice/impl"
+	"example/yourservice/gen/gen-go/gen"
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"log"
 	"os"

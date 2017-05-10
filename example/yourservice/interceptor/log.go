@@ -1,7 +1,7 @@
 package interceptor
 
 import (
-	"github.com/vaporz/turbo"
+	"turbo"
 	"log"
 	"net/http"
 )
