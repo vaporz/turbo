@@ -96,7 +96,7 @@ func doPostprocessor(resp http.ResponseWriter, req *http.Request, serviceRespons
 	// 1, run postprocessor, if any
 	post := Postprocessor(req)
 	if post != nil {
-		post(resp, req)
+		post(resp, req, serviceResponse)
 		return
 	}
 

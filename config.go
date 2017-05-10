@@ -159,7 +159,7 @@ func Preprocessor(req *http.Request) preprocessor {
 // -------PostProcessor---------
 var postprocessorMap *mux.Router = mux.NewRouter()
 
-type postprocessor func(http.ResponseWriter, *http.Request)
+type postprocessor func(http.ResponseWriter, *http.Request, interface{})
 
 func (p postprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}
 

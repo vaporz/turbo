@@ -15,8 +15,9 @@ func main() {
 	turbo.Intercept([]string{"GET"}, "/eat_apple/{num:[0-9]+}", i.LogInterceptor{})
 	turbo.Intercept([]string{"GET"}, "/a/a", i.LogInterceptor{Msg: "url interceptor"})
 	turbo.Intercept([]string{}, "/a/", i.LogInterceptor{Msg: "path interceptor"})
-	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", checkNum)
+	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", preEatApple)
 	//turbo.SetHijacker("/eat_apple/{num:[0-9]+}", hijackEatApple)
+	turbo.SetPostprocessor("/eat_apple/{num:[0-9]+}", postEatApple)
 	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.GrpcSwitcher)
 }
 
@@ -36,7 +37,7 @@ func hijackEatApple(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func checkNum(resp http.ResponseWriter, req *http.Request) error {
+func preEatApple(resp http.ResponseWriter, req *http.Request) error {
 	num, err := strconv.Atoi(req.Form["num"][0])
 	if err != nil {
 		resp.Write([]byte("'num' is not numberic"))
@@ -47,4 +48,9 @@ func checkNum(resp http.ResponseWriter, req *http.Request) error {
 		return errors.New("Too many apples")
 	}
 	return nil
+}
+
+func postEatApple(resp http.ResponseWriter, req *http.Request, serviceResp interface{}) {
+	sr := serviceResp.(*gen.EatAppleResponse)
+	resp.Write([]byte("this is from postprocesser, message=" + sr.Message))
 }
