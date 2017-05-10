@@ -2,7 +2,7 @@ package main
 
 import (
 	"turbo/example/yourservice/thriftservice/impl"
-	"turbo/example/yourservice/gen/gen-go/gen"
+	"example/yourservice/gen/gen-go/gen"
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"log"
 	"os"

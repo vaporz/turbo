@@ -318,7 +318,7 @@ var thriftCases string = `
 
 func GenerateThriftStub() {
 	nameLower := strings.ToLower(configs[THRIFT_SERVICE_NAME])
-	cmd := "thrift -r --gen go -o" + " " + serviceRootPath + "/" + "gen " + serviceRootPath + "/" + nameLower + ".thrift"
+	cmd := "thrift -r --gen go:package_prefix=" + servicePkgPath + "/gen/gen-go/ -o" + " " + serviceRootPath + "/" + "gen " + serviceRootPath + "/" + nameLower + ".thrift"
 	excuteCmd("bash", "-c", cmd)
 }
 
