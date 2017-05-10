@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"net/http"
 	"turbo"
-	"fmt"
 	"errors"
 )
 
@@ -63,7 +62,6 @@ var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http
 			return nil, result[1].Interface().(error)
 		}
 	default:
-		resp.Write([]byte(fmt.Sprintf("No such grpc method[%s]", methodName)))
+		return nil, errors.New("No such method[" + methodName + "]")
 	}
-	return nil, errors.New("Unknown methodName[" + methodName + "]")
 }

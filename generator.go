@@ -193,7 +193,6 @@ import (
 	"reflect"
 	"net/http"
 	"turbo"
-	"fmt"
 	"errors"
 )
 
@@ -203,9 +202,8 @@ this is a generated file, DO NOT EDIT!
 var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
 	switch methodName { {{.Cases}}
 	default:
-		resp.Write([]byte(fmt.Sprintf("No such grpc method[%s]", methodName)))
+		return nil, errors.New("No such method[" + methodName + "]")
 	}
-	return nil, errors.New("Unknown methodName[" + methodName + "]")
 }
 `
 
@@ -278,7 +276,6 @@ import (
 	"reflect"
 	"net/http"
 	"turbo"
-	"fmt"
 	"errors"
 )
 
@@ -288,9 +285,8 @@ this is a generated file, DO NOT EDIT!
 var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
 	switch methodName { {{.Cases}}
 	default:
-		resp.Write([]byte(fmt.Sprintf("No such grpc method[%s]", methodName)))
+		return nil, errors.New("No such method[" + methodName + "]")
 	}
-	return nil, errors.New("Unknown methodName[" + methodName + "]")
 }
 `
 

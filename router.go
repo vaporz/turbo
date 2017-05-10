@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 type switcher func(methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
@@ -18,7 +19,10 @@ func router(s switcher) *mux.Router {
 	switcherFunc = s
 	r := mux.NewRouter()
 	for _, v := range UrlServiceMap {
-		r.HandleFunc(v[1], handler(v[2])).Methods(v[0])
+		httpMethods := strings.Split(v[0], ",")
+		path := v[1]
+		methodName := v[2]
+		r.HandleFunc(path, handler(methodName)).Methods(httpMethods...)
 	}
 	return r
 }
