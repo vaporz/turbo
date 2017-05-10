@@ -2,8 +2,6 @@ language: go
 
 go:
   - 1.8.x
-  - master
 
 go_import_path: GOPATH/src/turbo
-
-install: make get-deps
+os: linux
