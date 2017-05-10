@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"turbo"
+	"github.com/vaporz/turbo"
 	"errors"
 )
 

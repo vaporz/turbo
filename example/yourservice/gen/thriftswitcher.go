@@ -1,10 +1,10 @@
 package gen
 
 import (
-	"turbo/example/yourservice/gen/gen-go/gen"
+	"github.com/vaporz/turbo/example/yourservice/gen/gen-go/gen"
 	"reflect"
 	"net/http"
-	"turbo"
+	"github.com/vaporz/turbo"
 	"errors"
 )
 

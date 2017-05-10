@@ -192,7 +192,7 @@ var grpcSwitcherFunc string = `package gen
 import (
 	"reflect"
 	"net/http"
-	"turbo"
+	"github.com/vaporz/turbo"
 	"errors"
 )
 
@@ -275,7 +275,7 @@ import (
 	"{{.PkgPath}}/gen/gen-go/gen"
 	"reflect"
 	"net/http"
-	"turbo"
+	"github.com/vaporz/turbo"
 	"errors"
 )
 
@@ -318,7 +318,7 @@ var thriftCases string = `
 
 func GenerateThriftStub() {
 	nameLower := strings.ToLower(configs[THRIFT_SERVICE_NAME])
-	cmd := "thrift -r --gen go -o" + " " + serviceRootPath + "/" + "gen " + serviceRootPath + "/" + nameLower + ".thrift"
+	cmd := "thrift -r --gen go:package_prefix=" + servicePkgPath + "/gen/gen-go/ -o" + " " + serviceRootPath + "/" + "gen " + serviceRootPath + "/" + nameLower + ".thrift"
 	excuteCmd("bash", "-c", cmd)
 }
 
@@ -505,7 +505,7 @@ type _HTTPMainValues struct {
 var _HTTPMain string = `package main
 
 import (
-	"turbo"
+	"github.com/vaporz/turbo"
 	"google.golang.org/grpc"
 	"{{.PkgPath}}/gen"
 )
@@ -535,8 +535,8 @@ func generateThriftHTTPMain() {
 var thriftHTTPMain string = `package main
 
 import (
-	"turbo"
-	"{{.PkgPath}}/gen"
+	"github.com/vaporz/turbo"
+	"github.com/vaporz/{{.PkgPath}}/gen"
 	t "{{.PkgPath}}/gen/gen-go/gen"
 	"git.apache.org/thrift.git/lib/go/thrift"
 )

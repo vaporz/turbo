@@ -2,7 +2,7 @@ package impl
 
 import (
 	"golang.org/x/net/context"
-	"turbo/example/yourservice/gen"
+	"github.com/vaporz/turbo/example/yourservice/gen"
 	"fmt"
 )
 

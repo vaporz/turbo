@@ -3,7 +3,7 @@ package gen
 import (
 	"reflect"
 	"net/http"
-	"turbo"
+	"github.com/vaporz/turbo"
 	"errors"
 )
 

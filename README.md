@@ -9,15 +9,17 @@
 
 ## Create a service on the fly
 ### 0, Before the start
-Obviously, you have to install [Golang](https://golang.org) and [Protocol buffers](https://developers.google.com/protocol-buffers/) first.
+Obviously, you have to install [Golang](https://golang.org) and [Protocol buffers](https://developers.google.com/protocol-buffers/) first.<br>
 And install required packages.
 ```sh
+go get github.com/vaporz/turbo
 go get github.com/kylelemons/go-gypsy/yaml
 go get github.com/gorilla/mux
 go get google.golang.org/grpc
+go get git.apache.org/thrift.git/lib/go/thrift
 ```
 
-### 1, Install Turbo
+### 1, Install Turbo command line tools
 ```sh
 git clone https://github.com/vaporz/turbo.git
 cd turbo/turbo
@@ -146,7 +148,7 @@ Edit "yourservice/interceptor/log.go":
 package interceptor
 
 import (
-	"turbo"
+	"github.com/vaporz/turbo"
 	"log"
 	"net/http"
 )
