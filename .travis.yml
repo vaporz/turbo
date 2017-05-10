@@ -3,4 +3,5 @@ language: go
 go:
   - 1.8.x
 
+go_import_path: $GOPATH/src/turbo
 os: linux
