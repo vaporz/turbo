@@ -6,7 +6,7 @@ config:
   thrift_service_address: 127.0.0.1:50052
 
 urlmapping:
-  - GET /hello SayHello
+  - GET,POST /hello SayHello
   - GET /eat_apple/{num:[0-9]+} EatApple
   - GET /a/a EatApple
   - POST /a/a SayHello

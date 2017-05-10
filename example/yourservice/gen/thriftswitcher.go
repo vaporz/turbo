@@ -5,13 +5,13 @@ import (
 	"reflect"
 	"net/http"
 	"turbo"
-	"fmt"
+	"errors"
 )
 
 /*
 this is a generated file, DO NOT EDIT!
  */
-var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) {
+var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
 	switch methodName { 
 	case "SayHello":
 		args := gen.YourServiceSayHelloArgs{}
@@ -27,17 +27,15 @@ var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http
 			}
 			value, err := turbo.ReflectValue(argsValue.FieldByName(fieldName), v[0])
 			if err != nil {
-				resp.Write([]byte("\n"))
-				return
+				return nil, err
 			}
 			params[i] = value
 		}
 		result := reflect.ValueOf(turbo.ThriftService().(*gen.YourServiceClient)).MethodByName(methodName).Call(params)
-		rsp := result[0].Interface().(*gen.SayHelloResponse)
 		if result[1].Interface() == nil {
-			resp.Write([]byte(rsp.String() + "\n"))
+			return result[0].Interface(), nil
 		} else {
-			resp.Write([]byte(result[1].Interface().(error).Error() + "\n"))
+			return nil, result[1].Interface().(error)
 		}
 	case "EatApple":
 		args := gen.YourServiceEatAppleArgs{}
@@ -53,19 +51,17 @@ var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http
 			}
 			value, err := turbo.ReflectValue(argsValue.FieldByName(fieldName), v[0])
 			if err != nil {
-				resp.Write([]byte("\n"))
-				return
+				return nil, err
 			}
 			params[i] = value
 		}
 		result := reflect.ValueOf(turbo.ThriftService().(*gen.YourServiceClient)).MethodByName(methodName).Call(params)
-		rsp := result[0].Interface().(*gen.EatAppleResponse)
 		if result[1].Interface() == nil {
-			resp.Write([]byte(rsp.String() + "\n"))
+			return result[0].Interface(), nil
 		} else {
-			resp.Write([]byte(result[1].Interface().(error).Error() + "\n"))
+			return nil, result[1].Interface().(error)
 		}
 	default:
-		resp.Write([]byte(fmt.Sprintf("No such grpc method[%s]", methodName)))
+		return nil, errors.New("No such method[" + methodName + "]")
 	}
 }

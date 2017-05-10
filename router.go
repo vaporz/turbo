@@ -1,39 +1,55 @@
 package turbo
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
-func router(switcherFunc func(methodName string, resp http.ResponseWriter, req *http.Request)) *mux.Router {
-	switcher = switcherFunc
+type switcher func(methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
+
+var switcherFunc switcher
+
+func router(s switcher) *mux.Router {
+	switcherFunc = s
 	r := mux.NewRouter()
 	for _, v := range UrlServiceMap {
-		r.HandleFunc(v[1], handler(v[2])).Methods(v[0])
+		httpMethods := strings.Split(v[0], ",")
+		path := v[1]
+		methodName := v[2]
+		r.HandleFunc(path, handler(methodName)).Methods(httpMethods...)
 	}
 	return r
 }
-
-var switcher func(methodName string, resp http.ResponseWriter, req *http.Request)
 
 var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		ParseRequestForm(req)
 		interceptors := getInterceptors(req)
+		// TODO if N doBefore() run, then N doAfter should run too
 		err := doBefore(interceptors, resp, req)
 		if err != nil {
+			log.Println(err.Error())
 			return
 		}
 		skipSwitch := doHijackerPreprocessor(resp, req)
 		if !skipSwitch {
-			switcher(methodName, resp, req)
+			serviceResp, err := switcherFunc(methodName, resp, req)
+			if err == nil {
+				doPostprocessor(resp, req, serviceResp)
+			} else {
+				log.Println(err.Error())
+				// do not 'return' here, this is not a bug
+			}
 		}
 		err = doAfter(interceptors, resp, req)
 		if err != nil {
+			log.Println(err.Error())
 			return
 		}
 	}
@@ -59,20 +75,44 @@ func doBefore(interceptors []Interceptor, resp http.ResponseWriter, req *http.Re
 }
 
 func doHijackerPreprocessor(resp http.ResponseWriter, req *http.Request) bool {
-	preprocessor := Preprocessor(req)
+	pre := Preprocessor(req)
 	if hijack := Hijacker(req); hijack != nil {
-		if preprocessor != nil {
+		if pre != nil {
 			//TODO packaging warning and error lib
 			log.Printf("Warning: There is a preprocessor on %s not performed because of hijacker\n", req.URL.String())
 		}
 		hijack(resp, req)
 		return true
-	} else if preprocessor != nil {
-		if err := preprocessor(resp, req); err != nil {
+	} else if  pre != nil {
+		if err := pre(resp, req); err != nil {
+			log.Println(err.Error())
 			return true
 		}
 	}
 	return false
+}
+
+func doPostprocessor(resp http.ResponseWriter, req *http.Request, serviceResponse interface{}) {
+	// 1, run postprocessor, if any
+	post := Postprocessor(req)
+	if post != nil {
+		post(resp, req)
+		return
+	}
+
+	// 2, parse serviceResponse with registered struct
+	//if user defined struct registerd {
+	// TODO user can define a struct, which defines how data is mapped
+	// from response to this struct, and how this struct is parsed into xml/json
+	// return
+	//}
+
+	//3, return as json
+	jsonBytes, err := json.Marshal(serviceResponse)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	resp.Write(jsonBytes)
 }
 
 func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Request) error {

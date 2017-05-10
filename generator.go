@@ -10,6 +10,8 @@ import (
 
 func CreateProject(pkgPath, serviceName, serverType string) {
 	InitPkgPath(pkgPath)
+	// TODO what if serviceName is start with a lower case character?
+	// TODO panic if root folder already exists
 	createRootFolder()
 	createServiceYaml(serviceName)
 	LoadServiceConfig()
@@ -191,16 +193,16 @@ import (
 	"reflect"
 	"net/http"
 	"turbo"
-	"fmt"
+	"errors"
 )
 
 /*
 this is a generated file, DO NOT EDIT!
  */
-var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) {
+var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
 	switch methodName { {{.Cases}}
 	default:
-		resp.Write([]byte(fmt.Sprintf("No such grpc method[%s]", methodName)))
+		return nil, errors.New("No such method[" + methodName + "]")
 	}
 }
 `
@@ -219,19 +221,17 @@ var grpcCases string = `
 			}
 			err := turbo.SetValue(theValue.FieldByName(fieldName), v[0])
 			if err != nil {
-				resp.Write([]byte(err.Error() + "\n"))
-				return
+				return nil, err
 			}
 		}
 		params := make([]reflect.Value, 2)
 		params[0] = reflect.ValueOf(req.Context())
 		params[1] = reflect.ValueOf(&request)
 		result := reflect.ValueOf(turbo.GrpcService().({{.ServiceName}}Client)).MethodByName(methodName).Call(params)
-		rsp := result[0].Interface().(*{{.MethodName}}Response)
 		if result[1].Interface() == nil {
-			resp.Write([]byte(rsp.String() + "\n"))
+			return result[0].Interface(), nil
 		} else {
-			resp.Write([]byte(result[1].Interface().(error).Error() + "\n"))
+			return nil, result[1].Interface().(error)
 		}`
 
 func GenerateProtobufStub() {
@@ -276,16 +276,16 @@ import (
 	"reflect"
 	"net/http"
 	"turbo"
-	"fmt"
+	"errors"
 )
 
 /*
 this is a generated file, DO NOT EDIT!
  */
-var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) {
+var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
 	switch methodName { {{.Cases}}
 	default:
-		resp.Write([]byte(fmt.Sprintf("No such grpc method[%s]", methodName)))
+		return nil, errors.New("No such method[" + methodName + "]")
 	}
 }
 `
@@ -305,17 +305,15 @@ var thriftCases string = `
 			}
 			value, err := turbo.ReflectValue(argsValue.FieldByName(fieldName), v[0])
 			if err != nil {
-				resp.Write([]byte("\n"))
-				return
+				return nil, err
 			}
 			params[i] = value
 		}
 		result := reflect.ValueOf(turbo.ThriftService().(*gen.{{.ServiceName}}Client)).MethodByName(methodName).Call(params)
-		rsp := result[0].Interface().(*gen.{{.MethodName}}Response)
 		if result[1].Interface() == nil {
-			resp.Write([]byte(rsp.String() + "\n"))
+			return result[0].Interface(), nil
 		} else {
-			resp.Write([]byte(result[1].Interface().(error).Error() + "\n"))
+			return nil, result[1].Interface().(error)
 		}`
 
 func GenerateThriftStub() {

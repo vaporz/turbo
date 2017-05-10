@@ -5,5 +5,6 @@ import (
 )
 
 func main() {
+	// TODO support UNIX-style flags, and improve usage
 	cmd.Execute()
 }

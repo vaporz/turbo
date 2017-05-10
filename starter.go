@@ -10,7 +10,7 @@ import (
 	"syscall"
 )
 
-func StartGrpcHTTPServer(pkgPath string, clientCreator func(conn *grpc.ClientConn) interface{}, switcher func(string, http.ResponseWriter, *http.Request)) {
+func StartGrpcHTTPServer(pkgPath string, clientCreator func(conn *grpc.ClientConn) interface{}, switcher func(string, http.ResponseWriter, *http.Request) (interface{}, error)) {
 	initPkgPath(pkgPath)
 	LoadServiceConfig()
 	err := initGrpcService(clientCreator)
@@ -22,7 +22,7 @@ func StartGrpcHTTPServer(pkgPath string, clientCreator func(conn *grpc.ClientCon
 	startHTTPServer(configs[PORT], router(switcher))
 }
 
-func StartThriftHTTPServer(pkgPath string, clientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}, switcher func(string, http.ResponseWriter, *http.Request)) {
+func StartThriftHTTPServer(pkgPath string, clientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}, switcher func(string, http.ResponseWriter, *http.Request) (interface{}, error)) {
 	initPkgPath(pkgPath)
 	LoadServiceConfig()
 	err := initThriftService(clientCreator)
