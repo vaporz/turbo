@@ -8,21 +8,31 @@ import (
 	"net/http"
 	"strconv"
 	"errors"
+	"reflect"
 )
 
 func main() {
-	// TODO support HTTP method
+	turbo.Intercept([]string{"GET"}, "/hello", i.LogInterceptor{})
 	turbo.Intercept([]string{"GET"}, "/eat_apple/{num:[0-9]+}", i.LogInterceptor{})
 	turbo.Intercept([]string{"GET"}, "/a/a", i.LogInterceptor{Msg: "url interceptor"})
 	turbo.Intercept([]string{}, "/a/", i.LogInterceptor{Msg: "path interceptor"})
 	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", preEatApple)
 	//turbo.SetHijacker("/eat_apple/{num:[0-9]+}", hijackEatApple)
 	turbo.SetPostprocessor("/eat_apple/{num:[0-9]+}", postEatApple)
+
+	turbo.RegisterMessageFieldConvertor(new(gen.CommonValues), convertCommonValues)
+
 	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.GrpcSwitcher)
 }
 
 func grpcClient(conn *grpc.ClientConn) interface{} {
 	return gen.NewYourServiceClient(conn)
+}
+
+func convertCommonValues(req *http.Request) reflect.Value {
+	result := &gen.CommonValues{}
+	result.TransactionId = 1111111
+	return reflect.ValueOf(result)
 }
 
 func hijackEatApple(resp http.ResponseWriter, req *http.Request) {

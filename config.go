@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"reflect"
 )
 
 const GRPC_SERVICE_NAME string = "grpc_service_name"
@@ -25,6 +26,8 @@ var serviceRootPath string
 var servicePkgPath string
 
 var configs map[string]string = make(map[string]string)
+
+var fieldMappings map[string][]string = make(map[string][]string)
 
 func LoadServiceConfigWith(pkgPath string) {
 	InitPkgPath(pkgPath)
@@ -53,6 +56,7 @@ func LoadServiceConfig() {
 	config = *conf
 	initUrlMap()
 	initConfigs()
+	initFieldMapping()
 }
 
 func initConfigs() {
@@ -77,6 +81,22 @@ func initUrlMap() {
 	}
 }
 
+func initFieldMapping() {
+	node, err := yaml.Child(config.Root, "fieldmapping")
+	if err != nil {
+		log.Fatalf("parse fieldmapping error: %s", err)
+	}
+	fieldMappingMap := node.(yaml.Map)
+	for k, v := range fieldMappingMap {
+		valueList := v.(yaml.List)
+		valueStrList := make([]string, 0)
+		for _, line := range valueList {
+			valueStrList = append(valueStrList, strings.TrimSpace(yaml.Render(line)))
+		}
+		fieldMappings[k] = valueStrList
+	}
+}
+
 func appendUrlServiceMap(line string) {
 	values := strings.Split(line, " ")
 	HTTPMethod := strings.TrimSpace(values[0])
@@ -87,18 +107,18 @@ func appendUrlServiceMap(line string) {
 
 // -------Interceptor---------
 type Interceptor interface {
-	Before(http.ResponseWriter, *http.Request) error
-	After(http.ResponseWriter, *http.Request) error
+	Before(http.ResponseWriter, *http.Request) (*http.Request, error)
+	After(http.ResponseWriter, *http.Request) (*http.Request, error)
 }
 
 type BaseInterceptor struct{}
 
-func (i BaseInterceptor) Before(http.ResponseWriter, *http.Request) error {
-	return nil
+func (i BaseInterceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+	return req, nil
 }
 
-func (i BaseInterceptor) After(http.ResponseWriter, *http.Request) error {
-	return nil
+func (i BaseInterceptor) After(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+	return req, nil
 }
 
 var commonInterceptors []Interceptor = []Interceptor{}
@@ -192,4 +212,17 @@ func Hijacker(req *http.Request) hijacker {
 		return m.Handler.(hijacker)
 	}
 	return nil
+}
+
+// -------Convertor--------
+type convertor func(r *http.Request) reflect.Value
+
+var convertorMap map[reflect.Type]convertor = make(map[reflect.Type]convertor)
+
+func RegisterMessageFieldConvertor(field interface{}, convertorFunc convertor) {
+	convertorMap[reflect.TypeOf(field).Elem()] = convertorFunc
+}
+
+func MessageFieldConvertor(theType reflect.Type) convertor {
+	return convertorMap[theType]
 }

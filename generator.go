@@ -12,6 +12,7 @@ func CreateProject(pkgPath, serviceName, serverType string) {
 	InitPkgPath(pkgPath)
 	// TODO what if serviceName is start with a lower case character?
 	// TODO panic if root folder already exists
+	// TODO !!!!! import shared.proto/shared.thrift
 	createRootFolder()
 	createServiceYaml(serviceName)
 	LoadServiceConfig()
@@ -25,8 +26,8 @@ func CreateProject(pkgPath, serviceName, serverType string) {
 func CreateGrpcProject(serviceName string) {
 	createGrpcFolders()
 	createProto(serviceName)
+	GenerateProtobufStub("")
 	GenerateGrpcSwitcher()
-	GenerateProtobufStub()
 	generateGrpcServiceMain()
 	generateGrpcServiceImpl()
 	generateGrpcHTTPMain()
@@ -35,8 +36,8 @@ func CreateGrpcProject(serviceName string) {
 func CreateThriftProject(serviceName string) {
 	createThriftFolders()
 	createThrift(serviceName)
-	GenerateThriftSwitcher()
 	GenerateThriftStub()
+	GenerateThriftSwitcher()
 	generateThriftServiceMain()
 	generateThriftServiceImpl()
 	generateThriftHTTPMain()
@@ -159,8 +160,19 @@ func GenerateGrpcSwitcher() {
 		if err != nil {
 			panic(err)
 		}
+		//Values: &CommonValues{},Values: &CommonValues{},
+		requestName := v + "Request"
+		fields := fieldMappings[requestName]
+		var structFields string
+		for _, field := range fields {
+			pair := strings.Split(field, " ")
+			nameSlice := []rune(pair[1])
+			name := strings.ToUpper(string(nameSlice[0])) + string(nameSlice[1:])
+			typeName := pair[0]
+			structFields = structFields + name + ": &" + typeName + "{},"
+		}
 		var casesBuf bytes.Buffer
-		err = tmpl.Execute(&casesBuf, method{configs[GRPC_SERVICE_NAME], v})
+		err = tmpl.Execute(&casesBuf, method{v, structFields})
 		casesStr = casesStr + casesBuf.String()
 	}
 	tmpl, err := template.New("switcher").Parse(grpcSwitcherFunc)
@@ -171,20 +183,20 @@ func GenerateGrpcSwitcher() {
 		os.Mkdir(serviceRootPath+"/gen", 0755)
 	}
 	f, _ := os.Create(serviceRootPath + "/gen/grpcswitcher.go")
-	err = tmpl.Execute(f, handlerContent{Cases: casesStr})
+	err = tmpl.Execute(f, handlerContent{ServiceName: configs[GRPC_SERVICE_NAME], Cases: casesStr})
 	if err != nil {
 		panic(err)
 	}
 }
 
 type method struct {
-	ServiceName string
-	MethodName  string
+	MethodName   string
+	StructFields string
 }
 
 type handlerContent struct {
-	Cases   string
-	PkgPath string
+	ServiceName string
+	Cases       string
 }
 
 var grpcSwitcherFunc string = `package gen
@@ -205,38 +217,28 @@ var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.R
 		return nil, errors.New("No such method[" + methodName + "]")
 	}
 }
+
+func callMethod(methodName string, params []reflect.Value) []reflect.Value {
+	return reflect.ValueOf(turbo.GrpcService().({{.ServiceName}}Client)).MethodByName(methodName).Call(params)
+}
 `
 
 var grpcCases string = `
 	case "{{.MethodName}}":
-		request := {{.MethodName}}Request{}
-		theType := reflect.TypeOf(request)
-		theValue := reflect.ValueOf(&request).Elem()
-		fieldNum := theType.NumField()
-		for i := 0; i < fieldNum; i++ {
-			fieldName := theType.Field(i).Name
-			v, ok := req.Form[turbo.ToSnakeCase(fieldName)]
-			if !ok || len(v) <= 0 {
-				continue
-			}
-			err := turbo.SetValue(theValue.FieldByName(fieldName), v[0])
-			if err != nil {
-				return nil, err
-			}
+		request := &{{.MethodName}}Request{ {{.StructFields}} }
+		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
+		if err != nil {
+			return nil, err
 		}
-		params := make([]reflect.Value, 2)
-		params[0] = reflect.ValueOf(req.Context())
-		params[1] = reflect.ValueOf(&request)
-		result := reflect.ValueOf(turbo.GrpcService().({{.ServiceName}}Client)).MethodByName(methodName).Call(params)
-		if result[1].Interface() == nil {
-			return result[0].Interface(), nil
-		} else {
-			return nil, result[1].Interface().(error)
-		}`
+		params := turbo.MakeParams(req, reflect.ValueOf(request))
+		return turbo.ParseResult(callMethod(methodName, params))`
 
-func GenerateProtobufStub() {
-	nameLower := strings.ToLower(configs[GRPC_SERVICE_NAME])
-	cmd := "protoc -I " + serviceRootPath + " " + serviceRootPath + "/" + nameLower + ".proto --go_out=plugins=grpc:" + serviceRootPath + "/gen"
+func GenerateProtobufStub(options string) {
+	//nameLower := strings.ToLower(configs[GRPC_SERVICE_NAME])
+	// TODO user can give a .proto file list
+	// protoc  -I /Users/xiaozhang/goworkspace/src/turbo/example/yourservice -I /Users/xiaozhang/goworkspace/src/turbo /Users/xiaozhang/goworkspace/src/turbo/shared.proto /Users/xiaozhang/goworkspace/src/turbo/example/yourservice/*.proto --go_out=plugins=grpc:gen/
+	//cmd := "protoc -I " + serviceRootPath + " " + serviceRootPath + "/*.proto --go_out=plugins=grpc:" + serviceRootPath + "/gen"
+	cmd := "protoc " + options + " --go_out=plugins=grpc:" + serviceRootPath + "/gen"
 	excuteCmd("bash", "-c", cmd)
 }
 
@@ -252,7 +254,7 @@ func GenerateThriftSwitcher() {
 			panic(err)
 		}
 		var casesBuf bytes.Buffer
-		err = tmpl.Execute(&casesBuf, method{configs[THRIFT_SERVICE_NAME], v})
+		err = tmpl.Execute(&casesBuf, thriftMethod{configs[THRIFT_SERVICE_NAME], v})
 		casesStr = casesStr + casesBuf.String()
 	}
 	tmpl, err := template.New("switcher").Parse(thriftSwitcherFunc)
@@ -263,10 +265,21 @@ func GenerateThriftSwitcher() {
 		os.Mkdir(serviceRootPath+"/gen", 0755)
 	}
 	f, _ := os.Create(serviceRootPath + "/gen/thriftswitcher.go")
-	err = tmpl.Execute(f, handlerContent{Cases: casesStr, PkgPath: servicePkgPath})
+	err = tmpl.Execute(f, thriftHandlerContent{Cases: casesStr, PkgPath: servicePkgPath})
 	if err != nil {
 		panic(err)
 	}
+}
+
+type thriftMethod struct {
+	ServiceName string
+	MethodName  string
+}
+
+type thriftHandlerContent struct {
+	ServiceName string
+	Cases       string
+	PkgPath     string
 }
 
 var thriftSwitcherFunc string = `package gen

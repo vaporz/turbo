@@ -7,17 +7,27 @@ import (
 )
 
 var generateCmd = &cobra.Command{
-	Use:     "generate [package_path] (grpc|thrift)",
-	Aliases: []string{"g"},
+	Use:     "generate package_path",
+	Aliases: []string{"p"},
 	Short:   "Generate 'switcher.go' and '[service_name].pb.go' according to service.yaml and [service_name].proto",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
-			return errors.New("Usage: generate [package_path] (grpc|thrift)")
+			return errors.New("Usage: generate [package_path]")
+		}
+		if g_rpcType == "" {
+			return errors.New("missing rpctype (-r)")
+		}
+		if g_rpcType == "grpc" && len(filePaths) == 0 {
+			return errors.New("missing .proto file path (-I)")
+		}
+		var options string
+		for _, p := range filePaths {
+			options = options + "-I " + p + " " + p + "/*.proto "
 		}
 		turbo.LoadServiceConfigWith(args[0])
 		if len(args) == 1 || args[1] == "grpc" {
 			turbo.GenerateGrpcSwitcher()
-			turbo.GenerateProtobufStub()
+			turbo.GenerateProtobufStub(options)
 		} else if args[1] == "thrift" {
 			turbo.GenerateThriftSwitcher()
 			turbo.GenerateThriftStub()
@@ -28,6 +38,11 @@ var generateCmd = &cobra.Command{
 	},
 }
 
+var filePaths []string
+var g_rpcType string
+
 func init() {
 	RootCmd.AddCommand(generateCmd)
+	generateCmd.Flags().StringVarP(&g_rpcType, "rpctype", "r", "", "required, (grpc|thrift)")
+	generateCmd.Flags().StringArrayVarP(&filePaths, "gpath", "I", []string{}, "required, .proto file paths(absolute path)")
 }

@@ -32,7 +32,7 @@ var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 		ParseRequestForm(req)
 		interceptors := getInterceptors(req)
 		// TODO if N doBefore() run, then N doAfter should run too
-		err := doBefore(interceptors, resp, req)
+		req, err := doBefore(interceptors, resp, req)
 		if err != nil {
 			log.Println(err.Error())
 			return
@@ -63,27 +63,26 @@ func getInterceptors(req *http.Request) []Interceptor {
 	return interceptors
 }
 
-func doBefore(interceptors []Interceptor, resp http.ResponseWriter, req *http.Request) error {
+func doBefore(interceptors []Interceptor, resp http.ResponseWriter, req *http.Request) (request *http.Request, err error) {
 	for _, i := range interceptors {
-		err := i.Before(resp, req)
+		req, err = i.Before(resp, req)
 		if err != nil {
 			log.Println("error in interceptor!" + err.Error())
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return req, nil
 }
 
 func doHijackerPreprocessor(resp http.ResponseWriter, req *http.Request) bool {
 	pre := Preprocessor(req)
 	if hijack := Hijacker(req); hijack != nil {
 		if pre != nil {
-			//TODO packaging warning and error lib
-			log.Printf("Warning: There is a preprocessor on %s not performed because of hijacker\n", req.URL.String())
+			log.Printf("Warning: PreProcessor ignored, URL: %s", req.URL.String())
 		}
 		hijack(resp, req)
 		return true
-	} else if  pre != nil {
+	} else if pre != nil {
 		if err := pre(resp, req); err != nil {
 			log.Println(err.Error())
 			return true
@@ -115,10 +114,10 @@ func doPostprocessor(resp http.ResponseWriter, req *http.Request, serviceRespons
 	resp.Write(jsonBytes)
 }
 
-func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Request) error {
+func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Request) (err error) {
 	l := len(interceptors)
 	for i := l - 1; i >= 0; i-- {
-		err := interceptors[i].After(resp, req)
+		req, err = interceptors[i].After(resp, req)
 		if err != nil {
 			log.Println("error in interceptor!")
 			return err
@@ -128,7 +127,7 @@ func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Req
 }
 
 func SetValue(fieldValue reflect.Value, v string) error {
-	switch fieldValue.Kind() {
+	switch k := fieldValue.Kind(); k {
 	case reflect.Int,
 		reflect.Int8,
 		reflect.Int16,
@@ -159,17 +158,14 @@ func SetValue(fieldValue reflect.Value, v string) error {
 			return errors.New("error uint")
 		}
 		fieldValue.SetUint(u)
-	case reflect.Slice, reflect.Interface, reflect.Struct:
-		// only basic types supported
-		return errors.New("type not supported")
 	default:
-		return errors.New("error")
+		return errors.New("not supported kind[" + k.String() + "]")
 	}
 	return nil
 }
 
 func ReflectValue(fieldValue reflect.Value, v string) (value reflect.Value, err error) {
-	switch fieldValue.Kind() {
+	switch k := fieldValue.Kind(); k {
 	case reflect.Int16:
 		var i int64
 		if v == "" {
@@ -249,10 +245,68 @@ func ReflectValue(fieldValue reflect.Value, v string) (value reflect.Value, err 
 		//		}
 		//	}
 		//	return reflect.ValueOf(u), nil
-	case reflect.Slice, reflect.Interface, reflect.Struct:
-		// only basic types supported
-		return reflect.ValueOf(0), errors.New("type not supported")
 	default:
-		return reflect.ValueOf(0), errors.New("error")
+		return reflect.ValueOf(0), errors.New("not supported kind[" + k.String() + "]")
+	}
+}
+
+func BuildStruct(theType reflect.Type, theValue reflect.Value, req *http.Request) error {
+	fieldNum := theType.NumField()
+	for i := 0; i < fieldNum; i++ {
+		fieldName := theType.Field(i).Name
+		fieldValue := theValue.FieldByName(fieldName)
+		if fieldValue.Kind() == reflect.Ptr && fieldValue.Type().Elem().Kind() == reflect.Struct {
+			convertor := MessageFieldConvertor(fieldValue.Type().Elem())
+			if convertor != nil {
+				fieldValue.Set(convertor(req))
+				continue
+			}
+			err := BuildStruct(fieldValue.Type().Elem(), fieldValue.Elem(), req)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		v, ok := findValue(fieldName, req)
+		if !ok || len(v) <= 0 {
+			continue
+		}
+		err := SetValue(fieldValue, v)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func findValue(fieldName string, req *http.Request) (string, bool) {
+	snakeCaseName := ToSnakeCase(fieldName)
+	v, ok := req.Form[snakeCaseName]
+	if ok && len(v) > 0 {
+		return v[0], true
+	}
+	ctxValue := req.Context().Value(fieldName)
+	if ctxValue != nil {
+		return ctxValue.(string), true
+	}
+	ctxValue = req.Context().Value(snakeCaseName)
+	if ctxValue != nil {
+		return ctxValue.(string), true
+	}
+	return "", false
+}
+
+func MakeParams(req *http.Request, requestValue reflect.Value) []reflect.Value {
+	params := make([]reflect.Value, 2)
+	params[0] = reflect.ValueOf(req.Context())
+	params[1] = requestValue
+	return params
+}
+
+func ParseResult(result []reflect.Value) (serviceResponse interface{}, err error) {
+	if result[1].Interface() == nil {
+		return result[0].Interface(), nil
+	} else {
+		return nil, result[1].Interface().(error)
 	}
 }

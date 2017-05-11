@@ -1,0 +1,6 @@
+syntax = "proto3";
+package gen;
+
+message CommonValues {
+    int64 transactionId = 1;
+}
