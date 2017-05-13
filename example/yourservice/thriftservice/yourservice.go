@@ -2,7 +2,7 @@ package main
 
 import (
 	"turbo/example/yourservice/thriftservice/impl"
-	"turbo/example/yourservice/gen/gen-go/gen"
+	"turbo/example/yourservice/gen/thrift/gen-go/gen"
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"log"
 	"os"
@@ -16,6 +16,6 @@ func main() {
 	}
 
 	server := thrift.NewTSimpleServer4(gen.NewYourServiceProcessor(impl.YourService{}), transport,
-		thrift.NewTTransportFactory(),thrift.NewTBinaryProtocolFactoryDefault())
+		thrift.NewTTransportFactory(), thrift.NewTBinaryProtocolFactoryDefault())
 	server.Serve()
 }

@@ -13,7 +13,7 @@ import (
         "strconv"
         "strings"
         "git.apache.org/thrift.git/lib/go/thrift"
-        "turbo/example/yourservice/gen/gen-go/gen"
+        "turbo/example/yourservice/gen/thrift/gen-go/gen"
 )
 
 

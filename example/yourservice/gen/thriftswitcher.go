@@ -1,7 +1,7 @@
 package gen
 
 import (
-	"turbo/example/yourservice/gen/gen-go/gen"
+	"turbo/example/yourservice/gen/thrift/gen-go/gen"
 	"reflect"
 	"net/http"
 	"turbo"
@@ -38,15 +38,15 @@ func callThriftMethod(methodName string, params []reflect.Value) []reflect.Value
 
 func buildStructArg(typeName string, req *http.Request) (v reflect.Value, err error) {
 	switch typeName { 
-	case "HelloValues":
-		request := &gen.HelloValues{}
+	case "CommonValues":
+		request := &gen.CommonValues{}
 		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
 		if err != nil {
 			return v, err
 		}
 		return reflect.ValueOf(request), nil
-	case "CommonValues":
-		request := &gen.CommonValues{}
+	case "HelloValues":
+		request := &gen.HelloValues{}
 		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
 		if err != nil {
 			return v, err

@@ -3,7 +3,7 @@ package main
 import (
 	"turbo"
 	"turbo/example/yourservice/gen"
-	t "turbo/example/yourservice/gen/gen-go/gen"
+	t "turbo/example/yourservice/gen/thrift/gen-go/gen"
 	"git.apache.org/thrift.git/lib/go/thrift"
 	i "turbo/example/yourservice/interceptor"
 	"reflect"

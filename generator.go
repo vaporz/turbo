@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"strings"
 	"text/template"
+	"fmt"
 )
 
 func CreateProject(pkgPath, serviceName, serverType string) {
@@ -59,8 +60,7 @@ func createThriftFolders() {
 }
 
 func createServiceYaml(serviceName string) {
-	_, err := os.Open(serviceRootPath + "/service.yaml")
-	if err == nil {
+	if _, err := os.Stat(serviceRootPath + "/service.yaml"); os.IsExist(err) {
 		return
 	}
 	tmpl, err := template.New("yaml").Parse(serviceYaml)
@@ -244,7 +244,12 @@ var grpcCases string = `
 		return turbo.ParseResult(callGrpcMethod(methodName, params))`
 
 func GenerateProtobufStub(options string) {
+	if _, err := os.Stat(serviceRootPath + "/gen/proto"); os.IsNotExist(err) {
+		fmt.Println("proto folder missing, create one")
+		os.MkdirAll(serviceRootPath+"/gen/proto", 0755)
+	}
 	cmd := "protoc " + options + " --go_out=plugins=grpc:" + serviceRootPath + "/gen/proto"
+
 	executeCmd("bash", "-c", cmd)
 }
 
@@ -360,8 +365,12 @@ var buildArgCases string = `
 		return reflect.ValueOf(request), nil`
 
 func GenerateThriftStub(options string) {
+	if _, err := os.Stat(serviceRootPath + "/gen/thrift"); os.IsNotExist(err) {
+		fmt.Println("thrift folder missing, create one")
+		os.MkdirAll(serviceRootPath+"/gen/thrift", 0755)
+	}
 	nameLower := strings.ToLower(configs[THRIFT_SERVICE_NAME])
-	cmd := "thrift " + options + " -r --gen go:package_prefix=" + servicePkgPath + "/gen/gen-go/ -o" +
+	cmd := "thrift " + options + " -r --gen go:package_prefix=" + servicePkgPath + "/gen/thrift/gen-go/ -o" +
 		" " + serviceRootPath + "/" + "gen/thrift " + serviceRootPath + "/" + nameLower + ".thrift"
 	executeCmd("bash", "-c", cmd)
 	// TODO run compile to validate

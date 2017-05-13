@@ -1,6 +1,6 @@
 syntax = "proto3";
 import "shared.proto";
-package gen;
+package proto;
 
 message SayHelloRequest {
     CommonValues values = 1;

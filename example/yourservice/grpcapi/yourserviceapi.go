@@ -3,6 +3,7 @@ package main
 import (
 	"turbo"
 	"google.golang.org/grpc"
+	"turbo/example/yourservice/gen/proto"
 	"turbo/example/yourservice/gen"
 	i "turbo/example/yourservice/interceptor"
 	"net/http"
@@ -20,24 +21,24 @@ func main() {
 	//turbo.SetHijacker("/eat_apple/{num:[0-9]+}", hijackEatApple)
 	turbo.SetPostprocessor("/eat_apple/{num:[0-9]+}", postEatApple)
 
-	turbo.RegisterMessageFieldConvertor(new(gen.CommonValues), convertCommonValues)
+	//turbo.RegisterMessageFieldConvertor(new(proto.CommonValues), convertCommonValues)
 
 	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.GrpcSwitcher)
 }
 
 func grpcClient(conn *grpc.ClientConn) interface{} {
-	return gen.NewYourServiceClient(conn)
+	return proto.NewYourServiceClient(conn)
 }
 
 func convertCommonValues(req *http.Request) reflect.Value {
-	result := &gen.CommonValues{}
+	result := &proto.CommonValues{}
 	result.TransactionId = 1111111
 	return reflect.ValueOf(result)
 }
 
 func hijackEatApple(resp http.ResponseWriter, req *http.Request) {
-	client := turbo.GrpcService().(gen.YourServiceClient)
-	r := new(gen.EatAppleRequest)
+	client := turbo.GrpcService().(proto.YourServiceClient)
+	r := new(proto.EatAppleRequest)
 	r.Num = 999
 	res, err := client.EatApple(req.Context(), r)
 	if err == nil {
@@ -61,6 +62,6 @@ func preEatApple(resp http.ResponseWriter, req *http.Request) error {
 }
 
 func postEatApple(resp http.ResponseWriter, req *http.Request, serviceResp interface{}) {
-	sr := serviceResp.(*gen.EatAppleResponse)
+	sr := serviceResp.(*proto.EatAppleResponse)
 	resp.Write([]byte("this is from postprocesser, message=" + sr.Message))
 }
