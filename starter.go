@@ -12,6 +12,7 @@ import (
 
 func StartGrpcHTTPServer(pkgPath string, clientCreator func(conn *grpc.ClientConn) interface{}, switcher func(string, http.ResponseWriter, *http.Request) (interface{}, error)) {
 	initPkgPath(pkgPath)
+	InitRpcType("grpc")
 	LoadServiceConfig()
 	err := initGrpcService(clientCreator)
 	if err != nil {
@@ -24,6 +25,7 @@ func StartGrpcHTTPServer(pkgPath string, clientCreator func(conn *grpc.ClientCon
 
 func StartThriftHTTPServer(pkgPath string, clientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}, switcher func(string, http.ResponseWriter, *http.Request) (interface{}, error)) {
 	initPkgPath(pkgPath)
+	InitRpcType("thrift")
 	LoadServiceConfig()
 	err := initThriftService(clientCreator)
 	if err != nil {

@@ -16,6 +16,8 @@ const THRIFT_SERVICE_NAME string = "thrift_service_name"
 const THRIFT_SERVICE_ADDRESS string = "thrift_service_address"
 const PORT string = "port"
 
+var rpctype string
+
 var config yaml.File
 
 var UrlServiceMap [][3]string
@@ -28,6 +30,10 @@ var servicePkgPath string
 var configs map[string]string = make(map[string]string)
 
 var fieldMappings map[string][]string = make(map[string][]string)
+
+func InitRpcType(rpcType string) {
+	rpctype = rpcType
+}
 
 func LoadServiceConfigWith(pkgPath string) {
 	InitPkgPath(pkgPath)
@@ -82,16 +88,18 @@ func initUrlMap() {
 }
 
 func initFieldMapping() {
-	node, err := yaml.Child(config.Root, "fieldmapping")
+	node, err := yaml.Child(config.Root, rpctype+"-fieldmapping")
 	if err != nil {
 		log.Fatalf("parse fieldmapping error: %s", err)
 	}
 	fieldMappingMap := node.(yaml.Map)
 	for k, v := range fieldMappingMap {
-		valueList := v.(yaml.List)
 		valueStrList := make([]string, 0)
-		for _, line := range valueList {
-			valueStrList = append(valueStrList, strings.TrimSpace(yaml.Render(line)))
+		if v != nil {
+			valueList := v.(yaml.List)
+			for _, line := range valueList {
+				valueStrList = append(valueStrList, strings.TrimSpace(yaml.Render(line)))
+			}
 		}
 		fieldMappings[k] = valueStrList
 	}

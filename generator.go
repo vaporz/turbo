@@ -8,35 +8,34 @@ import (
 	"text/template"
 )
 
-func CreateProject(pkgPath, serviceName, serverType string) {
+func CreateProject(pkgPath, serviceName, serverType, options string) {
 	InitPkgPath(pkgPath)
 	// TODO what if serviceName is start with a lower case character?
 	// TODO panic if root folder already exists
-	// TODO !!!!! import shared.proto/shared.thrift
 	createRootFolder()
 	createServiceYaml(serviceName)
 	LoadServiceConfig()
 	if serverType == "grpc" {
-		CreateGrpcProject(serviceName)
+		CreateGrpcProject(serviceName, options)
 	} else if serverType == "thrift" {
-		CreateThriftProject(serviceName)
+		CreateThriftProject(serviceName, options)
 	}
 }
 
-func CreateGrpcProject(serviceName string) {
+func CreateGrpcProject(serviceName, options string) {
 	createGrpcFolders()
 	createProto(serviceName)
-	GenerateProtobufStub("")
+	GenerateProtobufStub(options)
 	GenerateGrpcSwitcher()
 	generateGrpcServiceMain()
 	generateGrpcServiceImpl()
 	generateGrpcHTTPMain()
 }
 
-func CreateThriftProject(serviceName string) {
+func CreateThriftProject(serviceName, options string) {
 	createThriftFolders()
 	createThrift(serviceName)
-	GenerateThriftStub()
+	GenerateThriftStub(options)
 	GenerateThriftSwitcher()
 	generateThriftServiceMain()
 	generateThriftServiceImpl()
@@ -218,7 +217,7 @@ var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.R
 	}
 }
 
-func callMethod(methodName string, params []reflect.Value) []reflect.Value {
+func callGrpcMethod(methodName string, params []reflect.Value) []reflect.Value {
 	return reflect.ValueOf(turbo.GrpcService().({{.ServiceName}}Client)).MethodByName(methodName).Call(params)
 }
 `
@@ -231,15 +230,11 @@ var grpcCases string = `
 			return nil, err
 		}
 		params := turbo.MakeParams(req, reflect.ValueOf(request))
-		return turbo.ParseResult(callMethod(methodName, params))`
+		return turbo.ParseResult(callGrpcMethod(methodName, params))`
 
 func GenerateProtobufStub(options string) {
-	//nameLower := strings.ToLower(configs[GRPC_SERVICE_NAME])
-	// TODO user can give a .proto file list
-	// protoc  -I /Users/xiaozhang/goworkspace/src/turbo/example/yourservice -I /Users/xiaozhang/goworkspace/src/turbo /Users/xiaozhang/goworkspace/src/turbo/shared.proto /Users/xiaozhang/goworkspace/src/turbo/example/yourservice/*.proto --go_out=plugins=grpc:gen/
-	//cmd := "protoc -I " + serviceRootPath + " " + serviceRootPath + "/*.proto --go_out=plugins=grpc:" + serviceRootPath + "/gen"
 	cmd := "protoc " + options + " --go_out=plugins=grpc:" + serviceRootPath + "/gen"
-	excuteCmd("bash", "-c", cmd)
+	executeCmd("bash", "-c", cmd)
 }
 
 func GenerateThriftSwitcher() {
@@ -257,6 +252,18 @@ func GenerateThriftSwitcher() {
 		err = tmpl.Execute(&casesBuf, thriftMethod{configs[THRIFT_SERVICE_NAME], v})
 		casesStr = casesStr + casesBuf.String()
 	}
+
+	var argCasesStr string
+	for k := range fieldMappings {
+		tmpl, err := template.New("argcases").Parse(buildArgCases)
+		if err != nil {
+			panic(err)
+		}
+		var argCasesBuf bytes.Buffer
+		err = tmpl.Execute(&argCasesBuf, buildArgParams{k})
+		argCasesStr = argCasesStr + argCasesBuf.String()
+	}
+
 	tmpl, err := template.New("switcher").Parse(thriftSwitcherFunc)
 	if err != nil {
 		panic(err)
@@ -265,7 +272,11 @@ func GenerateThriftSwitcher() {
 		os.Mkdir(serviceRootPath+"/gen", 0755)
 	}
 	f, _ := os.Create(serviceRootPath + "/gen/thriftswitcher.go")
-	err = tmpl.Execute(f, thriftHandlerContent{Cases: casesStr, PkgPath: servicePkgPath})
+	err = tmpl.Execute(f, thriftHandlerContent{
+		ServiceName:    configs[THRIFT_SERVICE_NAME],
+		Cases:          casesStr,
+		PkgPath:        servicePkgPath,
+		BuildArgsCases: argCasesStr})
 	if err != nil {
 		panic(err)
 	}
@@ -277,9 +288,14 @@ type thriftMethod struct {
 }
 
 type thriftHandlerContent struct {
-	ServiceName string
-	Cases       string
-	PkgPath     string
+	ServiceName    string
+	Cases          string
+	PkgPath        string
+	BuildArgsCases string
+}
+
+type buildArgParams struct {
+	StructName string
 }
 
 var thriftSwitcherFunc string = `package gen
@@ -301,41 +317,46 @@ var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http
 		return nil, errors.New("No such method[" + methodName + "]")
 	}
 }
+
+func callThriftMethod(methodName string, params []reflect.Value) []reflect.Value {
+	return reflect.ValueOf(turbo.ThriftService().(*gen.{{.ServiceName}}Client)).MethodByName(methodName).Call(params)
+}
+
+func buildStructArg(typeName string, req *http.Request) (v reflect.Value, err error) {
+	switch typeName { {{.BuildArgsCases}}
+	default:
+		return v, errors.New("unknown typeName[" + typeName + "]")
+	}
+}
 `
 
 var thriftCases string = `
 	case "{{.MethodName}}":
 		args := gen.{{.ServiceName}}{{.MethodName}}Args{}
-		argsType := reflect.TypeOf(args)
-		argsValue := reflect.ValueOf(args)
-		fieldNum := argsType.NumField()
-		params := make([]reflect.Value, fieldNum)
-		for i := 0; i < fieldNum; i++ {
-			fieldName := argsType.Field(i).Name
-			v, ok := req.Form[turbo.ToSnakeCase(fieldName)]
-			if !ok || len(v) <= 0 {
-				v = []string{""}
-			}
-			value, err := turbo.ReflectValue(argsValue.FieldByName(fieldName), v[0])
-			if err != nil {
-				return nil, err
-			}
-			params[i] = value
+		params, err := turbo.BuildArgs(reflect.TypeOf(args), reflect.ValueOf(args), req, buildStructArg)
+		if err != nil {
+			return nil, err
 		}
-		result := reflect.ValueOf(turbo.ThriftService().(*gen.{{.ServiceName}}Client)).MethodByName(methodName).Call(params)
-		if result[1].Interface() == nil {
-			return result[0].Interface(), nil
-		} else {
-			return nil, result[1].Interface().(error)
-		}`
+		return turbo.ParseResult(callThriftMethod(methodName, params))`
 
-func GenerateThriftStub() {
+var buildArgCases string = `
+	case "{{.StructName}}":
+		request := &gen.{{.StructName}}{}
+		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
+		if err != nil {
+			return v, err
+		}
+		return reflect.ValueOf(request), nil`
+
+func GenerateThriftStub(options string) {
 	nameLower := strings.ToLower(configs[THRIFT_SERVICE_NAME])
-	cmd := "thrift -r --gen go:package_prefix=" + servicePkgPath + "/gen/gen-go/ -o" + " " + serviceRootPath + "/" + "gen " + serviceRootPath + "/" + nameLower + ".thrift"
-	excuteCmd("bash", "-c", cmd)
+	cmd := "thrift " + options + " -r --gen go:package_prefix=" + servicePkgPath + "/gen/gen-go/ -o" +
+		" " + serviceRootPath + "/" + "gen " + serviceRootPath + "/" + nameLower + ".thrift"
+	executeCmd("bash", "-c", cmd)
+	// TODO run compile to validate
 }
 
-func excuteCmd(cmd string, args ...string) {
+func executeCmd(cmd string, args ...string) {
 	c := exec.Command(cmd, args...)
 	c.Stdin = os.Stdin
 	c.Stderr = os.Stderr

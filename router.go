@@ -268,7 +268,7 @@ func BuildStruct(theType reflect.Type, theValue reflect.Value, req *http.Request
 			continue
 		}
 		v, ok := findValue(fieldName, req)
-		if !ok || len(v) <= 0 {
+		if !ok {
 			continue
 		}
 		err := SetValue(fieldValue, v)
@@ -309,4 +309,38 @@ func ParseResult(result []reflect.Value) (serviceResponse interface{}, err error
 	} else {
 		return nil, result[1].Interface().(error)
 	}
+}
+
+func BuildArgs(argsType reflect.Type, argsValue reflect.Value, req *http.Request, buildStructArg func(typeName string, req *http.Request) (v reflect.Value, err error)) ([]reflect.Value, error) {
+	fieldNum := argsType.NumField()
+	params := make([]reflect.Value, fieldNum)
+	for i := 0; i < fieldNum; i++ {
+		field := argsType.Field(i)
+		fieldName := field.Name
+		valueType := argsValue.FieldByName(fieldName).Type()
+		if field.Type.Kind() == reflect.Ptr && valueType.Elem().Kind() == reflect.Struct {
+			convertor := MessageFieldConvertor(valueType.Elem())
+			if convertor != nil {
+				params[i] = convertor(req)
+				continue
+			}
+			structName := valueType.Elem().Name()
+			v, err := buildStructArg(structName, req)
+			if err != nil {
+				return nil, err
+			}
+			params[i] = v
+			continue
+		}
+		v, ok := findValue(fieldName, req)
+		if !ok {
+			continue
+		}
+		value, err := ReflectValue(argsValue.FieldByName(fieldName), v)
+		if err != nil {
+			return nil, err
+		}
+		params[i] = value
+	}
+	return params, nil
 }

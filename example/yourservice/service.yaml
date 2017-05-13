@@ -2,9 +2,18 @@ config:
   port: 8081
   grpc_service_name: YourService
   grpc_service_address: 127.0.0.1:50051
-  grpc_common_message: CommonValues
   thrift_service_name: YourService
   thrift_service_address: 127.0.0.1:50052
+
+# TODO make a grpc plugin to generate this mapping
+grpc-fieldmapping:
+  SayHelloRequest:
+    - CommonValues values
+
+# TODO make a thrift plugin to generate this mapping
+thrift-fieldmapping:
+  CommonValues:
+  HelloValues:
 
 urlmapping:
   - GET,POST /hello SayHello

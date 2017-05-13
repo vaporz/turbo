@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"git.apache.org/thrift.git/lib/go/thrift"
+
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -187,7 +188,9 @@ func (p *EatAppleResponse) String() string {
 type YourService interface {
   // Parameters:
   //  - YourName
-  SayHello(yourName string) (r *SayHelloResponse, err error)
+  //  - Values
+  //  - HelloValues
+  SayHello(yourName string, values *CommonValues, helloValues *HelloValues) (r *SayHelloResponse, err error)
   // Parameters:
   //  - Num
   //  - StringValue
@@ -223,12 +226,14 @@ func NewYourServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, o
 
 // Parameters:
 //  - YourName
-func (p *YourServiceClient) SayHello(yourName string) (r *SayHelloResponse, err error) {
-  if err = p.sendSayHello(yourName); err != nil { return }
+//  - Values
+//  - HelloValues
+func (p *YourServiceClient) SayHello(yourName string, values *CommonValues, helloValues *HelloValues) (r *SayHelloResponse, err error) {
+  if err = p.sendSayHello(yourName, values, helloValues); err != nil { return }
   return p.recvSayHello()
 }
 
-func (p *YourServiceClient) sendSayHello(yourName string)(err error) {
+func (p *YourServiceClient) sendSayHello(yourName string, values *CommonValues, helloValues *HelloValues)(err error) {
   oprot := p.OutputProtocol
   if oprot == nil {
     oprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -240,6 +245,8 @@ func (p *YourServiceClient) sendSayHello(yourName string)(err error) {
   }
   args := YourServiceSayHelloArgs{
   YourName : yourName,
+  Values : values,
+  HelloValues : helloValues,
   }
   if err = args.Write(oprot); err != nil {
       return
@@ -441,7 +448,7 @@ func (p *yourServiceProcessorSayHello) Process(seqId int32, iprot, oprot thrift.
   result := YourServiceSayHelloResult{}
 var retval *SayHelloResponse
   var err2 error
-  if retval, err2 = p.handler.SayHello(args.YourName); err2 != nil {
+  if retval, err2 = p.handler.SayHello(args.YourName, args.Values, args.HelloValues); err2 != nil {
     x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing sayHello: " + err2.Error())
     oprot.WriteMessageBegin("sayHello", thrift.EXCEPTION, seqId)
     x.Write(oprot)
@@ -522,8 +529,12 @@ var retval *EatAppleResponse
 
 // Attributes:
 //  - YourName
+//  - Values
+//  - HelloValues
 type YourServiceSayHelloArgs struct {
   YourName string `thrift:"yourName,1" db:"yourName" json:"yourName"`
+  Values *CommonValues `thrift:"values,2" db:"values" json:"values"`
+  HelloValues *HelloValues `thrift:"helloValues,3" db:"helloValues" json:"helloValues"`
 }
 
 func NewYourServiceSayHelloArgs() *YourServiceSayHelloArgs {
@@ -534,6 +545,28 @@ func NewYourServiceSayHelloArgs() *YourServiceSayHelloArgs {
 func (p *YourServiceSayHelloArgs) GetYourName() string {
   return p.YourName
 }
+var YourServiceSayHelloArgs_Values_DEFAULT *CommonValues
+func (p *YourServiceSayHelloArgs) GetValues() *CommonValues {
+  if !p.IsSetValues() {
+    return YourServiceSayHelloArgs_Values_DEFAULT
+  }
+return p.Values
+}
+var YourServiceSayHelloArgs_HelloValues_DEFAULT *HelloValues
+func (p *YourServiceSayHelloArgs) GetHelloValues() *HelloValues {
+  if !p.IsSetHelloValues() {
+    return YourServiceSayHelloArgs_HelloValues_DEFAULT
+  }
+return p.HelloValues
+}
+func (p *YourServiceSayHelloArgs) IsSetValues() bool {
+  return p.Values != nil
+}
+
+func (p *YourServiceSayHelloArgs) IsSetHelloValues() bool {
+  return p.HelloValues != nil
+}
+
 func (p *YourServiceSayHelloArgs) Read(iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
@@ -549,6 +582,14 @@ func (p *YourServiceSayHelloArgs) Read(iprot thrift.TProtocol) error {
     switch fieldId {
     case 1:
       if err := p.ReadField1(iprot); err != nil {
+        return err
+      }
+    case 2:
+      if err := p.ReadField2(iprot); err != nil {
+        return err
+      }
+    case 3:
+      if err := p.ReadField3(iprot); err != nil {
         return err
       }
     default:
@@ -575,11 +616,29 @@ func (p *YourServiceSayHelloArgs)  ReadField1(iprot thrift.TProtocol) error {
   return nil
 }
 
+func (p *YourServiceSayHelloArgs)  ReadField2(iprot thrift.TProtocol) error {
+  p.Values = &CommonValues{}
+  if err := p.Values.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Values), err)
+  }
+  return nil
+}
+
+func (p *YourServiceSayHelloArgs)  ReadField3(iprot thrift.TProtocol) error {
+  p.HelloValues = &HelloValues{}
+  if err := p.HelloValues.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.HelloValues), err)
+  }
+  return nil
+}
+
 func (p *YourServiceSayHelloArgs) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("sayHello_args"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
     if err := p.writeField1(oprot); err != nil { return err }
+    if err := p.writeField2(oprot); err != nil { return err }
+    if err := p.writeField3(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -595,6 +654,28 @@ func (p *YourServiceSayHelloArgs) writeField1(oprot thrift.TProtocol) (err error
   return thrift.PrependError(fmt.Sprintf("%T.yourName (1) field write error: ", p), err) }
   if err := oprot.WriteFieldEnd(); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write field end error 1:yourName: ", p), err) }
+  return err
+}
+
+func (p *YourServiceSayHelloArgs) writeField2(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("values", thrift.STRUCT, 2); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:values: ", p), err) }
+  if err := p.Values.Write(oprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Values), err)
+  }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 2:values: ", p), err) }
+  return err
+}
+
+func (p *YourServiceSayHelloArgs) writeField3(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("helloValues", thrift.STRUCT, 3); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:helloValues: ", p), err) }
+  if err := p.HelloValues.Write(oprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.HelloValues), err)
+  }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 3:helloValues: ", p), err) }
   return err
 }
 

@@ -11,7 +11,6 @@ type YourService struct {
 
 func (s *YourService) SayHello(ctx context.Context, req *gen.SayHelloRequest) (*gen.SayHelloResponse, error) {
 	fmt.Println(req.Values.TransactionId)
-	//fmt.Println("transaction id=" + strconv.FormatInt(req.Values.TransactionId, 10))
 	return &gen.SayHelloResponse{Message: "[grpc server]Hello, " + req.YourName}, nil
 }
 

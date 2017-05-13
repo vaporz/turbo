@@ -19,17 +19,17 @@ var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.R
 			return nil, err
 		}
 		params := turbo.MakeParams(req, reflect.ValueOf(request))
-		return turbo.ParseResult(callMethod(methodName, params))
+		return turbo.ParseResult(callGrpcMethod(methodName, params))
 	case "EatApple":
 		request := &EatAppleRequest{}
 		turbo.BuildStruct(reflect.TypeOf(request), reflect.ValueOf(&request).Elem(), req)
 		params := turbo.MakeParams(req, reflect.ValueOf(&request))
-		return turbo.ParseResult(callMethod(methodName, params))
+		return turbo.ParseResult(callGrpcMethod(methodName, params))
 	default:
 		return nil, errors.New("No such method[" + methodName + "]")
 	}
 }
 
-func callMethod(methodName string, params []reflect.Value) []reflect.Value {
+func callGrpcMethod(methodName string, params []reflect.Value) []reflect.Value {
 	return reflect.ValueOf(turbo.GrpcService().(YourServiceClient)).MethodByName(methodName).Call(params)
 }

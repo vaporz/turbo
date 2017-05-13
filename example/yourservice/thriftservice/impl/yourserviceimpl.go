@@ -8,7 +8,9 @@ import (
 type YourService struct {
 }
 
-func (s YourService) SayHello(yourName string) (r *gen.SayHelloResponse, err error) {
+func (s YourService) SayHello(yourName string, values *gen.CommonValues, helloValues *gen.HelloValues) (r *gen.SayHelloResponse, err error) {
+	fmt.Println(values.TransactionId)
+	fmt.Println(helloValues.Message)
 	return &gen.SayHelloResponse{Message: "[thrift server]Hello, " + yourName}, nil
 }
 

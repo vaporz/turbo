@@ -21,7 +21,7 @@ func Usage() {
   fmt.Fprintln(os.Stderr, "Usage of ", os.Args[0], " [-h host:port] [-u url] [-f[ramed]] function [arg1 [arg2...]]:")
   flag.PrintDefaults()
   fmt.Fprintln(os.Stderr, "\nFunctions:")
-  fmt.Fprintln(os.Stderr, "  SayHelloResponse sayHello(string yourName)")
+  fmt.Fprintln(os.Stderr, "  SayHelloResponse sayHello(string yourName, CommonValues values, HelloValues helloValues)")
   fmt.Fprintln(os.Stderr, "  EatAppleResponse eatApple(i32 num, string stringValue, bool boolValue)")
   fmt.Fprintln(os.Stderr)
   os.Exit(0)
@@ -118,13 +118,47 @@ func main() {
   
   switch cmd {
   case "sayHello":
-    if flag.NArg() - 1 != 1 {
-      fmt.Fprintln(os.Stderr, "SayHello requires 1 args")
+    if flag.NArg() - 1 != 3 {
+      fmt.Fprintln(os.Stderr, "SayHello requires 3 args")
       flag.Usage()
     }
     argvalue0 := flag.Arg(1)
     value0 := argvalue0
-    fmt.Print(client.SayHello(value0))
+    arg7 := flag.Arg(2)
+    mbTrans8 := thrift.NewTMemoryBufferLen(len(arg7))
+    defer mbTrans8.Close()
+    _, err9 := mbTrans8.WriteString(arg7)
+    if err9 != nil {
+      Usage()
+      return
+    }
+    factory10 := thrift.NewTSimpleJSONProtocolFactory()
+    jsProt11 := factory10.GetProtocol(mbTrans8)
+    argvalue1 := gen.NewCommonValues()
+    err12 := argvalue1.Read(jsProt11)
+    if err12 != nil {
+      Usage()
+      return
+    }
+    value1 := argvalue1
+    arg13 := flag.Arg(3)
+    mbTrans14 := thrift.NewTMemoryBufferLen(len(arg13))
+    defer mbTrans14.Close()
+    _, err15 := mbTrans14.WriteString(arg13)
+    if err15 != nil {
+      Usage()
+      return
+    }
+    factory16 := thrift.NewTSimpleJSONProtocolFactory()
+    jsProt17 := factory16.GetProtocol(mbTrans14)
+    argvalue2 := gen.NewHelloValues()
+    err18 := argvalue2.Read(jsProt17)
+    if err18 != nil {
+      Usage()
+      return
+    }
+    value2 := argvalue2
+    fmt.Print(client.SayHello(value0, value1, value2))
     fmt.Print("\n")
     break
   case "eatApple":
@@ -132,8 +166,8 @@ func main() {
       fmt.Fprintln(os.Stderr, "EatApple requires 3 args")
       flag.Usage()
     }
-    tmp0, err7 := (strconv.Atoi(flag.Arg(1)))
-    if err7 != nil {
+    tmp0, err19 := (strconv.Atoi(flag.Arg(1)))
+    if err19 != nil {
       Usage()
       return
     }

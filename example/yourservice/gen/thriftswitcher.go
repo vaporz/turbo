@@ -15,53 +15,44 @@ var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http
 	switch methodName { 
 	case "SayHello":
 		args := gen.YourServiceSayHelloArgs{}
-		argsType := reflect.TypeOf(args)
-		argsValue := reflect.ValueOf(args)
-		fieldNum := argsType.NumField()
-		params := make([]reflect.Value, fieldNum)
-		for i := 0; i < fieldNum; i++ {
-			fieldName := argsType.Field(i).Name
-			v, ok := req.Form[turbo.ToSnakeCase(fieldName)]
-			if !ok || len(v) <= 0 {
-				v = []string{""}
-			}
-			value, err := turbo.ReflectValue(argsValue.FieldByName(fieldName), v[0])
-			if err != nil {
-				return nil, err
-			}
-			params[i] = value
+		params, err := turbo.BuildArgs(reflect.TypeOf(args), reflect.ValueOf(args), req, buildStructArg)
+		if err != nil {
+			return nil, err
 		}
-		result := reflect.ValueOf(turbo.ThriftService().(*gen.YourServiceClient)).MethodByName(methodName).Call(params)
-		if result[1].Interface() == nil {
-			return result[0].Interface(), nil
-		} else {
-			return nil, result[1].Interface().(error)
-		}
+		return turbo.ParseResult(callThriftMethod(methodName, params))
 	case "EatApple":
 		args := gen.YourServiceEatAppleArgs{}
-		argsType := reflect.TypeOf(args)
-		argsValue := reflect.ValueOf(args)
-		fieldNum := argsType.NumField()
-		params := make([]reflect.Value, fieldNum)
-		for i := 0; i < fieldNum; i++ {
-			fieldName := argsType.Field(i).Name
-			v, ok := req.Form[turbo.ToSnakeCase(fieldName)]
-			if !ok || len(v) <= 0 {
-				v = []string{""}
-			}
-			value, err := turbo.ReflectValue(argsValue.FieldByName(fieldName), v[0])
-			if err != nil {
-				return nil, err
-			}
-			params[i] = value
+		params, err := turbo.BuildArgs(reflect.TypeOf(args), reflect.ValueOf(args), req, buildStructArg)
+		if err != nil {
+			return nil, err
 		}
-		result := reflect.ValueOf(turbo.ThriftService().(*gen.YourServiceClient)).MethodByName(methodName).Call(params)
-		if result[1].Interface() == nil {
-			return result[0].Interface(), nil
-		} else {
-			return nil, result[1].Interface().(error)
-		}
+		return turbo.ParseResult(callThriftMethod(methodName, params))
 	default:
 		return nil, errors.New("No such method[" + methodName + "]")
+	}
+}
+
+func callThriftMethod(methodName string, params []reflect.Value) []reflect.Value {
+	return reflect.ValueOf(turbo.ThriftService().(*gen.YourServiceClient)).MethodByName(methodName).Call(params)
+}
+
+func buildStructArg(typeName string, req *http.Request) (v reflect.Value, err error) {
+	switch typeName { 
+	case "HelloValues":
+		request := &gen.HelloValues{}
+		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
+		if err != nil {
+			return v, err
+		}
+		return reflect.ValueOf(request), nil
+	case "CommonValues":
+		request := &gen.CommonValues{}
+		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
+		if err != nil {
+			return v, err
+		}
+		return reflect.ValueOf(request), nil
+	default:
+		return v, errors.New("unknown typeName[" + typeName + "]")
 	}
 }

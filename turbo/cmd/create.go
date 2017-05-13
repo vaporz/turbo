@@ -8,6 +8,7 @@ import (
 
 var createCmd = &cobra.Command{
 	Use:   "create package_path ServiceName",
+	Aliases: []string{"c"},
 	Short: "Create a project with runnable HTTP server and gRPC/thrift server",
 	Example: "turbo create package/path/to/yourservice YourService -p grpc\n" +
 		"'ServiceName' must be a CamelCase string",
@@ -16,7 +17,7 @@ var createCmd = &cobra.Command{
 			return errors.New("invalid args")
 		}
 		// TODO assert that args[1] must be a CamelCase string
-		turbo.CreateProject(args[0], args[1], c_rpcType)
+		turbo.CreateProject(args[0], args[1], c_rpcType, "")
 		return nil
 	},
 }
