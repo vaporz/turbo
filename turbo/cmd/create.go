@@ -17,7 +17,7 @@ var createCmd = &cobra.Command{
 			return errors.New("invalid args")
 		}
 		// TODO assert that args[1] must be a CamelCase string
-		turbo.CreateProject(args[0], args[1], c_rpcType, "")
+		turbo.CreateProject(args[0], args[1], c_rpcType)
 		return nil
 	},
 }

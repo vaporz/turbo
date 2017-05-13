@@ -8,34 +8,34 @@ import (
 	"text/template"
 )
 
-func CreateProject(pkgPath, serviceName, serverType, options string) {
+func CreateProject(pkgPath, serviceName, serverType string) {
 	InitPkgPath(pkgPath)
-	// TODO what if serviceName is start with a lower case character?
-	// TODO panic if root folder already exists
+	// TODO pop alert, force user to confirm if root folder already exists
 	createRootFolder()
 	createServiceYaml(serviceName)
+	InitRpcType(serverType)
 	LoadServiceConfig()
 	if serverType == "grpc" {
-		CreateGrpcProject(serviceName, options)
+		CreateGrpcProject(serviceName)
 	} else if serverType == "thrift" {
-		CreateThriftProject(serviceName, options)
+		CreateThriftProject(serviceName)
 	}
 }
 
-func CreateGrpcProject(serviceName, options string) {
+func CreateGrpcProject(serviceName string) {
 	createGrpcFolders()
 	createProto(serviceName)
-	GenerateProtobufStub(options)
+	GenerateProtobufStub(" -I " + serviceRootPath + " " + serviceRootPath + "/" + strings.ToLower(serviceName) + ".proto ")
 	GenerateGrpcSwitcher()
 	generateGrpcServiceMain()
 	generateGrpcServiceImpl()
 	generateGrpcHTTPMain()
 }
 
-func CreateThriftProject(serviceName, options string) {
+func CreateThriftProject(serviceName string) {
 	createThriftFolders()
 	createThrift(serviceName)
-	GenerateThriftStub(options)
+	GenerateThriftStub(" -I " + serviceRootPath + " ")
 	GenerateThriftSwitcher()
 	generateThriftServiceMain()
 	generateThriftServiceImpl()
@@ -47,16 +47,22 @@ func createRootFolder() {
 }
 
 func createGrpcFolders() {
+	os.MkdirAll(serviceRootPath+"/gen/proto", 0755)
 	os.MkdirAll(serviceRootPath+"/grpcapi", 0755)
 	os.MkdirAll(serviceRootPath+"/grpcservice/impl", 0755)
 }
 
 func createThriftFolders() {
+	os.MkdirAll(serviceRootPath+"/gen/thrift", 0755)
 	os.MkdirAll(serviceRootPath+"/thriftapi", 0755)
 	os.MkdirAll(serviceRootPath+"/thriftservice/impl", 0755)
 }
 
 func createServiceYaml(serviceName string) {
+	_, err := os.Open(serviceRootPath + "/service.yaml")
+	if err == nil {
+		return
+	}
 	tmpl, err := template.New("yaml").Parse(serviceYaml)
 	if err != nil {
 		panic(err)
@@ -101,7 +107,7 @@ type protoValues struct {
 }
 
 var proto string = `syntax = "proto3";
-package gen;
+package proto;
 
 message SayHelloRequest {
     string yourName = 1;
@@ -168,7 +174,7 @@ func GenerateGrpcSwitcher() {
 			nameSlice := []rune(pair[1])
 			name := strings.ToUpper(string(nameSlice[0])) + string(nameSlice[1:])
 			typeName := pair[0]
-			structFields = structFields + name + ": &" + typeName + "{},"
+			structFields = structFields + name + ": &proto." + typeName + "{},"
 		}
 		var casesBuf bytes.Buffer
 		err = tmpl.Execute(&casesBuf, method{v, structFields})
@@ -182,7 +188,10 @@ func GenerateGrpcSwitcher() {
 		os.Mkdir(serviceRootPath+"/gen", 0755)
 	}
 	f, _ := os.Create(serviceRootPath + "/gen/grpcswitcher.go")
-	err = tmpl.Execute(f, handlerContent{ServiceName: configs[GRPC_SERVICE_NAME], Cases: casesStr})
+	err = tmpl.Execute(f, handlerContent{
+		ServiceName: configs[GRPC_SERVICE_NAME],
+		Cases:       casesStr,
+		PkgPath:     servicePkgPath})
 	if err != nil {
 		panic(err)
 	}
@@ -196,6 +205,7 @@ type method struct {
 type handlerContent struct {
 	ServiceName string
 	Cases       string
+	PkgPath     string
 }
 
 var grpcSwitcherFunc string = `package gen
@@ -205,6 +215,7 @@ import (
 	"net/http"
 	"turbo"
 	"errors"
+	"{{.PkgPath}}/gen/proto"
 )
 
 /*
@@ -218,13 +229,13 @@ var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.R
 }
 
 func callGrpcMethod(methodName string, params []reflect.Value) []reflect.Value {
-	return reflect.ValueOf(turbo.GrpcService().({{.ServiceName}}Client)).MethodByName(methodName).Call(params)
+	return reflect.ValueOf(turbo.GrpcService().(proto.{{.ServiceName}}Client)).MethodByName(methodName).Call(params)
 }
 `
 
 var grpcCases string = `
 	case "{{.MethodName}}":
-		request := &{{.MethodName}}Request{ {{.StructFields}} }
+		request := &proto.{{.MethodName}}Request{ {{.StructFields}} }
 		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
 		if err != nil {
 			return nil, err
@@ -233,7 +244,7 @@ var grpcCases string = `
 		return turbo.ParseResult(callGrpcMethod(methodName, params))`
 
 func GenerateProtobufStub(options string) {
-	cmd := "protoc " + options + " --go_out=plugins=grpc:" + serviceRootPath + "/gen"
+	cmd := "protoc " + options + " --go_out=plugins=grpc:" + serviceRootPath + "/gen/proto"
 	executeCmd("bash", "-c", cmd)
 }
 
@@ -301,7 +312,7 @@ type buildArgParams struct {
 var thriftSwitcherFunc string = `package gen
 
 import (
-	"{{.PkgPath}}/gen/gen-go/gen"
+	"{{.PkgPath}}/gen/thrift/gen-go/gen"
 	"reflect"
 	"net/http"
 	"turbo"
@@ -351,7 +362,7 @@ var buildArgCases string = `
 func GenerateThriftStub(options string) {
 	nameLower := strings.ToLower(configs[THRIFT_SERVICE_NAME])
 	cmd := "thrift " + options + " -r --gen go:package_prefix=" + servicePkgPath + "/gen/gen-go/ -o" +
-		" " + serviceRootPath + "/" + "gen " + serviceRootPath + "/" + nameLower + ".thrift"
+		" " + serviceRootPath + "/" + "gen/thrift " + serviceRootPath + "/" + nameLower + ".thrift"
 	executeCmd("bash", "-c", cmd)
 	// TODO run compile to validate
 }
@@ -392,7 +403,7 @@ import (
 	"log"
 	"google.golang.org/grpc"
 	"{{.PkgPath}}/grpcservice/impl"
-	"{{.PkgPath}}/gen"
+	"{{.PkgPath}}/gen/proto"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -402,7 +413,7 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	grpcServer := grpc.NewServer()
-	gen.Register{{.ServiceName}}Server(grpcServer, &impl.{{.ServiceName}}{})
+	proto.Register{{.ServiceName}}Server(grpcServer, &impl.{{.ServiceName}}{})
 
 	reflection.Register(grpcServer)
 	if err := grpcServer.Serve(lis); err != nil {
@@ -434,7 +445,7 @@ var thriftServiceMain string = `package main
 
 import (
 	"{{.PkgPath}}/thriftservice/impl"
-	"{{.PkgPath}}/gen/gen-go/gen"
+	"{{.PkgPath}}/gen/thrift/gen-go/gen"
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"log"
 	"os"
@@ -475,14 +486,14 @@ var serviceImpl string = `package impl
 
 import (
 	"golang.org/x/net/context"
-	"{{.PkgPath}}/gen"
+	"{{.PkgPath}}/gen/proto"
 )
 
 type {{.ServiceName}} struct {
 }
 
-func (s *{{.ServiceName}}) SayHello(ctx context.Context, req *gen.SayHelloRequest) (*gen.SayHelloResponse, error) {
-	return &gen.SayHelloResponse{Message: "[grpc server]Hello, " + req.YourName}, nil
+func (s *{{.ServiceName}}) SayHello(ctx context.Context, req *proto.SayHelloRequest) (*proto.SayHelloResponse, error) {
+	return &proto.SayHelloResponse{Message: "[grpc server]Hello, " + req.YourName}, nil
 }
 `
 
@@ -507,7 +518,7 @@ type thriftServiceImplValues struct {
 var thriftServiceImpl string = `package impl
 
 import (
-	"{{.PkgPath}}/gen/gen-go/gen"
+	"{{.PkgPath}}/gen/thrift/gen-go/gen"
 )
 
 type {{.ServiceName}} struct {
@@ -542,6 +553,7 @@ import (
 	"turbo"
 	"google.golang.org/grpc"
 	"{{.PkgPath}}/gen"
+	"{{.PkgPath}}/gen/proto"
 )
 
 func main() {
@@ -549,7 +561,7 @@ func main() {
 }
 
 func grpcClient(conn *grpc.ClientConn) interface{} {
-	return gen.New{{.ServiceName}}Client(conn)
+	return proto.New{{.ServiceName}}Client(conn)
 }
 `
 
@@ -571,7 +583,7 @@ var thriftHTTPMain string = `package main
 import (
 	"turbo"
 	"{{.PkgPath}}/gen"
-	t "{{.PkgPath}}/gen/gen-go/gen"
+	t "{{.PkgPath}}/gen/thrift/gen-go/gen"
 	"git.apache.org/thrift.git/lib/go/thrift"
 )
 

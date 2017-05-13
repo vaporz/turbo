@@ -31,7 +31,7 @@ var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		ParseRequestForm(req)
 		interceptors := getInterceptors(req)
-		// TODO if N doBefore() run, then N doAfter should run too
+		// TODO !!! if N doBefore() run, then N doAfter should run too
 		req, err := doBefore(interceptors, resp, req)
 		if err != nil {
 			log.Println(err.Error())

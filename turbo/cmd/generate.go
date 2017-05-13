@@ -35,11 +35,10 @@ var generateCmd = &cobra.Command{
 		}
 		turbo.InitRpcType(g_rpcType)
 		turbo.LoadServiceConfigWith(args[0])
-		// TODO divide into different folders
-		if len(args) == 1 || args[1] == "grpc" {
+		if g_rpcType == "grpc" {
 			turbo.GenerateGrpcSwitcher()
 			turbo.GenerateProtobufStub(options)
-		} else if args[1] == "thrift" {
+		} else if g_rpcType == "thrift" {
 			turbo.GenerateThriftSwitcher()
 			turbo.GenerateThriftStub(options)
 		} else {

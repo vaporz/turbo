@@ -90,7 +90,7 @@ func initUrlMap() {
 func initFieldMapping() {
 	node, err := yaml.Child(config.Root, rpctype+"-fieldmapping")
 	if err != nil {
-		log.Fatalf("parse fieldmapping error: %s", err)
+		return
 	}
 	fieldMappingMap := node.(yaml.Map)
 	for k, v := range fieldMappingMap {
