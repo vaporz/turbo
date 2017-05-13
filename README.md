@@ -1,5 +1,4 @@
-# Turbo
-[![Build Status](https://travis-ci.org/vaporz/turbo.svg?branch=master)](https://travis-ci.org/vaporz/turbo)
+# Turbo  [![Circle CI](https://circleci.com/gh/vaporz/turbo.svg?style=shield)](https://circleci.com/gh/vaporz/turbo) [![Build Status](https://travis-ci.org/vaporz/turbo.svg?branch=master)](https://travis-ci.org/vaporz/turbo) [![Go Report Card](https://goreportcard.com/badge/github.com/vaporz/turbo)](https://goreportcard.com/report/github.com/vaporz/turbo) [![codebeat badge](https://codebeat.co/badges/7a166e48-dae1-454c-b925-4fbcd3f1f461)](https://codebeat.co/projects/github-com-vaporz-turbo-master) [![Coverage Status](https://coveralls.io/repos/github/vaporz/turbo/badge.svg?branch=master)](https://coveralls.io/github/vaporz/turbo?branch=master)
 
 <b>WORK IN PROGRESS! There may be many bugs, and the README may not be synced in time as the codes changed.</b>
 

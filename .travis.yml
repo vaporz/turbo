@@ -2,6 +2,7 @@ language: go
 
 go:
   - 1.8.x
+  - tip
 
 go_import_path: turbo
 
@@ -12,3 +13,8 @@ install:
   - go get git.apache.org/thrift.git/lib/go/thrift
   - go get github.com/spf13/cobra
   - go get github.com/spf13/viper
+#  - go get golang.org/x/tools/cmd/cover
+#  - go get github.com/mattn/goveralls
+#script:
+#  - go test -v -covermode=count -coverprofile=coverage.out
+#  - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken LKmWen7DjWjYrvaX8N80tX9LbnCRCww8k

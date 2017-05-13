@@ -1,0 +1,16 @@
+## Customize the test machine
+machine:
+  # Version of ruby to use
+  go:
+    version:
+      1.8
+
+## Customize dependencies
+dependencies:
+  pre:
+     - go get github.com/kylelemons/go-gypsy/yaml
+     - go get github.com/gorilla/mux
+     - go get google.golang.org/grpc
+     - go get git.apache.org/thrift.git/lib/go/thrift
+     - go get github.com/spf13/cobra
+     - go get github.com/spf13/viper
