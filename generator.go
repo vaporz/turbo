@@ -2,11 +2,11 @@ package turbo
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 	"text/template"
-	"fmt"
 )
 
 func CreateProject(pkgPath, serviceName, serverType string) {
@@ -150,10 +150,6 @@ service {{.ServiceName}} {
 }
 `
 
-/*
-generate grpcswitcher.go, [service_name].pb.go, grpcservice/[service_name].go, " +
-		"grpcservice/impl/[service_name]impl.go
-*/
 func GenerateGrpcSwitcher() {
 	var casesStr string
 	methodNames := make(map[string]int)
@@ -178,6 +174,9 @@ func GenerateGrpcSwitcher() {
 		}
 		var casesBuf bytes.Buffer
 		err = tmpl.Execute(&casesBuf, method{v, structFields})
+		if err != nil {
+			panic(err)
+		}
 		casesStr = casesStr + casesBuf.String()
 	}
 	tmpl, err := template.New("switcher").Parse(grpcSwitcherFunc)
@@ -266,6 +265,9 @@ func GenerateThriftSwitcher() {
 		}
 		var casesBuf bytes.Buffer
 		err = tmpl.Execute(&casesBuf, thriftMethod{configs[THRIFT_SERVICE_NAME], v})
+		if err != nil {
+			panic(err)
+		}
 		casesStr = casesStr + casesBuf.String()
 	}
 
@@ -277,6 +279,9 @@ func GenerateThriftSwitcher() {
 		}
 		var argCasesBuf bytes.Buffer
 		err = tmpl.Execute(&argCasesBuf, buildArgParams{k})
+		if err != nil {
+			panic(err)
+		}
 		argCasesStr = argCasesStr + argCasesBuf.String()
 	}
 

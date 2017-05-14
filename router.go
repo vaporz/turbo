@@ -100,7 +100,7 @@ func doPostprocessor(resp http.ResponseWriter, req *http.Request, serviceRespons
 	}
 
 	// 2, parse serviceResponse with registered struct
-	//if user defined struct registerd {
+	//if user defined struct registered {
 	// TODO user can define a struct, which defines how data is mapped
 	// from response to this struct, and how this struct is parsed into xml/json
 	// return
@@ -306,9 +306,8 @@ func MakeParams(req *http.Request, requestValue reflect.Value) []reflect.Value {
 func ParseResult(result []reflect.Value) (serviceResponse interface{}, err error) {
 	if result[1].Interface() == nil {
 		return result[0].Interface(), nil
-	} else {
-		return nil, result[1].Interface().(error)
 	}
+	return nil, result[1].Interface().(error)
 }
 
 func BuildArgs(argsType reflect.Type, argsValue reflect.Value, req *http.Request, buildStructArg func(typeName string, req *http.Request) (v reflect.Value, err error)) ([]reflect.Value, error) {

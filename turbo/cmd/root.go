@@ -12,7 +12,7 @@ var cfgFile string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   "turbo",
+	Use: "turbo",
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
@@ -43,7 +43,7 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	}
 
-	viper.SetConfigName(".turbo") // name of config file (without extension)
+	viper.SetConfigName(".turbo")          // name of config file (without extension)
 	viper.AddConfigPath(os.Getenv("HOME")) // adding home directory as first search path
 	viper.AutomaticEnv()                   // read in environment variables that match
 

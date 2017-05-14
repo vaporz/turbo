@@ -6,8 +6,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"reflect"
+	"strings"
 )
 
 const GRPC_SERVICE_NAME string = "grpc_service_name"
@@ -113,7 +113,7 @@ func appendUrlServiceMap(line string) {
 	UrlServiceMap = append(UrlServiceMap, [3]string{HTTPMethod, url, methodName})
 }
 
-// -------Interceptor---------
+// Interceptor-----------------
 type Interceptor interface {
 	Before(http.ResponseWriter, *http.Request) (*http.Request, error)
 	After(http.ResponseWriter, *http.Request) (*http.Request, error)
@@ -165,7 +165,7 @@ func Interceptors(req *http.Request) interceptors {
 	return []Interceptor{}
 }
 
-// -------PreProcessor---------
+// PreProcessor-------------
 var preprocessorMap *mux.Router = mux.NewRouter()
 
 type preprocessor func(http.ResponseWriter, *http.Request) error
@@ -184,7 +184,7 @@ func Preprocessor(req *http.Request) preprocessor {
 	return nil
 }
 
-// -------PostProcessor---------
+// PostProcessor--------------
 var postprocessorMap *mux.Router = mux.NewRouter()
 
 type postprocessor func(http.ResponseWriter, *http.Request, interface{})
@@ -203,7 +203,7 @@ func Postprocessor(req *http.Request) postprocessor {
 	return nil
 }
 
-// -------Hijacker---------
+// Hijacker-----------------
 var hijackerMap *mux.Router = mux.NewRouter()
 
 type hijacker func(http.ResponseWriter, *http.Request)
@@ -222,7 +222,7 @@ func Hijacker(req *http.Request) hijacker {
 	return nil
 }
 
-// -------Convertor--------
+// Convertor--------------
 type convertor func(r *http.Request) reflect.Value
 
 var convertorMap map[reflect.Type]convertor = make(map[reflect.Type]convertor)
