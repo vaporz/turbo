@@ -18,7 +18,7 @@ var switcherFunc switcher
 func router(s switcher) *mux.Router {
 	switcherFunc = s
 	r := mux.NewRouter()
-	for _, v := range UrlServiceMap {
+	for _, v := range urlServiceMaps {
 		httpMethods := strings.Split(v[0], ",")
 		path := v[1]
 		methodName := v[2]
@@ -126,6 +126,7 @@ func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Req
 	return nil
 }
 
+// SetValue sets v to fieldValue according to fieldValue's Kind
 func SetValue(fieldValue reflect.Value, v string) error {
 	switch k := fieldValue.Kind(); k {
 	case reflect.Int,
@@ -164,6 +165,7 @@ func SetValue(fieldValue reflect.Value, v string) error {
 	return nil
 }
 
+// ReflectValue returns a reflect.Value with v according to fieldValue's Kind
 func ReflectValue(fieldValue reflect.Value, v string) (value reflect.Value, err error) {
 	switch k := fieldValue.Kind(); k {
 	case reflect.Int16:
@@ -250,6 +252,7 @@ func ReflectValue(fieldValue reflect.Value, v string) (value reflect.Value, err 
 	}
 }
 
+//BuildStruct finds values from request, and set them to struct fields recursively
 func BuildStruct(theType reflect.Type, theValue reflect.Value, req *http.Request) error {
 	fieldNum := theType.NumField()
 	for i := 0; i < fieldNum; i++ {
@@ -296,6 +299,7 @@ func findValue(fieldName string, req *http.Request) (string, bool) {
 	return "", false
 }
 
+// MakeParams returns a reflect.Value slice for grpc request
 func MakeParams(req *http.Request, requestValue reflect.Value) []reflect.Value {
 	params := make([]reflect.Value, 2)
 	params[0] = reflect.ValueOf(req.Context())
@@ -303,6 +307,7 @@ func MakeParams(req *http.Request, requestValue reflect.Value) []reflect.Value {
 	return params
 }
 
+// ParseResult checks if error is nil, will returns an error if any
 func ParseResult(result []reflect.Value) (serviceResponse interface{}, err error) {
 	if result[1].Interface() == nil {
 		return result[0].Interface(), nil
@@ -310,6 +315,7 @@ func ParseResult(result []reflect.Value) (serviceResponse interface{}, err error
 	return nil, result[1].Interface().(error)
 }
 
+// BuildArgs returns a list of reflect.Value for thrift request
 func BuildArgs(argsType reflect.Type, argsValue reflect.Value, req *http.Request, buildStructArg func(typeName string, req *http.Request) (v reflect.Value, err error)) ([]reflect.Value, error) {
 	fieldNum := argsType.NumField()
 	params := make([]reflect.Value, fieldNum)

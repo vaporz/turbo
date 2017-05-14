@@ -39,7 +39,7 @@ func initThriftService(clientCreator func(trans thrift.TTransport, f thrift.TPro
 	if thriftService != nil {
 		return nil
 	}
-	err := tClient.connect(configs[THRIFT_SERVICE_ADDRESS])
+	err := tClient.connect(configs[thriftServiceAddress])
 	if err == nil {
 		thriftService = clientCreator(tClient.transport, tClient.factory)
 	}
@@ -50,6 +50,8 @@ func closeThriftService() error {
 	return tClient.close()
 }
 
+// ThriftService returns a Thrift client instance,
+// example: client := turbo.ThriftService().(proto.YourServiceClient)
 func ThriftService() interface{} {
 	if thriftService == nil {
 		log.Fatalln("thrift connection not initiated!")

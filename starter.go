@@ -10,30 +10,32 @@ import (
 	"syscall"
 )
 
+// StartGrpcHTTPServer starts a HTTP server which sends requests via grpc
 func StartGrpcHTTPServer(pkgPath string, clientCreator func(conn *grpc.ClientConn) interface{}, switcher func(string, http.ResponseWriter, *http.Request) (interface{}, error)) {
 	initPkgPath(pkgPath)
 	InitRpcType("grpc")
-	LoadServiceConfig()
+	loadServiceConfig()
 	err := initGrpcService(clientCreator)
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 	defer closeGrpcService()
-	startHTTPServer(configs[PORT], router(switcher))
+	startHTTPServer(configs[port], router(switcher))
 }
 
+// StartThriftHTTPServer starts a HTTP server which sends requests via Thrift
 func StartThriftHTTPServer(pkgPath string, clientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}, switcher func(string, http.ResponseWriter, *http.Request) (interface{}, error)) {
 	initPkgPath(pkgPath)
 	InitRpcType("thrift")
-	LoadServiceConfig()
+	loadServiceConfig()
 	err := initThriftService(clientCreator)
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 	defer closeThriftService()
-	startHTTPServer(configs[PORT], router(switcher))
+	startHTTPServer(configs[port], router(switcher))
 }
 
 func startHTTPServer(port string, router http.Handler) {

@@ -34,7 +34,7 @@ func initGrpcService(clientCreator func(conn *grpc.ClientConn) interface{}) erro
 	if grpcService != nil {
 		return nil
 	}
-	err := gClient.dial(configs[GRPC_SERVICE_ADDRESS])
+	err := gClient.dial(configs[grpcServiceAddress])
 	if err == nil {
 		grpcService = clientCreator(gClient.conn)
 	}
@@ -45,6 +45,8 @@ func closeGrpcService() error {
 	return gClient.close()
 }
 
+// GrpcService returns a grpc client instance,
+// example: client := turbo.GrpcService().(proto.YourServiceClient)
 func GrpcService() interface{} {
 	if grpcService == nil {
 		log.Fatalln("grpc connection not initiated!")
