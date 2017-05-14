@@ -212,7 +212,7 @@ var grpcSwitcherFunc string = `package gen
 import (
 	"reflect"
 	"net/http"
-	"turbo"
+	"github.com/vaporz/turbo"
 	"errors"
 	"{{.PkgPath}}/gen/proto"
 )
@@ -325,7 +325,7 @@ import (
 	"{{.PkgPath}}/gen/thrift/gen-go/gen"
 	"reflect"
 	"net/http"
-	"turbo"
+	"github.com/vaporz/turbo"
 	"errors"
 )
 

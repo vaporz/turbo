@@ -44,12 +44,11 @@ func InitPkgPath(pkgPath string) {
 	initPkgPath(pkgPath)
 }
 
-// initPkgPath parse package path, if $GOPATH contains multi paths, the last one will be used
+// initPkgPath parse package path, if $GOPATH contains multi paths, the first one will be used
 func initPkgPath(pkgPath string) {
 	goPath := os.Getenv("GOPATH")
 	paths := strings.Split(goPath, ":")
-	l := len(paths)
-	serviceRootPath = paths[l-1] + "/src/" + pkgPath
+	serviceRootPath = paths[0] + "/src/" + pkgPath
 	servicePkgPath = pkgPath
 }
 
