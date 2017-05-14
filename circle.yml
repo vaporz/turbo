@@ -8,9 +8,10 @@ machine:
 ## Customize dependencies
 dependencies:
   pre:
+    - rm -rf /home/ubuntu/.go_workspace/src/github.com/vaporz
     - go get github.com/vaporz/turbo
     - rm -rf /home/ubuntu/.go_workspace/src/turbo
-    - ln -s -F -f /home/ubuntu/.go_workspace/src/github.com/vaporz/turbo /home/ubuntu/.go_workspace/src/turbo
+    - ln -s /home/ubuntu/.go_workspace/src/github.com/vaporz/turbo /home/ubuntu/.go_workspace/src/turbo
     - go get github.com/kylelemons/go-gypsy/yaml
     - go get github.com/gorilla/mux
     - go get google.golang.org/grpc

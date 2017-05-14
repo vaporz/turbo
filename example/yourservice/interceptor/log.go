@@ -2,9 +2,8 @@ package interceptor
 
 import (
 	"turbo"
-	"log"
 	"net/http"
-	"context"
+	"fmt"
 )
 
 type LogInterceptor struct {
@@ -16,13 +15,18 @@ type LogInterceptor struct {
 }
 
 func (l LogInterceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
-	log.Println("[Before][" + l.Msg + "] Request URL:" + req.URL.Path)
-	ctx := req.Context()
-	ctx = context.WithValue(ctx, "transaction_id", "1234567")
-	return req.WithContext(ctx), nil
+	fmt.Println("[Before][" + l.Msg + "] Request URL:" + req.URL.Path)
+	//resp.Write([]byte("Encounter an error from LogInterceptor!\n"))
+	//return req, errors.New("error!")
+	return req, nil
+
+	//fmt.Println("[Before][" + l.Msg + "] Request URL:" + req.URL.Path)
+	//ctx := req.Context()
+	//ctx = context.WithValue(ctx, "some_id", "1234567")
+	//return req.WithContext(ctx), nil
 }
 
 func (l LogInterceptor) After(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
-	log.Println("[After] Request URL:" + req.URL.Path)
+	fmt.Println("[After] Request URL:" + req.URL.Path)
 	return req, nil
 }

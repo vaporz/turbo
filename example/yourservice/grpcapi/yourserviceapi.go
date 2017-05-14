@@ -32,7 +32,7 @@ func grpcClient(conn *grpc.ClientConn) interface{} {
 
 func convertCommonValues(req *http.Request) reflect.Value {
 	result := &proto.CommonValues{}
-	result.TransactionId = 1111111
+	result.SomeId = 1111111
 	return reflect.ValueOf(result)
 }
 

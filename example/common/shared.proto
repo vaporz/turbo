@@ -2,5 +2,5 @@ syntax = "proto3";
 package proto;
 
 message CommonValues {
-    int64 transactionId = 1;
+    int64 someId = 1;
 }
