@@ -35,7 +35,9 @@ go install
 $ turbo create package/path/to/yourservice YourService -r grpc
 ```
 Directory "$GOPATH/src/package/path/to/yourservice" should appear.  
-There're also some generated files in this folder.
+There're also some generated files in this folder.  
+Example project:  
+https://github.com/vaporz/turbo-example/tree/master/yourservice
 
 ### 3, Run
 That's it! Now let's Play!
