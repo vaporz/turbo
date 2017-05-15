@@ -3,6 +3,7 @@ package turbo
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
@@ -166,74 +167,44 @@ func SetValue(fieldValue reflect.Value, v string) error {
 }
 
 // ReflectValue returns a reflect.Value with v according to fieldValue's Kind
-func ReflectValue(fieldValue reflect.Value, v string) (value reflect.Value, err error) {
+func ReflectValue(fieldValue reflect.Value, v string) (reflect.Value, error) {
 	switch k := fieldValue.Kind(); k {
 	case reflect.Int16:
-		var i int64
-		if v == "" {
-			i = 0
-		} else {
-			i, err = strconv.ParseInt(v, 10, 16)
-			if err != nil {
-				return reflect.ValueOf(i), errors.New("error int")
-			}
+		i, err := strconv.ParseInt(v, 10, 16)
+		if err != nil {
+			return reflect.ValueOf(int16(0)), err
 		}
 		return reflect.ValueOf(int16(i)), nil
 	case reflect.Int32:
-		var i int64
-		if v == "" {
-			i = 0
-		} else {
-			i, err = strconv.ParseInt(v, 10, 32)
-			if err != nil {
-				return reflect.ValueOf(i), errors.New("error int")
-			}
+		i, err := strconv.ParseInt(v, 10, 32)
+		if err != nil {
+			return reflect.ValueOf(int32(0)), err
 		}
 		return reflect.ValueOf(int32(i)), nil
 	case reflect.Int64:
-		var i int64
-		if v == "" {
-			i = 0
-		} else {
-			i, err = strconv.ParseInt(v, 10, 64)
-			if err != nil {
-				return reflect.ValueOf(i), errors.New("error int")
-			}
+		i, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return reflect.ValueOf(int64(0)), err
 		}
 		return reflect.ValueOf(int64(i)), nil
 	case reflect.String:
 		return reflect.ValueOf(v), nil
 	case reflect.Bool:
-		var b bool
-		if v == "" {
-			b = false
-		} else {
-			b, err = strconv.ParseBool(v)
-			if err != nil {
-				return reflect.ValueOf(b), errors.New("error bool")
-			}
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return reflect.ValueOf(false), err
 		}
 		return reflect.ValueOf(bool(b)), nil
 	case reflect.Float32:
-		var f float64
-		if v == "" {
-			f = 0
-		} else {
-			f, err = strconv.ParseFloat(v, 64)
-			if err != nil {
-				return reflect.ValueOf(f), errors.New("error float")
-			}
+		f, err := strconv.ParseFloat(v, 32)
+		if err != nil {
+			return reflect.ValueOf(0), errors.New("error float")
 		}
 		return reflect.ValueOf(float32(f)), nil
 	case reflect.Float64:
-		var f float64
-		if v == "" {
-			f = 0
-		} else {
-			f, err = strconv.ParseFloat(v, 64)
-			if err != nil {
-				return reflect.ValueOf(f), errors.New("error float")
-			}
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return reflect.ValueOf(0), errors.New("error float")
 		}
 		return reflect.ValueOf(float64(f)), nil
 		//case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
@@ -339,11 +310,11 @@ func BuildArgs(argsType reflect.Type, argsValue reflect.Value, req *http.Request
 		}
 		v, ok := findValue(fieldName, req)
 		if !ok {
-			continue
+			fmt.Println("[info]value not found! key[" + fieldName + "], use default value[" + v + "]")
 		}
 		value, err := ReflectValue(argsValue.FieldByName(fieldName), v)
 		if err != nil {
-			return nil, err
+			fmt.Println("[info]using default value, error: " + err.Error())
 		}
 		params[i] = value
 	}
