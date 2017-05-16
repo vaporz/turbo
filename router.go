@@ -3,6 +3,7 @@ package turbo
 import (
 	"encoding/json"
 	"errors"
+	// TODO support logging levels, log file path, etc.
 	"fmt"
 	"github.com/gorilla/mux"
 	"log"
@@ -32,13 +33,15 @@ var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		ParseRequestForm(req)
 		interceptors := getInterceptors(req)
-		// TODO !!! if N doBefore() run, then N doAfter should run too
-		req, err := doBefore(interceptors, resp, req)
+		skipSwitch := false
+		req, err := doBefore(&interceptors, resp, req)
 		if err != nil {
 			log.Println(err.Error())
-			return
+			skipSwitch = true
 		}
-		skipSwitch := doHijackerPreprocessor(resp, req)
+		if !skipSwitch {
+			skipSwitch = doHijackerPreprocessor(resp, req)
+		}
 		if !skipSwitch {
 			serviceResp, err := switcherFunc(methodName, resp, req)
 			if err == nil {
@@ -64,11 +67,12 @@ func getInterceptors(req *http.Request) []Interceptor {
 	return interceptors
 }
 
-func doBefore(interceptors []Interceptor, resp http.ResponseWriter, req *http.Request) (request *http.Request, err error) {
-	for _, i := range interceptors {
+func doBefore(interceptors *[]Interceptor, resp http.ResponseWriter, req *http.Request) (request *http.Request, err error) {
+	for index, i := range *interceptors {
 		req, err = i.Before(resp, req)
 		if err != nil {
 			log.Println("error in interceptor!" + err.Error())
+			*interceptors = (*interceptors)[0:index]
 			return nil, err
 		}
 	}
@@ -121,7 +125,10 @@ func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Req
 		req, err = interceptors[i].After(resp, req)
 		if err != nil {
 			log.Println("error in interceptor!")
-			return err
+			// if a doBefore() has run, then the corresponding doAfter() func
+			// should run too, so don't return here.
+			// Or, may be not?
+			//return err
 		}
 	}
 	return nil
