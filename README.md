@@ -9,8 +9,18 @@
  * [PreProcessor and PostProcessor](#preprocessor_and_postprocessor): customizable URL-RPC mapping process.
  * [Hijacker](#hijacker): Take over requests, do anything you want!
  * [MessageFieldConvertor](#message_field_convertor): Tell Turbo how to set a struct field.
-
-## Create a service on the fly
+## Index
+ * [Create a service on the fly](#create_a_service)
+ * [Command line tools](#command_line_tools)
+ * [Rules and Conventions](#rules_and_conventions)
+ * [How to add a new API](#add_a_new_api)
+ * [Use a shared struct](#use_a_shared_struct)
+ * [Interceptor](#interceptor)
+ * [PreProcessor and PostProcessor](#preprocessor_and_postprocessor)
+ * [Hijacker](#hijacker)
+ * [MessageFieldConvertor](#message_field_convertor)
+ * [Thrift support](#support_thrift)
+## <a name="create_a_service"></a>Create a service on the fly
 ### 0, Before the start
 Obviously, you have to install [Golang](https://golang.org) and [Protocol buffers](https://developers.google.com/protocol-buffers/) first.  
 And install required packages.
@@ -54,7 +64,7 @@ $ curl -w "\n" "http://localhost:8081/hello?your_name=Alice"
 message:"Hello, Alice"
 ```
 
-## Command line tools
+## <a name="command_line_tools"></a>Command line tools
 ### turbo create package_path ServiceName -r (grpc|thrift)
 'turbo create' creates a project with runnable HTTP server and gRPC/Thrift server.  
 'ServiceName' **MUST** be a CamelCase string.  
@@ -88,7 +98,7 @@ $ turbo generate package/path/to/yourservice -r grpc
 ```
 "-I" can appear more than one time, if you have a shared file like "shared.proto" imported from other path.
 
-## Rules and Conventions
+## <a name="rules_and_conventions"></a>Rules and Conventions
 There are some rules when you use turbo.
  * When defining a gRPC service, if the name of a gRPC method is "methodName", then the name
  of request message and response message **MUST** be "MethodNameRequest" and "MethodNameResponse".  
@@ -102,8 +112,8 @@ e.g. In a request like "GET /book/1234?id=5678", both "1234" and "5678" are valu
  * A parameter's key is case-insensitive to turbo, in fact, internally turbo will cast keys to lower case characters before further use.  
  e.g. In a request like "GET /book?ID=1234", turbo will see this query string as "id=1234".
 
-## How to add a new API
-#### 1, Define new gRPC API
+## <a name="add_a_new_api"></a>How to add a new API
+### 1, Define new gRPC API
 Modify "yourservice.proto", add new method "eatApple":
 ```diff
 +message EatAppleRequest {
@@ -119,19 +129,19 @@ Modify "yourservice.proto", add new method "eatApple":
 +    rpc eatApple (EatAppleRequest) returns (EatAppleResponse) {}
  }
 ```
-#### 2, Add new url-grpc mapping
+### 2, Add new url-grpc mapping
 Modify "service.yaml":
 ```diff
  urlmapping:
    - GET /hello SayHello
 +  - GET /eat_apple/{num:[0-9]+} EatApple
 ```
-#### 3, Generate new codes
+### 3, Generate new codes
 ```sh
 $ turbo generate package/path/to/yourservice -r grpc -I $GOPATH/src/package/path/to/yourservice
 ```
 
-#### 4, Implement new gRPC method
+### 4, Implement new gRPC method
 Edit "grpcservice/impl/yourserviceimpl.go":
 ```diff
 +func (s *YourService) EatApple(ctx context.Context, req *proto.EatAppleRequest) (*proto.EatAppleResponse, error) {
@@ -139,7 +149,7 @@ Edit "grpcservice/impl/yourserviceimpl.go":
 +}
 ```
 
-Now, stop and restart both HTTP and gRPC server, then test:
+Now, restart both HTTP and gRPC server, then test:
 ```sh
 # start grpc service
 $ go run grpcservice/yourservice.go
@@ -149,13 +159,13 @@ $ go run grpcapi/yourserviceapi.go
 $ curl "http://localhost:8081/eat_apple/5"
 message:"Good taste! Apple num=5"
 ```
-## Use a shared struct
+## <a name="use_a_shared_struct"></a>Use a shared struct
 Sometimes we want to add some info to all requests from frontend server to backend server.  
 So we define a new message in a file like "shared.proto" in a separate path.  
 Then we add this new message to other message as a struct field.
 
-Let me show you how do this in grpc with Turbo.
-#### 1, Create "shared.proto" and define a new message
+Let me show you how to do this in grpc with Turbo.
+### 1, Create "shared.proto" and define a new message
 Create folder "common"(or any other name)
 ```sh
 $ mkdir -p $GOPATH/src/package/path/to/common
@@ -169,7 +179,7 @@ message CommonValues {
     int64 someId = 1;
 }
 ```
-#### 2, Add new field to a request message
+### 2, Add new field to a request message
 Edit "yourservice.proto":
 ```diff
 syntax = "proto3";
@@ -182,7 +192,7 @@ message SayHelloRequest {
 +    CommonValues values = 2;
 }
 ```
-#### 3, Register field structs
+### 3, Register field structs
 // TODO this step is planed to be merged into "turbo generate" with a grpc|thrift plugin.
 Edit "service.yaml":
 ```diff
@@ -195,7 +205,7 @@ Edit "service.yaml":
 urlmapping:
   - GET /hello SayHello
 ```
-#### 4, Generate codes
+### 4, Generate codes
 ```sh
 $ turbo generate package/path/to/yourservice -r grpc -I $GOPATH/src/package/path/to/yourservice
  -I $GOPATH/src/package/path/to/common
@@ -304,7 +314,7 @@ What if I want to do something particularly for some API?<br>
 Preprocessor/Hijacker comes to help!<br>
 If both Preprocessors and hijackers are assigned to an URL, only the last hijacker assigned is active.
 
-#### Preprocessor
+### Preprocessor
 Preprocessors are executed just after all Before() functions from interceptors, and before
 sending requests to gRPC server.  
 Preprocessors can be used to do something particularly for an API. For example, parameter value validations,
@@ -344,7 +354,7 @@ message:"Good taste! Apple num=5"
 $ curl -w "\n" "http://localhost:8081/eat_apple/6"
 Too many apples!
 ```
-#### Postprocessor
+### Postprocessor
 By default, RPC response objects are format into a JSON string, and returned as API response.  
 Postprocessors handle responses from backend service. You can change default behavior by assigning a postprocessor.
 
