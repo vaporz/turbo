@@ -92,7 +92,7 @@ urlmapping:
 
 func createProto(serviceName string) {
 	nameLower := strings.ToLower(serviceName)
-	tmpl, err := template.New("proto").Parse(proto)
+	tmpl, err := template.New("proto").Parse(protoFile)
 	if err != nil {
 		panic(err)
 	}
@@ -107,7 +107,7 @@ type protoValues struct {
 	ServiceName string
 }
 
-var proto string = `syntax = "proto3";
+var protoFile string = `syntax = "proto3";
 package proto;
 
 message SayHelloRequest {

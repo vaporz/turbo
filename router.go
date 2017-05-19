@@ -11,6 +11,11 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	validator "turbo/plugin/fieldvalidator"
+	"github.com/golang/protobuf/descriptor"
+	p "turbo-example/yourservice/gen/proto"
+	protobuf "github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"github.com/golang/protobuf/proto"
 )
 
 type switcher func(methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
@@ -48,6 +53,7 @@ var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 				doPostprocessor(resp, req, serviceResp)
 			} else {
 				log.Println(err.Error())
+				resp.Write([]byte(err.Error()))
 				// do not 'return' here, this is not a bug
 			}
 		}
@@ -230,7 +236,7 @@ func ReflectValue(fieldValue reflect.Value, v string) (reflect.Value, error) {
 	}
 }
 
-//BuildStruct finds values from request, and set them to struct fields recursively
+//BuildStruct finds values from request, and set them to struct fields recursively, for grpc only
 func BuildStruct(theType reflect.Type, theValue reflect.Value, req *http.Request) error {
 	fieldNum := theType.NumField()
 	for i := 0; i < fieldNum; i++ {
@@ -252,6 +258,35 @@ func BuildStruct(theType reflect.Type, theValue reflect.Value, req *http.Request
 		if !ok {
 			continue
 		}
+
+		// 根据fieldValue的kind过滤出需要验证的checkedOptions
+		// 如果有不符合的option，log warning
+		checkedOptions := validator.FindOptions(fieldValue.Kind())
+		// 调生成代码的方法，根据fieldName拿到options列表
+		_, md := descriptor.ForMessage(&p.SayHelloRequest{})
+		var declaredOptions *protobuf.FieldOptions
+		for _, des := range md.GetField() {
+			if ToSnakeCase(*des.Name) == ToSnakeCase(fieldName) {
+				declaredOptions = des.Options
+				break
+			}
+		}
+		// 对每个option循环，如果option属于checkedOptions，则进行验证
+		// 如果验证失败，则返回error
+		if declaredOptions!=nil {
+			for _, option := range checkedOptions {
+				ext, err := proto.GetExtension(declaredOptions, option)
+				if err!=nil {
+					fmt.Println(err.Error())
+					continue
+				}
+				v, err = validator.DoValidate(v, option, ext)
+				if err!=nil {
+					return err
+				}
+			}
+		}
+
 		err := SetValue(fieldValue, v)
 		if err != nil {
 			return err
@@ -259,6 +294,8 @@ func BuildStruct(theType reflect.Type, theValue reflect.Value, req *http.Request
 	}
 	return nil
 }
+
+//func validate
 
 func findValue(fieldName string, req *http.Request) (string, bool) {
 	snakeCaseName := ToSnakeCase(fieldName)

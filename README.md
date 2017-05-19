@@ -38,6 +38,7 @@ go get github.com/spf13/viper
 go get github.com/vaporz/turbo
 cd github.com/vaporz/turbo/turbo
 go install
+export PATH=$PATH:$GOPATH/src/bin
 ```
 
 ### 2, Create your service
