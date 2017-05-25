@@ -1,5 +1,5 @@
 1, What is a Go-style framework?  
-2, Unit test, performance test, test test test.  
+2, Unit test, performance test(vs wheels), test test test.
 3, Logging: log level, log configuration, there should be some nice tools.  
 4, Better documentation.  
 5, Learn from and integrate with other open source projects, such as go-kit, go-micro, etc.  

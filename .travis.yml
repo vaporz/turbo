@@ -2,9 +2,6 @@ language: go
 
 go:
   - 1.8.x
-  - tip
-
-go_import_path: turbo
 
 install:
   - go get github.com/kylelemons/go-gypsy/yaml

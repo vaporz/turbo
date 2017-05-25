@@ -1,7 +1,7 @@
 package main
 
 import (
-	"turbo/turbo/cmd"
+	"github.com/vaporz/turbo/turbo/cmd"
 )
 
 func main() {

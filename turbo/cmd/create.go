@@ -3,7 +3,7 @@ package cmd
 import (
 	"errors"
 	"github.com/spf13/cobra"
-	"turbo"
+	"github.com/vaporz/turbo"
 )
 
 var createCmd = &cobra.Command{

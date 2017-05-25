@@ -244,7 +244,7 @@ Edit "yourservice/interceptor/log.go":
 package interceptor
 
 import (
-	"turbo"
+	"github.com/vaporz/turbo"
 	"fat"
 	"net/http"
 )
@@ -270,7 +270,7 @@ Then assign this interceptor to URL "/hello":<br>
 Edit "yourservice/yourserviceapi.go":
 ```diff
 import (
-	"turbo"
+	"github.com/vaporz/turbo"
 	"google.golang.org/grpc"
 	"turbo/example/yourservice/gen"
 	"turbo/example/yourservice/gen/proto"
