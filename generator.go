@@ -110,7 +110,7 @@ func createProto(serviceName string) {
 	nameLower := strings.ToLower(serviceName)
 	writeFileWithTemplate(
 		serviceRootPath+"/"+nameLower+".proto",
-		proto,
+		protoFile,
 		protoValues{ServiceName: serviceName},
 	)
 }
@@ -119,7 +119,7 @@ type protoValues struct {
 	ServiceName string
 }
 
-var proto string = `syntax = "proto3";
+var protoFile string = `syntax = "proto3";
 package proto;
 
 message SayHelloRequest {
