@@ -1,16 +1,16 @@
 package turbo
 
 import (
-	"github.com/gorilla/mux"
-	"net/http"
-	"regexp"
-	"strings"
-	"reflect"
+	"errors"
 	"fmt"
 	sjson "github.com/bitly/go-simplejson"
-	"strconv"
-	"errors"
 	"github.com/golang/protobuf/proto"
+	"github.com/gorilla/mux"
+	"net/http"
+	"reflect"
+	"regexp"
+	"strconv"
+	"strings"
 )
 
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
@@ -64,15 +64,17 @@ func mergeMuxVars(req *http.Request) {
 	}
 }
 
-// FilterProtoJson walks through a Json(marshaled by ), comparing each key with the field which have same name in protoMessage,
-// 1, if field type is 'int64', then change the value in Json into a number
-// 2, if field type is 'Ptr', and field value is 'nil', then append a "[key_name]":null in Json
-func FilterProtoJson(jsonBytes []byte, protoMessage interface{}) ([]byte, error) {
+// FilterJsonWithStruct walks through a struct, comparing each struct field with the key which have
+// same name('fieldName'=='field_name') in json, and change the json by:
+// 1, if struct field type is 'int64', then change the value in Json into a number
+// 2, if field type is 'Ptr', and field value is 'nil', then set "[key_name]":null in Json
+// 3, if any key in json is missing, set zero value to that key
+func FilterJsonWithStruct(jsonBytes []byte, structObj interface{}) ([]byte, error) {
 	json, err := sjson.NewJson(jsonBytes)
 	if err != nil {
 		return jsonBytes, err
 	}
-	err = filterStruct(json, reflect.TypeOf(protoMessage).Elem(), reflect.ValueOf(protoMessage).Elem())
+	err = filterStruct(json, reflect.TypeOf(structObj).Elem(), reflect.ValueOf(structObj).Elem())
 	if err != nil {
 		return jsonBytes, err
 	}
@@ -217,13 +219,51 @@ func jsonFieldName(structJson *sjson.Json, field reflect.StructField) (string, e
 		return nameToSnake, nil
 	}
 	defaultName := nameToSnake
-	protoTag := field.Tag.Get("protobuf")
+	nameInTag, err := lookupNameInTag(field)
+	if err == nil {
+		_, ok = structJson.CheckGet(nameInTag)
+		if ok {
+			return nameInTag, nil
+		}
+		defaultName = nameInTag
+	}
+	return defaultName, errors.New(fmt.Sprintf("fieldName [%s] not exist in json", fieldName))
+}
+
+func lookupNameInTag(field reflect.StructField) (string, error) {
+	name, err := lookupNameInProtoTag(field)
+	if err == nil {
+		return name, nil
+	}
+	name, err = lookupNameInJsonTag(field)
+	if err == nil {
+		return name, nil
+	}
+	return "", errors.New("no name in tag")
+}
+
+func lookupNameInProtoTag(field reflect.StructField) (string, error) {
+	protoTag := strings.TrimSpace(field.Tag.Get("protobuf"))
 	if len(protoTag) > 0 {
 		var prop proto.Properties
 		prop.Parse(protoTag)
 		if len(prop.OrigName) > 0 {
-			defaultName = prop.OrigName
+			return prop.OrigName, nil
 		}
 	}
-	return defaultName, errors.New(fmt.Sprintf("fieldName [%s] not exist in json", fieldName))
+	return "", errors.New("no such tag: protobuf")
+}
+
+func lookupNameInJsonTag(field reflect.StructField) (string, error) {
+	jsonTag := strings.TrimSpace(field.Tag.Get("json"))
+	if len(jsonTag) > 0 {
+		if jsonTag == "-" {
+			return "", errors.New("no name in json tag")
+		}
+		tagItems := strings.Split(jsonTag, ",")
+		if len(tagItems[0]) > 0 {
+			return tagItems[0], nil
+		}
+	}
+	return "", errors.New("no such tag: json")
 }

@@ -2,9 +2,9 @@ package turbo
 
 import (
 	sjson "github.com/bitly/go-simplejson"
-	"testing"
-	"reflect"
 	"github.com/stretchr/testify/assert"
+	"reflect"
+	"testing"
 )
 
 type args struct {
@@ -87,6 +87,36 @@ func TestFilterNestedStruct_Empty_Field(t *testing.T) {
 	assert.Equal(t, "{\"nested_value\":{\"ptr_value\":null},\"test_id\":123}", string(jsonBytes))
 }
 
+type testTag struct {
+	Value   int `protobuf:"varint,1,opt,name=test_name_proto" json:"id,omitempty"`
+	Value_1 int `protobuf:"varint,1,opt" json:"test_name_json,omitempty"`
+}
+
+func TestLookupNameInProtoTag(t *testing.T) {
+	var v testTag
+	sf := reflect.TypeOf(v).Field(0)
+	name, _ := lookupNameInProtoTag(sf)
+	assert.Equal(t, "test_name_proto", name)
+}
+
+func TestLookupNameInJsonTag(t *testing.T) {
+	var v testTag
+	sf := reflect.TypeOf(v).Field(1)
+	name, _ := lookupNameInJsonTag(sf)
+	assert.Equal(t, "test_name_json", name)
+}
+
+func TestLookupNameInTag(t *testing.T) {
+	var v testTag
+	sf := reflect.TypeOf(v).Field(0)
+	name, _ := lookupNameInTag(sf)
+	assert.Equal(t, "test_name_proto", name)
+
+	sf = reflect.TypeOf(v).Field(1)
+	name, _ = lookupNameInTag(sf)
+	assert.Equal(t, "test_name_json", name)
+}
+
 type someArgs struct {
 }
 
@@ -107,106 +137,102 @@ type complexNestedValue struct {
 
 type complexNestedStruct struct {
 	testId              int64
-	stringValue         string
-	intArray            []int64  `protobuf:"varint,1,opt,name=new_name" json:"id,omitempty"`
+	StringValue         string  `protobuf:"varint,1,opt,name=s_value" json:"id,omitempty"`
+	IntArray            []int64 `protobuf:"varint,1,opt,name=new_name" json:"id,omitempty"`
 	complexNestedValue  *complexNestedValue
-	complexNestedValue1 *complexNestedValue
-	complexNestedValue2 *complexNestedValue
+	ComplexNestedValue1 *complexNestedValue `protobuf:"varint,1,opt,name=c_n_v1" json:"c_n_v111,omitempty"`
+	ComplexNestedValue2 *complexNestedValue `protobuf:"varint,1,opt" json:"c_n_v2,omitempty"`
 }
 
 func TestFilterComplexNestedStruct(t *testing.T) {
 	cv := &childValue{testId: 123, stringValue: "a string"}
 	cv1 := &childValue{testId: 456, args: &someArgs{}}
 	cv2 := &childValue{testId: 789, intArray: []int64{44, 55, 66}}
-
 	cnv := &complexNestedValue{testId: 456, intArray: []int64{11, 22, 33}, childValueArr: []*childValue{cv1, cv2}, childValue1: cv}
-	s := &complexNestedStruct{stringValue: "struct string", complexNestedValue: cnv}
-	bytes := []byte("{\"string_value\":\"struct string\", \"complex_nested_value\":{\"test_id\":\"456\"" +
+	s := &complexNestedStruct{StringValue: "struct string", complexNestedValue: cnv}
+
+	bytes := []byte("{\"s_value\":\"struct string\", \"complex_nested_value\":{\"test_id\":\"456\"" +
 		", \"int_array\":[\"11\",\"22\",\"33\"], \"child_value_arr\":[{\"test_id\":\"456\",\"args\":{}}," +
 		"{\"test_id\":\"789\",\"int_array\":[\"44\",\"55\",\"66\"]}]" +
 		", \"child_value1\":{\"test_id\":\"123\",\"string_value\":\"a string\"}}}")
-	bytes, _ = FilterProtoJson(bytes, s)
-	assert.Equal(t, "{\"complex_nested_value\":{\"child_value1\":{\"args\":null,\"int_array\":[],\"string_value\":"+
+	bytes, _ = FilterJsonWithStruct(bytes, s)
+	assert.Equal(t, "{\"c_n_v1\":null,\"c_n_v2\":null,\"complex_nested_value\":{\"child_value1\":{\"args\":null,\"int_array\":[],\"string_value\":"+
 		"\"a string\",\"test_id\":123},\"child_value_arr\":[{\"args\":{},\"int_array\":[],\"string_value\":\"\",\"test_id\":456},"+
 		"{\"args\":null,\"int_array\":[44,55,66],\"string_value\":\"\",\"test_id\":789}],\"int_array\":[11,22,33],\"string_value\":\"\""+
-		",\"test_id\":456},\"complex_nested_value1\":null,\"complex_nested_value2\":null,\"new_name\":[],\"string_value\":\"struct string\","+
+		",\"test_id\":456},\"new_name\":[],\"s_value\":\"struct string\","+
 		"\"test_id\":0}", string(bytes))
 	/*
-Before filter:
-{
-    "test_id": "0",
-    "string_value": "struct string",
-    "complex_nested_value": {
-        "test_id": "456",
-        "string_value": "",
-        "int_array": [
-            "11",
-            "22",
-            "33"
-        ],
-        "child_value_arr": [
-            {
-                "test_id": "456",
-                "string_value": "",
-                "args": {}
-            },
-            {
-                "test_id": "789",
-                "string_value": "",
-                "int_array": [
-                    "44",
-                    "55",
-                    "66"
-                ]
-            }
-        ],
-        "child_value1": {
-            "test_id": "123",
-            "string_value": "a string"
-        }
-    }
-}
+		Before filter:
+		{
+		    "string_value": "struct string",
+		    "complex_nested_value": {
+		        "test_id": "456",
+		        "int_array": [
+		            "11",
+		            "22",
+		            "33"
+		        ],
+		        "child_value_arr": [
+		            {
+		                "test_id": "456",
+		                "args": {}
+		            },
+		            {
+		                "test_id": "789",
+		                "int_array": [
+		                    "44",
+		                    "55",
+		                    "66"
+		                ]
+		            }
+		        ],
+		        "child_value1": {
+		            "test_id": "123",
+		            "string_value": "a string"
+		        }
+		    }
+		}
 
-After filter:
-{
-    "complex_nested_value": {
-        "child_value1": {
-            "args": null,
-            "int_array": [],
-            "string_value": "a string",
-            "test_id": 123
-        },
-        "child_value_arr": [
-            {
-                "args": {},
-                "int_array": [],
-                "string_value": "",
-                "test_id": 456
-            },
-            {
-                "args": null,
-                "int_array": [
-                    44,
-                    55,
-                    66
-                ],
-                "string_value": "",
-                "test_id": 789
-            }
-        ],
-        "int_array": [
-            11,
-            22,
-            33
-        ],
-        "string_value": "",
-        "test_id": 456
-    },
-    "complex_nested_value1": null,
-    "complex_nested_value2": null,
-    "int_array": [],
-    "string_value": "struct string",
-    "test_id": 0
-}
-	 */
+		After filter:
+		{
+		    "complex_nested_value": {
+		        "child_value1": {
+		            "args": null,
+		            "int_array": [],
+		            "string_value": "a string",
+		            "test_id": 123
+		        },
+		        "child_value_arr": [
+		            {
+		                "args": {},
+		                "int_array": [],
+		                "string_value": "",
+		                "test_id": 456
+		            },
+		            {
+		                "args": null,
+		                "int_array": [
+		                    44,
+		                    55,
+		                    66
+		                ],
+		                "string_value": "",
+		                "test_id": 789
+		            }
+		        ],
+		        "int_array": [
+		            11,
+		            22,
+		            33
+		        ],
+		        "string_value": "",
+		        "test_id": 456
+		    },
+		    "complex_nested_value1": null,
+		    "complex_nested_value2": null,
+		    "int_array": [],
+		    "string_value": "struct string",
+		    "test_id": 0
+		}
+	*/
 }
