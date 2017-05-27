@@ -104,8 +104,12 @@ type fieldFilterFunc func(*sjson.Json, reflect.StructField, reflect.Value) error
 func structFieldFilter(field reflect.StructField) fieldFilterFunc {
 	// TODO make this configurable
 	switch field.Type.Kind() {
-	case reflect.Int32, reflect.Int64, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
-		return int64FieldFilter
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return intFieldFilter
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return uintFieldFilter
+	case reflect.Float32, reflect.Float64:
+		return floatFieldFilter
 	case reflect.Ptr:
 		return ptrFieldFilter
 	case reflect.Slice:
@@ -126,19 +130,31 @@ func emptyFilter(*sjson.Json, reflect.StructField, reflect.Value) error {
 
 func boolFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) error {
 	jsonFieldName, _ := jsonFieldName(structJson, field)
-	structJson.Set(jsonFieldName, v.Interface().(bool))
+	structJson.Set(jsonFieldName, v.Bool())
 	return nil
 }
 
 func stringFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) error {
 	jsonFieldName, _ := jsonFieldName(structJson, field)
-	structJson.Set(jsonFieldName, v.Interface().(string))
+	structJson.Set(jsonFieldName, v.String())
 	return nil
 }
 
-func int64FieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) error {
+func intFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) error {
 	jsonFieldName, _ := jsonFieldName(structJson, field)
-	structJson.Set(jsonFieldName, v.Interface().(int64))
+	structJson.Set(jsonFieldName, v.Int())
+	return nil
+}
+
+func uintFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) error {
+	jsonFieldName, _ := jsonFieldName(structJson, field)
+	structJson.Set(jsonFieldName, v.Uint())
+	return nil
+}
+
+func floatFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) error {
+	jsonFieldName, _ := jsonFieldName(structJson, field)
+	structJson.Set(jsonFieldName, v.Float())
 	return nil
 }
 
@@ -153,25 +169,40 @@ func ptrFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect
 }
 
 func sliceFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) error {
-	jsonFieldName, _ := jsonFieldName(structJson, field)
+	jsonFieldName, err := jsonFieldName(structJson, field)
+	if err != nil {
+		structJson.Set(jsonFieldName, make([]interface{}, 0))
+	}
 	if v.Len() == 0 {
-		structJson.Set(jsonFieldName, make([]int64, 0))
 		return nil
 	}
-	sliceInnerKind := field.Type.Elem().Kind()
 	sliceJson := structJson.Get(jsonFieldName)
 	arr, err := sliceJson.Array()
 	if err != nil {
+		fmt.Println(err.Error())
 		return err
 	}
+	sliceInnerKind := field.Type.Elem().Kind()
+	l := v.Len()
+	arrLength := len(arr)
+	if arrLength < l {
+		newArr := make([]interface{}, l)
+		copy(newArr, arr)
+		structJson.Set(jsonFieldName, newArr)
+		arr = newArr
+		sliceJson = structJson.Get(jsonFieldName)
+	}
+
 	if sliceInnerKind == reflect.Int64 {
-		l := v.Len()
 		for i := 0; i < l; i++ {
-			arr[i] = v.Index(i).Interface().(int64)
+			arr[i] = v.Index(i).Int()
 		}
 	}
 	if sliceInnerKind == reflect.Ptr && field.Type.Elem().Elem().Kind() == reflect.Struct {
-		for i := range arr {
+		for i := 0; i < l; i++ {
+			if i >= arrLength {
+				arr[i] = make(map[string]interface{})
+			}
 			err = filterStruct(sliceJson.GetIndex(i), v.Index(i).Type().Elem(), v.Index(i).Elem())
 			if err != nil {
 				return err

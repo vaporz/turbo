@@ -64,6 +64,58 @@ func TestFilterStruct_Missing_Key(t *testing.T) {
 	assert.Equal(t, "{\"ptr_value\":null,\"test_id\":123}", string(jsonBytes))
 }
 
+type testSlice struct {
+	Values []int64
+}
+
+func TestFilterSlice_Missing_Key(t *testing.T) {
+	s := &testSlice{Values: []int64{1, 2, 3}}
+	json, _ := sjson.NewJson([]byte("{\"values\":[1]}"))
+	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
+	jsonBytes, _ := json.MarshalJSON()
+
+	assert.Equal(t, "{\"values\":[1,2,3]}", string(jsonBytes))
+}
+
+func TestFilterSlice_Empty(t *testing.T) {
+	s := &testSlice{Values: []int64{1, 2, 3}}
+	json, _ := sjson.NewJson([]byte("{}"))
+	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
+	jsonBytes, _ := json.MarshalJSON()
+
+	assert.Equal(t, "{\"values\":[1,2,3]}", string(jsonBytes))
+}
+
+type child struct {
+	Num int
+}
+
+type testStructSlice struct {
+	Values []*child
+}
+
+func TestFilterSlice_Missing_Struct_Member(t *testing.T) {
+	c := &child{}
+	c1 := &child{Num: 123}
+	s := &testStructSlice{Values: []*child{c, c1}}
+	json, _ := sjson.NewJson([]byte("{\"values\":[{\"num\":111}]}"))
+	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
+	jsonBytes, _ := json.MarshalJSON()
+
+	assert.Equal(t, "{\"values\":[{\"num\":0},{\"num\":123}]}", string(jsonBytes))
+}
+
+func TestFilterSlice_Empty_Struct_Member(t *testing.T) {
+	c := &child{}
+	c1 := &child{Num: 123}
+	s := &testStructSlice{Values: []*child{c, c1}}
+	json, _ := sjson.NewJson([]byte("{}"))
+	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
+	jsonBytes, _ := json.MarshalJSON()
+
+	assert.Equal(t, "{\"values\":[{\"num\":0},{\"num\":123}]}", string(jsonBytes))
+}
+
 type nestedValue struct {
 	PtrValue *args
 }
