@@ -151,8 +151,8 @@ func TestFilterNestedStruct_Empty_Field(t *testing.T) {
 }
 
 type testTag struct {
-	value   int `protobuf:"varint,1,opt,name=test_name_proto" json:"id,omitempty"`
-	value_1 int `protobuf:"varint,1,opt" json:"test_name_json,omitempty"`
+	Value  int `protobuf:"varint,1,opt,name=test_name_proto" json:"id,omitempty"`
+	Value1 int `protobuf:"varint,1,opt" json:"test_name_json,omitempty"`
 }
 
 func TestLookupNameInProtoTag(t *testing.T) {
@@ -200,8 +200,8 @@ type complexNestedValue struct {
 
 type complexNestedStruct struct {
 	TestId              int64
-	StringValue         string  `protobuf:"varint,1,opt,name=s_value" json:"id,omitempty"`
-	IntArray            []int64 `protobuf:"varint,1,opt,name=new_name" json:"id,omitempty"`
+	StringValue         string  `protobuf:"varint,1,opt,name=s_value" json:"json_s_value,omitempty"`
+	IntArray            []int64 `protobuf:"varint,1,opt,name=new_name" json:"json_new_name,omitempty"`
 	ComplexNestedValue  *complexNestedValue
 	ComplexNestedValue1 *complexNestedValue `protobuf:"varint,1,opt,name=c_n_v1" json:"c_n_v111,omitempty"`
 	ComplexNestedValue2 *complexNestedValue `protobuf:"varint,1,opt" json:"c_n_v2,omitempty"`

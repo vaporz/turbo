@@ -31,6 +31,7 @@ go get github.com/kylelemons/go-gypsy/yaml
 go get github.com/gorilla/mux
 go get github.com/spf13/cobra
 go get github.com/spf13/viper
+go get github.com/bitly/go-simplejson
 ```
 
 ### 1, Install Turbo command line tools

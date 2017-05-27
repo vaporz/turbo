@@ -232,7 +232,7 @@ func jsonFieldName(structJson *sjson.Json, field reflect.StructField) (string, e
 		}
 		defaultName = nameInTag
 	}
-	return defaultName, errors.New(fmt.Sprintf("fieldName [%s] not exist in json", fieldName))
+	return defaultName, fmt.Errorf("fieldName [%s] not exist in json", fieldName)
 }
 
 func lookupNameInTag(field reflect.StructField) (string, error) {

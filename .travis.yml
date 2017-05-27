@@ -10,6 +10,8 @@ install:
   - go get git.apache.org/thrift.git/lib/go/thrift
   - go get github.com/spf13/cobra
   - go get github.com/spf13/viper
+  - go get github.com/bitly/go-simplejson
+  - go get github.com/stretchr/testify/assert
 #  - go get golang.org/x/tools/cmd/cover
 #  - go get github.com/mattn/goveralls
 #script:
