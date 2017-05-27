@@ -1,7 +1,10 @@
 language: go
+sudo: false
 
 go:
-  - 1.8.x
+  - tip
+before_install:
+  - go get github.com/mattn/goveralls
 
 install:
   - go get github.com/kylelemons/go-gypsy/yaml
@@ -14,6 +17,7 @@ install:
   - go get github.com/stretchr/testify/assert
 #  - go get golang.org/x/tools/cmd/cover
 #  - go get github.com/mattn/goveralls
-#script:
-#  - go test -v -covermode=count -coverprofile=coverage.out
-#  - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken LKmWen7DjWjYrvaX8N80tX9LbnCRCww8k
+script:
+  - $HOME/gopath/bin/goveralls -service=travis-ci
+#  - cd $GOPATH/src/github.com/vaporz/turbo
+#  - $HOME/gopath/bin/goveralls -repotoken LKmWen7DjWjYrvaX8N80tX9LbnCRCww8k
