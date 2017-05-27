@@ -11,22 +11,23 @@ type args struct {
 }
 
 type testStruct struct {
-	testId   int64
-	ptrValue *args
+	TestId   int64
+	PtrValue *args
 }
 
 func TestFilterFieldInt64Str(t *testing.T) {
-	s := &testStruct{testId: 123}
+	s := &testStruct{TestId: 123}
 	tp := reflect.TypeOf(s).Elem()
+	v := reflect.ValueOf(s).Elem()
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\"}"))
-	structFieldFilter(tp.Field(0))(json, tp.Field(0), reflect.ValueOf(s))
+	structFieldFilter(tp.Field(0))(json, tp.Field(0), v.Field(0))
 	jsonBytes, _ := json.MarshalJSON()
 
 	assert.Equal(t, "{\"test_id\":123}", string(jsonBytes))
 }
 
 func TestFilterFieldInt64Number(t *testing.T) {
-	s := &testStruct{testId: 123}
+	s := &testStruct{TestId: 123}
 	json, _ := sjson.NewJson([]byte("{\"test_id\": 123}"))
 	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
@@ -35,17 +36,18 @@ func TestFilterFieldInt64Number(t *testing.T) {
 }
 
 func TestFilterFieldNullPointer(t *testing.T) {
-	s := &testStruct{testId: 123}
+	s := &testStruct{TestId: 123}
 	tp := reflect.TypeOf(s).Elem()
+	v := reflect.ValueOf(s).Elem()
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\"}"))
-	structFieldFilter(tp.Field(1))(json, tp.Field(1), reflect.ValueOf(s).Elem().Field(1))
+	structFieldFilter(tp.Field(1))(json, tp.Field(1), v.Field(1))
 	jsonBytes, _ := json.MarshalJSON()
 
 	assert.Equal(t, "{\"ptr_value\":null,\"test_id\":\"123\"}", string(jsonBytes))
 }
 
 func TestFilterStruct(t *testing.T) {
-	s := &testStruct{testId: 123}
+	s := &testStruct{TestId: 123}
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\"}"))
 	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
@@ -53,17 +55,26 @@ func TestFilterStruct(t *testing.T) {
 	assert.Equal(t, "{\"ptr_value\":null,\"test_id\":123}", string(jsonBytes))
 }
 
+func TestFilterStruct_Missing_Key(t *testing.T) {
+	s := &testStruct{TestId: 123}
+	json, _ := sjson.NewJson([]byte("{}"))
+	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
+	jsonBytes, _ := json.MarshalJSON()
+
+	assert.Equal(t, "{\"ptr_value\":null,\"test_id\":123}", string(jsonBytes))
+}
+
 type nestedValue struct {
-	ptrValue *args
+	PtrValue *args
 }
 
 type nestedStruct struct {
-	testId      int64
-	nestedValue *nestedValue
+	TestId      int64
+	NestedValue *nestedValue
 }
 
 func TestFilterNestedStruct_Nil_field(t *testing.T) {
-	s := &nestedStruct{testId: 123}
+	s := &nestedStruct{TestId: 123}
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\"}"))
 	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
@@ -71,7 +82,7 @@ func TestFilterNestedStruct_Nil_field(t *testing.T) {
 }
 
 func TestFilterNestedStructField_Empty_Field(t *testing.T) {
-	s := &nestedStruct{testId: 123, nestedValue: &nestedValue{}}
+	s := &nestedStruct{TestId: 123, NestedValue: &nestedValue{}}
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\", \"nested_value\":{}}"))
 	structField := reflect.TypeOf(s).Elem().Field(1)
 	structFieldFilter(structField)(json, structField, reflect.ValueOf(s).Elem().Field(1))
@@ -80,7 +91,7 @@ func TestFilterNestedStructField_Empty_Field(t *testing.T) {
 }
 
 func TestFilterNestedStruct_Empty_Field(t *testing.T) {
-	s := &nestedStruct{testId: 123, nestedValue: &nestedValue{}}
+	s := &nestedStruct{TestId: 123, NestedValue: &nestedValue{}}
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\", \"nested_value\":{}}"))
 	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
@@ -88,8 +99,8 @@ func TestFilterNestedStruct_Empty_Field(t *testing.T) {
 }
 
 type testTag struct {
-	Value   int `protobuf:"varint,1,opt,name=test_name_proto" json:"id,omitempty"`
-	Value_1 int `protobuf:"varint,1,opt" json:"test_name_json,omitempty"`
+	value   int `protobuf:"varint,1,opt,name=test_name_proto" json:"id,omitempty"`
+	value_1 int `protobuf:"varint,1,opt" json:"test_name_json,omitempty"`
 }
 
 func TestLookupNameInProtoTag(t *testing.T) {
@@ -121,35 +132,35 @@ type someArgs struct {
 }
 
 type childValue struct {
-	testId      int64
-	stringValue string
-	intArray    []int64
-	args        *someArgs
+	TestId      int64
+	StringValue string
+	IntArray    []int64
+	Args        *someArgs
 }
 
 type complexNestedValue struct {
-	testId        int64
-	stringValue   string
-	intArray      []int64
-	childValueArr []*childValue
-	childValue1   *childValue
+	TestId        int64
+	StringValue   string
+	IntArray      []int64
+	ChildValueArr []*childValue
+	ChildValue1   *childValue
 }
 
 type complexNestedStruct struct {
-	testId              int64
+	TestId              int64
 	StringValue         string  `protobuf:"varint,1,opt,name=s_value" json:"id,omitempty"`
 	IntArray            []int64 `protobuf:"varint,1,opt,name=new_name" json:"id,omitempty"`
-	complexNestedValue  *complexNestedValue
+	ComplexNestedValue  *complexNestedValue
 	ComplexNestedValue1 *complexNestedValue `protobuf:"varint,1,opt,name=c_n_v1" json:"c_n_v111,omitempty"`
 	ComplexNestedValue2 *complexNestedValue `protobuf:"varint,1,opt" json:"c_n_v2,omitempty"`
 }
 
-func TestFilterComplexNestedStruct(t *testing.T) {
-	cv := &childValue{testId: 123, stringValue: "a string"}
-	cv1 := &childValue{testId: 456, args: &someArgs{}}
-	cv2 := &childValue{testId: 789, intArray: []int64{44, 55, 66}}
-	cnv := &complexNestedValue{testId: 456, intArray: []int64{11, 22, 33}, childValueArr: []*childValue{cv1, cv2}, childValue1: cv}
-	s := &complexNestedStruct{StringValue: "struct string", complexNestedValue: cnv}
+func TestFilterComplexNestedStructWithTags(t *testing.T) {
+	cv := &childValue{TestId: 123, StringValue: "a string"}
+	cv1 := &childValue{TestId: 456, Args: &someArgs{}}
+	cv2 := &childValue{TestId: 789, IntArray: []int64{44, 55, 66}}
+	cnv := &complexNestedValue{TestId: 456, IntArray: []int64{11, 22, 33}, ChildValueArr: []*childValue{cv1, cv2}, ChildValue1: cv}
+	s := &complexNestedStruct{StringValue: "struct string", ComplexNestedValue: cnv}
 
 	bytes := []byte("{\"s_value\":\"struct string\", \"complex_nested_value\":{\"test_id\":\"456\"" +
 		", \"int_array\":[\"11\",\"22\",\"33\"], \"child_value_arr\":[{\"test_id\":\"456\",\"args\":{}}," +
@@ -175,7 +186,7 @@ func TestFilterComplexNestedStruct(t *testing.T) {
 		        "child_value_arr": [
 		            {
 		                "test_id": "456",
-		                "args": {}
+		                "Args": {}
 		            },
 		            {
 		                "test_id": "789",
@@ -197,20 +208,20 @@ func TestFilterComplexNestedStruct(t *testing.T) {
 		{
 		    "complex_nested_value": {
 		        "child_value1": {
-		            "args": null,
+		            "Args": null,
 		            "int_array": [],
 		            "string_value": "a string",
 		            "test_id": 123
 		        },
 		        "child_value_arr": [
 		            {
-		                "args": {},
+		                "Args": {},
 		                "int_array": [],
 		                "string_value": "",
 		                "test_id": 456
 		            },
 		            {
-		                "args": null,
+		                "Args": null,
 		                "int_array": [
 		                    44,
 		                    55,

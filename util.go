@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
@@ -69,6 +68,10 @@ func mergeMuxVars(req *http.Request) {
 // 1, if struct field type is 'int64', then change the value in Json into a number
 // 2, if field type is 'Ptr', and field value is 'nil', then set "[key_name]":null in Json
 // 3, if any key in json is missing, set zero value to that key
+// The reason why we do this is
+// (a) protobuf parse int64 as string,
+// (b) a Key with a nil Ptr value is missing in the json marshaled by github.com/golang/protobuf/jsonpb.Marshaler
+// So, this func is a 'patch' to protobuf
 func FilterJsonWithStruct(jsonBytes []byte, structObj interface{}) ([]byte, error) {
 	json, err := sjson.NewJson(jsonBytes)
 	if err != nil {
@@ -122,49 +125,21 @@ func emptyFilter(*sjson.Json, reflect.StructField, reflect.Value) error {
 }
 
 func boolFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) error {
-	jsonFieldName, err := jsonFieldName(structJson, field)
-	if err != nil {
-		structJson.Set(jsonFieldName, false)
-	}
+	jsonFieldName, _ := jsonFieldName(structJson, field)
+	structJson.Set(jsonFieldName, v.Interface().(bool))
 	return nil
 }
 
 func stringFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) error {
-	jsonFieldName, err := jsonFieldName(structJson, field)
-	if err != nil {
-		structJson.Set(jsonFieldName, "")
-	}
+	jsonFieldName, _ := jsonFieldName(structJson, field)
+	structJson.Set(jsonFieldName, v.Interface().(string))
 	return nil
 }
 
 func int64FieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) error {
 	jsonFieldName, _ := jsonFieldName(structJson, field)
-	asInt64, err := int64Value(structJson, jsonFieldName)
-	if err != nil {
-		return err
-	}
-	structJson.Set(jsonFieldName, asInt64)
+	structJson.Set(jsonFieldName, v.Interface().(int64))
 	return nil
-}
-
-func int64Value(structJson *sjson.Json, jsonFieldName string) (int64, error) {
-	fieldJson, ok := structJson.CheckGet(jsonFieldName)
-	if !ok {
-		return 0, nil
-	}
-	int64Number, err := fieldJson.Int64()
-	if err == nil {
-		return int64Number, nil
-	}
-	int64Str, err := fieldJson.String()
-	if err != nil {
-		return 0, err
-	}
-	int64Value, err := strconv.ParseInt(int64Str, 10, 64)
-	if err != nil {
-		return 0, err
-	}
-	return int64Value, nil
 }
 
 func ptrFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) error {
@@ -189,15 +164,14 @@ func sliceFieldFilter(structJson *sjson.Json, field reflect.StructField, v refle
 	if err != nil {
 		return err
 	}
-	for i, item := range arr {
-		if sliceInnerKind == reflect.Int64 {
-			intValue, err := strconv.ParseInt(item.(string), 10, 64)
-			if err != nil {
-				return err
-			}
-			arr[i] = intValue
+	if sliceInnerKind == reflect.Int64 {
+		l := v.Len()
+		for i := 0; i < l; i++ {
+			arr[i] = v.Index(i).Interface().(int64)
 		}
-		if sliceInnerKind == reflect.Ptr && field.Type.Elem().Elem().Kind() == reflect.Struct {
+	}
+	if sliceInnerKind == reflect.Ptr && field.Type.Elem().Elem().Kind() == reflect.Struct {
+		for i := range arr {
 			err = filterStruct(sliceJson.GetIndex(i), v.Index(i).Type().Elem(), v.Index(i).Elem())
 			if err != nil {
 				return err
