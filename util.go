@@ -15,6 +15,16 @@ import (
 	"strings"
 )
 
+var matchCamelCase = regexp.MustCompile("^([A-Z]+[a-z]*)+$")
+
+func IsCamelCase(name string) bool {
+	return matchCamelCase.Match([]byte(name))
+}
+
+func IsNotCamelCase(name string) bool {
+	return !IsCamelCase(name)
+}
+
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
 var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
 
@@ -118,6 +128,7 @@ func FilterJsonWithStruct(jsonBytes []byte, structObj interface{}) ([]byte, erro
 func filterStruct(structJson *sjson.Json, t reflect.Type, v reflect.Value) error {
 	numField := t.NumField()
 	for i := 0; i < numField; i++ {
+		// TODO use panic(), recover
 		err := filterOf(t.Field(i).Type.Kind())(structJson, t.Field(i), v.Field(i))
 		if err != nil {
 			return err

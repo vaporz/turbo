@@ -7,6 +7,20 @@ import (
 	"testing"
 )
 
+func TestIsCamelCase(t *testing.T) {
+	assert.Equal(t, true, IsCamelCase("CamelCase"))
+	assert.Equal(t, true, IsCamelCase("CAMELCase"))
+	assert.Equal(t, true, IsCamelCase("CAMELCASE"))
+	assert.Equal(t, true, IsCamelCase("CamelCASE"))
+	assert.Equal(t, false, IsCamelCase("camelCase"))
+	assert.Equal(t, false, IsCamelCase("camelcase"))
+	assert.Equal(t, false, IsCamelCase("camel_case"))
+	assert.Equal(t, false, IsCamelCase(""))
+	assert.Equal(t, false, IsCamelCase("_"))
+
+	assert.Equal(t, false, IsNotCamelCase("CamelCase"))
+}
+
 type args struct {
 }
 

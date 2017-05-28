@@ -448,14 +448,19 @@ Just change "grpc" into "thrift" when you want to do something in thrift.
 config:
 # The port http server listens
   http_port: 8081
+
 # The grpc service name, MUST be a CamelCase name, usually end with "Service"
   grpc_service_name: YourService
+  
 # The grpc server entry point
   grpc_service_address: 127.0.0.1:50051
+
 # The thrift service name, MUST be a CamelCase name, usually end with "Service"
   thrift_service_name: YourService
+
 # The thrift server entry point
   thrift_service_address: 127.0.0.1:50052
+
 # Only valid for grpc service.
 # By default, the Response message is marshaled by jsonpb.Marshaler, and returned directly.
 # There're some protobuf "problem" with this json:
