@@ -1,7 +1,6 @@
 package turbo
 
 import (
-	"encoding/json"
 	"errors"
 	// TODO support logging levels, log file path, etc.
 	"fmt"
@@ -112,7 +111,7 @@ func doPostprocessor(resp http.ResponseWriter, req *http.Request, serviceRespons
 	//}
 
 	//3, return as json
-	jsonBytes, err := json.Marshal(serviceResponse)
+	jsonBytes, err := JSON(serviceResponse)
 	if err != nil {
 		log.Println(err.Error())
 	}

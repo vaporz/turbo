@@ -64,6 +64,24 @@ func mergeMuxVars(req *http.Request) {
 	}
 }
 
+// JSON returns the json encoding of v,
+// if v implements 'proto.Message', then FilterJsonWithStruct() is called, see comments for FilterJsonWithStruct(),
+// otherwise, call encoding/json.Marshal()
+func JSON(v interface{}) ([]byte, error) {
+	if _, ok := v.(proto.Message); ok {
+		//var buf bytes.Buffer
+		//m := &jsonpb.Marshaler{}
+		//if err := m.Marshal(&buf, v.(proto.Message)); err != nil {
+		//	return []byte{}, err
+		//}
+		//return buf.Bytes(), nil
+		// TODO add an option to decide if filtering is needed
+		// if false, return the original json form jsonpb.Marshaler
+		return FilterJsonWithStruct([]byte("{}"), v)
+	}
+	return json.Marshal(v)
+}
+
 // FilterJsonWithStruct walks through a struct, comparing each struct field with the key which have
 // same name('fieldName'=='field_name') in json, and change the json by:
 // 1, if struct field type is 'int64', then change the value in Json into a number
@@ -91,16 +109,6 @@ func FilterJsonWithStruct(jsonBytes []byte, structObj interface{}) ([]byte, erro
 		return jsonBytes, err
 	}
 	return result, nil
-}
-
-// JSON returns the json encoding of v,
-// if v implements 'proto.Message', then FilterJsonWithStruct() is called, see comments at FilterJsonWithStruct(),
-// otherwise, call encoding/json.Marshal()
-func JSON(v interface{}) ([]byte, error) {
-	if _, ok := v.(proto.Message); ok {
-		return FilterJsonWithStruct([]byte("{}"), v)
-	}
-	return json.Marshal(v)
 }
 
 func filterStruct(structJson *sjson.Json, t reflect.Type, v reflect.Value) error {
