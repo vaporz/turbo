@@ -12,8 +12,13 @@ import (
 
 // CreateProject creates a whole new project!
 func CreateProject(pkgPath, serviceName, serverType string) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println(err)
+		}
+	}()
 	initPkgPath(pkgPath)
-	// TODO pop alert, force user to confirm if root folder already exists
+	validateServiceRootPath()
 	createRootFolder()
 	createServiceYaml(serviceName)
 	InitRpcType(serverType)
@@ -23,6 +28,26 @@ func CreateProject(pkgPath, serviceName, serverType string) {
 	} else if serverType == "thrift" {
 		createThriftProject(serviceName)
 	}
+}
+
+func validateServiceRootPath() {
+	_, err := os.Stat(serviceRootPath)
+	if os.IsNotExist(err) {
+		return
+	}
+	fmt.Print("Path '" + serviceRootPath + " already exist!\n" +
+		"Are you sure to recreate this project? (type 'y' to continue):'")
+	var input string
+	fmt.Scanln(&input)
+	if input != "y" {
+		panic("aborted")
+	}
+	fmt.Print("All files in that directory will be lost, are you sure? (type 'y' to continue):'")
+	fmt.Scanln(&input)
+	if input != "y" {
+		panic("aborted")
+	}
+	os.RemoveAll(serviceRootPath)
 }
 
 func createGrpcProject(serviceName string) {
@@ -96,7 +121,7 @@ type serviceYamlValues struct {
 }
 
 var serviceYaml string = `config:
-  httpPort: 8081
+  http_port: 8081
   grpc_service_name: {{.ServiceName}}
   grpc_service_address: 127.0.0.1:50051
   thrift_service_name: {{.ServiceName}}
