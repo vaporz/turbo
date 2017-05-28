@@ -11,3 +11,4 @@
 
 8, Request param value validations with protobuf field options(thrift?).
 9, Start both http and grpc server as go routine.
+10, Generate a const list of registered urls

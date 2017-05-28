@@ -46,6 +46,17 @@ func TestFilterFieldNullPointer(t *testing.T) {
 	assert.Equal(t, "{\"ptr_value\":null,\"test_id\":\"123\"}", string(jsonBytes))
 }
 
+func TestFilterField_With_Empty_Json(t *testing.T) {
+	s := &testStruct{PtrValue: &args{}}
+	tp := reflect.TypeOf(s).Elem()
+	v := reflect.ValueOf(s).Elem()
+	json, _ := sjson.NewJson([]byte("{}"))
+	filterStruct(json, tp, v)
+	jsonBytes, _ := json.MarshalJSON()
+
+	assert.Equal(t, "{\"ptr_value\":{},\"test_id\":0}", string(jsonBytes))
+}
+
 func TestFilterStruct(t *testing.T) {
 	s := &testStruct{TestId: 123}
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\"}"))
@@ -238,7 +249,7 @@ func TestFilterComplexNestedStructWithTags(t *testing.T) {
 		        "child_value_arr": [
 		            {
 		                "test_id": "456",
-		                "Args": {}
+		                "args": {}
 		            },
 		            {
 		                "test_id": "789",
@@ -260,20 +271,20 @@ func TestFilterComplexNestedStructWithTags(t *testing.T) {
 		{
 		    "complex_nested_value": {
 		        "child_value1": {
-		            "Args": null,
+		            "args": null,
 		            "int_array": [],
 		            "string_value": "a string",
 		            "test_id": 123
 		        },
 		        "child_value_arr": [
 		            {
-		                "Args": {},
+		                "args": {},
 		                "int_array": [],
 		                "string_value": "",
 		                "test_id": 456
 		            },
 		            {
-		                "Args": null,
+		                "args": null,
 		                "int_array": [
 		                    44,
 		                    55,

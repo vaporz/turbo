@@ -159,10 +159,13 @@ func floatFieldFilter(structJson *sjson.Json, field reflect.StructField, v refle
 }
 
 func ptrFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) error {
-	jsonFieldName, _ := jsonFieldName(structJson, field)
+	jsonFieldName, err := jsonFieldName(structJson, field)
 	if v.Elem().Kind() == reflect.Invalid {
 		structJson.Set(jsonFieldName, nil)
 	} else {
+		if err!=nil {
+			structJson.Set(jsonFieldName, make(map[string]interface{}))
+		}
 		return filterStruct(structJson.Get(jsonFieldName), field.Type.Elem(), v.Elem())
 	}
 	return nil
