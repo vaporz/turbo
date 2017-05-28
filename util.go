@@ -1,10 +1,12 @@
 package turbo
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	sjson "github.com/bitly/go-simplejson"
+	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/mux"
 	"net/http"
@@ -69,15 +71,17 @@ func mergeMuxVars(req *http.Request) {
 // otherwise, call encoding/json.Marshal()
 func JSON(v interface{}) ([]byte, error) {
 	if _, ok := v.(proto.Message); ok {
-		//var buf bytes.Buffer
-		//m := &jsonpb.Marshaler{}
-		//if err := m.Marshal(&buf, v.(proto.Message)); err != nil {
-		//	return []byte{}, err
-		//}
-		//return buf.Bytes(), nil
-		// TODO add an option to decide if filtering is needed
-		// if false, return the original json form jsonpb.Marshaler
-		return FilterJsonWithStruct([]byte("{}"), v)
+		var buf bytes.Buffer
+		m := &jsonpb.Marshaler{}
+		if err := m.Marshal(&buf, v.(proto.Message)); err != nil {
+			return []byte{}, err
+		}
+
+		filterProtoJson, ok := configs[filterProtoJson]
+		if ok && filterProtoJson == "true" {
+			return FilterJsonWithStruct(buf.Bytes(), v)
+		}
+		return buf.Bytes(), nil
 	}
 	return json.Marshal(v)
 }

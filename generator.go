@@ -96,7 +96,7 @@ type serviceYamlValues struct {
 }
 
 var serviceYaml string = `config:
-  port: 8081
+  httpPort: 8081
   grpc_service_name: {{.ServiceName}}
   grpc_service_address: 127.0.0.1:50051
   thrift_service_name: {{.ServiceName}}

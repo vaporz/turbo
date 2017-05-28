@@ -14,7 +14,8 @@ const grpcServiceName string = "grpc_service_name"
 const grpcServiceAddress string = "grpc_service_address"
 const thriftServiceName string = "thrift_service_name"
 const thriftServiceAddress string = "thrift_service_address"
-const port string = "port"
+const httpPort string = "http_port"
+const filterProtoJson string = "filter_proto_json"
 
 var rpcType string
 

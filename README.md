@@ -20,6 +20,7 @@
  * [Hijacker](#hijacker)
  * [MessageFieldConvertor](#message_field_convertor)
  * [Thrift support](#support_thrift)
+ * [Configs in service.yaml](#service_yaml)
 ## <a name="create_a_service"></a>Create a service on the fly
 ### 0, Before the start
 Obviously, you have to install [Golang](https://golang.org) and [Protocol buffers](https://developers.google.com/protocol-buffers/) first.  
@@ -442,3 +443,58 @@ $ curl -w "\n" -X GET "http://localhost:8081/hello?your_name=Alice&some_id=123"
 Turbo supports thrift as well.  
 Similar with grpc, you can create a thrift project or generate thrift codes with "-r thrift" in command line.  
 Just change "grpc" into "thrift" when you want to do something in thrift.
+## <a name="service_yaml"></a> Configs in service.yaml
+```yaml
+config:
+# The port http server listens
+  http_port: 8081
+# The grpc service name, MUST be a CamelCase name, usually end with "Service"
+  grpc_service_name: YourService
+# The grpc server entry point
+  grpc_service_address: 127.0.0.1:50051
+# The thrift service name, MUST be a CamelCase name, usually end with "Service"
+  thrift_service_name: YourService
+# The thrift server entry point
+  thrift_service_address: 127.0.0.1:50052
+# Only valid for grpc service.
+# By default, the Response message is marshaled by jsonpb.Marshaler, and returned directly.
+# There're some protobuf "problem" with this json:
+# (a) protobuf parse int64 as string: e.g. {"int64_value":"123"}
+# (b) a Key with a nil Ptr value is missing in the json.
+# If this option is set to "true", then Turbo will change the json by:
+# 1, if struct field type is 'int64', then change the value in Json into a number
+# 2, if field type is 'Ptr', and field value is 'nil', then set "[key_name]":null in Json
+# 3, if any key in json is missing, set zero value to that key
+  filter_proto_json: true
+
+# TODO make a grpc plugin to generate this mapping
+# If you use a nested message, you have to tell Turbo how it is nested.
+# For a protobuf message like this:
+# message SayHelloRequest {
+#     CommonValues values = 1;
+#     string yourName = 2;
+# }
+# Following mapping is needed.
+grpc-fieldmapping:
+  SayHelloRequest:
+    - CommonValues values
+
+# TODO make a thrift plugin to generate this mapping
+# If you use structs as method args, you have to tell Turbo what are they.
+# For a thrift method defined like this:
+# service YourService {
+#     SayHelloResponse sayHello (1:string yourName, 2:shared.CommonValues values, 3:shared.HelloValues helloValues)
+# }
+# Just list the names of struct args as following:
+thrift-fieldmapping:
+  CommonValues:
+  HelloValues:
+
+# This mapping is the core function of Turbo.
+# This mapping tells Turbo how to proxy a HTTP request to a grpc/thrift entry point.
+# The format is "HTTP_METHOD URL SERVICE_METHOD_NAME".
+# Trubo use that awsome [gorilla mux](github.com/gorilla/mux) as router, it also support variables in URL.
+urlmapping:
+  - GET,POST /hello SayHello
+  - GET /eat_apple/{num:[0-9]+} EatApple
+```

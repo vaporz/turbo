@@ -21,7 +21,7 @@ func StartGrpcHTTPServer(pkgPath string, clientCreator func(conn *grpc.ClientCon
 		os.Exit(1)
 	}
 	defer closeGrpcService()
-	startHTTPServer(configs[port], router(switcher))
+	startHTTPServer(configs[httpPort], router(switcher))
 }
 
 // StartThriftHTTPServer starts a HTTP server which sends requests via Thrift
@@ -35,7 +35,7 @@ func StartThriftHTTPServer(pkgPath string, clientCreator func(trans thrift.TTran
 		os.Exit(1)
 	}
 	defer closeThriftService()
-	startHTTPServer(configs[port], router(switcher))
+	startHTTPServer(configs[httpPort], router(switcher))
 }
 
 func startHTTPServer(port string, router http.Handler) {

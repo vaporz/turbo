@@ -29,7 +29,14 @@ func TestJSON(t *testing.T) {
 	assert.Equal(t, "{\"TestId\":0,\"PtrValue\":null}", string(buf))
 }
 
-func TestJSON_Proto(t *testing.T) {
+func TestJSON_Proto_OPTION_TRUE(t *testing.T) {
+	configs[filterProtoJson] = "true"
+	ts := &testProtoStruct{}
+	buf, _ := JSON(ts)
+	assert.Equal(t, "{\"value\":0}", string(buf))
+}
+
+func TestJSON_Proto_OPTION_FALSE(t *testing.T) {
 	ts := &testProtoStruct{}
 	buf, _ := JSON(ts)
 	assert.Equal(t, "{\"value\":0}", string(buf))
