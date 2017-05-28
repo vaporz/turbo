@@ -15,12 +15,32 @@ type testStruct struct {
 	PtrValue *args
 }
 
+type testProtoStruct struct {
+	value int64
+}
+
+func (t *testProtoStruct) Reset()         {}
+func (t *testProtoStruct) String() string { return "" }
+func (t *testProtoStruct) ProtoMessage()  {}
+
+func TestJSON(t *testing.T) {
+	ts := &testStruct{}
+	buf, _ := JSON(ts)
+	assert.Equal(t, "{\"TestId\":0,\"PtrValue\":null}", string(buf))
+}
+
+func TestJSON_Proto(t *testing.T) {
+	ts := &testProtoStruct{}
+	buf, _ := JSON(ts)
+	assert.Equal(t, "{\"value\":0}", string(buf))
+}
+
 func TestFilterFieldInt64Str(t *testing.T) {
 	s := &testStruct{TestId: 123}
 	tp := reflect.TypeOf(s).Elem()
 	v := reflect.ValueOf(s).Elem()
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\"}"))
-	structFieldFilter(tp.Field(0))(json, tp.Field(0), v.Field(0))
+	filterOf(tp.Field(0).Type.Kind())(json, tp.Field(0), v.Field(0))
 	jsonBytes, _ := json.MarshalJSON()
 
 	assert.Equal(t, "{\"test_id\":123}", string(jsonBytes))
@@ -32,7 +52,7 @@ func TestFilterFieldInt64Number(t *testing.T) {
 	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
 
-	assert.Equal(t, "{\"ptr_value\":null,\"test_id\":123}", string(jsonBytes))
+	assert.Equal(t, "{\"PtrValue\":null,\"test_id\":123}", string(jsonBytes))
 }
 
 func TestFilterFieldNullPointer(t *testing.T) {
@@ -40,10 +60,10 @@ func TestFilterFieldNullPointer(t *testing.T) {
 	tp := reflect.TypeOf(s).Elem()
 	v := reflect.ValueOf(s).Elem()
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\"}"))
-	structFieldFilter(tp.Field(1))(json, tp.Field(1), v.Field(1))
+	filterOf(tp.Field(1).Type.Kind())(json, tp.Field(1), v.Field(1))
 	jsonBytes, _ := json.MarshalJSON()
 
-	assert.Equal(t, "{\"ptr_value\":null,\"test_id\":\"123\"}", string(jsonBytes))
+	assert.Equal(t, "{\"PtrValue\":null,\"test_id\":\"123\"}", string(jsonBytes))
 }
 
 func TestFilterField_With_Empty_Json(t *testing.T) {
@@ -54,7 +74,7 @@ func TestFilterField_With_Empty_Json(t *testing.T) {
 	filterStruct(json, tp, v)
 	jsonBytes, _ := json.MarshalJSON()
 
-	assert.Equal(t, "{\"ptr_value\":{},\"test_id\":0}", string(jsonBytes))
+	assert.Equal(t, "{\"PtrValue\":{},\"TestId\":0}", string(jsonBytes))
 }
 
 func TestFilterStruct(t *testing.T) {
@@ -63,7 +83,7 @@ func TestFilterStruct(t *testing.T) {
 	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
 
-	assert.Equal(t, "{\"ptr_value\":null,\"test_id\":123}", string(jsonBytes))
+	assert.Equal(t, "{\"PtrValue\":null,\"test_id\":123}", string(jsonBytes))
 }
 
 func TestFilterStruct_Missing_Key(t *testing.T) {
@@ -72,7 +92,7 @@ func TestFilterStruct_Missing_Key(t *testing.T) {
 	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
 
-	assert.Equal(t, "{\"ptr_value\":null,\"test_id\":123}", string(jsonBytes))
+	assert.Equal(t, "{\"PtrValue\":null,\"TestId\":123}", string(jsonBytes))
 }
 
 type testSlice struct {
@@ -94,7 +114,7 @@ func TestFilterSlice_Empty(t *testing.T) {
 	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
 
-	assert.Equal(t, "{\"values\":[1,2,3]}", string(jsonBytes))
+	assert.Equal(t, "{\"Values\":[1,2,3]}", string(jsonBytes))
 }
 
 type child struct {
@@ -113,7 +133,7 @@ func TestFilterSlice_Missing_Struct_Member(t *testing.T) {
 	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
 
-	assert.Equal(t, "{\"values\":[{\"num\":0},{\"num\":123}]}", string(jsonBytes))
+	assert.Equal(t, "{\"values\":[{\"num\":0},{\"Num\":123}]}", string(jsonBytes))
 }
 
 func TestFilterSlice_Empty_Struct_Member(t *testing.T) {
@@ -124,7 +144,7 @@ func TestFilterSlice_Empty_Struct_Member(t *testing.T) {
 	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
 
-	assert.Equal(t, "{\"values\":[{\"num\":0},{\"num\":123}]}", string(jsonBytes))
+	assert.Equal(t, "{\"Values\":[{\"Num\":0},{\"Num\":123}]}", string(jsonBytes))
 }
 
 type nestedValue struct {
@@ -141,16 +161,16 @@ func TestFilterNestedStruct_Nil_field(t *testing.T) {
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\"}"))
 	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
-	assert.Equal(t, "{\"nested_value\":null,\"test_id\":123}", string(jsonBytes))
+	assert.Equal(t, "{\"NestedValue\":null,\"test_id\":123}", string(jsonBytes))
 }
 
 func TestFilterNestedStructField_Empty_Field(t *testing.T) {
 	s := &nestedStruct{TestId: 123, NestedValue: &nestedValue{}}
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\", \"nested_value\":{}}"))
 	structField := reflect.TypeOf(s).Elem().Field(1)
-	structFieldFilter(structField)(json, structField, reflect.ValueOf(s).Elem().Field(1))
+	filterOf(structField.Type.Kind())(json, structField, reflect.ValueOf(s).Elem().Field(1))
 	jsonBytes, _ := json.MarshalJSON()
-	assert.Equal(t, "{\"nested_value\":{\"ptr_value\":null},\"test_id\":\"123\"}", string(jsonBytes))
+	assert.Equal(t, "{\"nested_value\":{\"PtrValue\":null},\"test_id\":\"123\"}", string(jsonBytes))
 }
 
 func TestFilterNestedStruct_Empty_Field(t *testing.T) {
@@ -158,7 +178,7 @@ func TestFilterNestedStruct_Empty_Field(t *testing.T) {
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\", \"nested_value\":{}}"))
 	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
-	assert.Equal(t, "{\"nested_value\":{\"ptr_value\":null},\"test_id\":123}", string(jsonBytes))
+	assert.Equal(t, "{\"nested_value\":{\"PtrValue\":null},\"test_id\":123}", string(jsonBytes))
 }
 
 type testTag struct {
@@ -230,11 +250,12 @@ func TestFilterComplexNestedStructWithTags(t *testing.T) {
 		"{\"test_id\":\"789\",\"int_array\":[\"44\",\"55\",\"66\"]}]" +
 		", \"child_value1\":{\"test_id\":\"123\",\"string_value\":\"a string\"}}}")
 	bytes, _ = FilterJsonWithStruct(bytes, s)
-	assert.Equal(t, "{\"c_n_v1\":null,\"c_n_v2\":null,\"complex_nested_value\":{\"child_value1\":{\"args\":null,\"int_array\":[],\"string_value\":"+
-		"\"a string\",\"test_id\":123},\"child_value_arr\":[{\"args\":{},\"int_array\":[],\"string_value\":\"\",\"test_id\":456},"+
-		"{\"args\":null,\"int_array\":[44,55,66],\"string_value\":\"\",\"test_id\":789}],\"int_array\":[11,22,33],\"string_value\":\"\""+
-		",\"test_id\":456},\"new_name\":[],\"s_value\":\"struct string\","+
-		"\"test_id\":0}", string(bytes))
+	assert.Equal(t, "{\"TestId\":0,\"c_n_v1\":null,\"c_n_v2\":null,\"complex_nested_value\":"+
+		"{\"StringValue\":\"\",\"child_value1\":{\"Args\":null,\"IntArray\":[],\"string_value\":"+
+		"\"a string\",\"test_id\":123},\"child_value_arr\":[{\"IntArray\":[],\"StringValue\":\"\","+
+		"\"args\":{},\"test_id\":456},{\"Args\":null,\"StringValue\":\"\",\"int_array\":[44,55,66],"+
+		"\"test_id\":789}],\"int_array\":[11,22,33],\"test_id\":456},\"new_name\":[],\"s_value\":"+
+		"\"struct string\"}", string(bytes))
 	/*
 		Before filter:
 		{
@@ -269,44 +290,44 @@ func TestFilterComplexNestedStructWithTags(t *testing.T) {
 
 		After filter:
 		{
+		    "TestId": 0,
+		    "c_n_v1": null,
+		    "c_n_v2": null,
 		    "complex_nested_value": {
-		        "child_value1": {
-		            "args": null,
-		            "int_array": [],
-		            "string_value": "a string",
-		            "test_id": 123
-		        },
-		        "child_value_arr": [
-		            {
-		                "args": {},
-		                "int_array": [],
-		                "string_value": "",
-		                "test_id": 456
-		            },
-		            {
-		                "args": null,
-		                "int_array": [
-		                    44,
-		                    55,
-		                    66
-		                ],
-		                "string_value": "",
-		                "test_id": 789
-		            }
-		        ],
-		        "int_array": [
-		            11,
-		            22,
-		            33
-		        ],
-		        "string_value": "",
-		        "test_id": 456
+			"StringValue": "",
+			"child_value1": {
+			    "Args": null,
+			    "IntArray": [],
+			    "string_value": "a string",
+			    "test_id": 123
+			},
+			"child_value_arr": [
+			    {
+				"IntArray": [],
+				"StringValue": "",
+				"args": {},
+				"test_id": 456
+			    },
+			    {
+				"Args": null,
+				"StringValue": "",
+				"int_array": [
+				    44,
+				    55,
+				    66
+				],
+				"test_id": 789
+			    }
+			],
+			"int_array": [
+			    11,
+			    22,
+			    33
+			],
+			"test_id": 456
 		    },
-		    "complex_nested_value1": null,
-		    "complex_nested_value2": null,
-		    "int_array": [],
-		    "string_value": "struct string",
-		    "test_id": 0
+		    "new_name": [],
+		    "s_value": "struct string"
 		}
 	*/
 }

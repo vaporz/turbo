@@ -1,6 +1,7 @@
 package turbo
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	sjson "github.com/bitly/go-simplejson"
@@ -77,7 +78,11 @@ func FilterJsonWithStruct(jsonBytes []byte, structObj interface{}) ([]byte, erro
 	if err != nil {
 		return jsonBytes, err
 	}
-	err = filterStruct(json, reflect.TypeOf(structObj).Elem(), reflect.ValueOf(structObj).Elem())
+	if reflect.TypeOf(structObj).Kind() == reflect.Ptr {
+		err = filterStruct(json, reflect.TypeOf(structObj).Elem(), reflect.ValueOf(structObj).Elem())
+	} else {
+		err = filterStruct(json, reflect.TypeOf(structObj), reflect.ValueOf(structObj))
+	}
 	if err != nil {
 		return jsonBytes, err
 	}
@@ -88,10 +93,20 @@ func FilterJsonWithStruct(jsonBytes []byte, structObj interface{}) ([]byte, erro
 	return result, nil
 }
 
+// JSON returns the json encoding of v,
+// if v implements 'proto.Message', then FilterJsonWithStruct() is called, see comments at FilterJsonWithStruct(),
+// otherwise, call encoding/json.Marshal()
+func JSON(v interface{}) ([]byte, error) {
+	if _, ok := v.(proto.Message); ok {
+		return FilterJsonWithStruct([]byte("{}"), v)
+	}
+	return json.Marshal(v)
+}
+
 func filterStruct(structJson *sjson.Json, t reflect.Type, v reflect.Value) error {
 	numField := t.NumField()
 	for i := 0; i < numField; i++ {
-		err := structFieldFilter(t.Field(i))(structJson, t.Field(i), v.Field(i))
+		err := filterOf(t.Field(i).Type.Kind())(structJson, t.Field(i), v.Field(i))
 		if err != nil {
 			return err
 		}
@@ -101,9 +116,9 @@ func filterStruct(structJson *sjson.Json, t reflect.Type, v reflect.Value) error
 
 type fieldFilterFunc func(*sjson.Json, reflect.StructField, reflect.Value) error
 
-func structFieldFilter(field reflect.StructField) fieldFilterFunc {
+func filterOf(kind reflect.Kind) fieldFilterFunc {
 	// TODO make this configurable
-	switch field.Type.Kind() {
+	switch kind {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return intFieldFilter
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
@@ -163,7 +178,7 @@ func ptrFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect
 	if v.Elem().Kind() == reflect.Invalid {
 		structJson.Set(jsonFieldName, nil)
 	} else {
-		if err!=nil {
+		if err != nil {
 			structJson.Set(jsonFieldName, make(map[string]interface{}))
 		}
 		return filterStruct(structJson.Get(jsonFieldName), field.Type.Elem(), v.Elem())
@@ -226,7 +241,7 @@ func jsonFieldName(structJson *sjson.Json, field reflect.StructField) (string, e
 	if ok {
 		return nameToSnake, nil
 	}
-	defaultName := nameToSnake
+	defaultName := fieldName
 	nameInTag, err := lookupNameInTag(field)
 	if err == nil {
 		_, ok = structJson.CheckGet(nameInTag)
