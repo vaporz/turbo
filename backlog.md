@@ -9,6 +9,6 @@
    https://github.com/google/protobuf/issues/3132
  * int64 values are parsed as strings, not number
 
-8, Request param value validations with protobuf field options(thrift?).
-9, Start both http and grpc server as go routine.
+8, Request param value validations with protobuf field options(thrift?).  
+9, Start both http and grpc server as go routine.  
 10, Generate a const list of registered urls

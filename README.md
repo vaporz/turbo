@@ -451,7 +451,7 @@ config:
 
 # The grpc service name, MUST be a CamelCase name, usually end with "Service"
   grpc_service_name: YourService
-  
+
 # The grpc server entry point
   grpc_service_address: 127.0.0.1:50051
 

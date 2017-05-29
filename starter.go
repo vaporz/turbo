@@ -10,6 +10,8 @@ import (
 	"syscall"
 )
 
+// TODO start both http and grpc/thrift with one command
+
 // StartGrpcHTTPServer starts a HTTP server which sends requests via grpc
 func StartGrpcHTTPServer(pkgPath string, clientCreator func(conn *grpc.ClientConn) interface{}, switcher func(string, http.ResponseWriter, *http.Request) (interface{}, error)) {
 	initPkgPath(pkgPath)
