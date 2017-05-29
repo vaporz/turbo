@@ -19,7 +19,7 @@ var switcherFunc switcher
 func router(s switcher) *mux.Router {
 	switcherFunc = s
 	r := mux.NewRouter()
-	for _, v := range urlServiceMaps {
+	for _, v := range Config.urlServiceMaps {
 		httpMethods := strings.Split(v[0], ",")
 		path := v[1]
 		methodName := v[2]

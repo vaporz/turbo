@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -185,10 +186,22 @@ func intFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect
 }
 
 func int64FieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
-	if Config.FilterProtoJsonInt64AsNumber() {
-		jsonFieldName, ok := jsonFieldName(structJson, field)
-		if ok || Config.FilterProtoJsonEmitZeroValues() {
-			structJson.Set(jsonFieldName, v.Int())
+	jsonFieldName, _ := jsonFieldName(structJson, field)
+	if Config.FilterProtoJsonInt64AsNumber() && Config.FilterProtoJsonEmitZeroValues() {
+		structJson.Set(jsonFieldName, v.Int())
+	} else {
+		if v.Int() == 0 && Config.FilterProtoJsonEmitZeroValues() {
+			if Config.FilterProtoJsonInt64AsNumber() {
+				structJson.Set(jsonFieldName, 0)
+			} else {
+				structJson.Set(jsonFieldName, "0")
+			}
+		} else if v.Int() != 0 {
+			if Config.FilterProtoJsonInt64AsNumber() {
+				structJson.Set(jsonFieldName, v.Int())
+			} else {
+				structJson.Set(jsonFieldName, strconv.FormatInt(v.Int(), 10))
+			}
 		}
 	}
 }
@@ -243,7 +256,7 @@ func sliceFieldFilter(structJson *sjson.Json, field reflect.StructField, v refle
 		sliceJson = structJson.Get(jsonFieldName)
 	}
 
-	if sliceInnerKind == reflect.Int64 {
+	if sliceInnerKind == reflect.Int64 && Config.FilterProtoJsonInt64AsNumber() {
 		for i := 0; i < l; i++ {
 			arr[i] = v.Index(i).Int()
 		}

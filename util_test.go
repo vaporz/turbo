@@ -9,9 +9,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	Config.SetFilterProtoJson(true)
-	Config.SetFilterProtoJsonEmitZeroValues(true)
-	Config.SetFilterProtoJsonInt64AsNumber(true)
+	LoadServiceConfig("grpc", "github.com/vaporz/turbo", "service_test")
 	os.Exit(m.Run())
 }
 

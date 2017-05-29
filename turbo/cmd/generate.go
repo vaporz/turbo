@@ -36,8 +36,7 @@ var generateCmd = &cobra.Command{
 				options = options + " -I " + p + " "
 			}
 		}
-		turbo.InitRpcType(gRpcType)
-		turbo.LoadServiceConfigWith(args[0])
+		turbo.LoadServiceConfig(gRpcType, args[0], "service")
 		if gRpcType == "grpc" {
 			turbo.GenerateGrpcSwitcher()
 			turbo.GenerateProtobufStub(options)
