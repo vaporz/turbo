@@ -3,9 +3,17 @@ package turbo
 import (
 	sjson "github.com/bitly/go-simplejson"
 	"github.com/stretchr/testify/assert"
+	"os"
 	"reflect"
 	"testing"
 )
+
+func TestMain(m *testing.M) {
+	configs[filterProtoJsonEmitZeroValues] = "true"
+	configs[filterProtoJsonInt64AsNumber] = "true"
+	configs[filterProtoJson] = "true"
+	os.Exit(m.Run())
+}
 
 func TestIsCamelCase(t *testing.T) {
 	assert.Equal(t, true, IsCamelCase("CamelCase"))
@@ -36,11 +44,27 @@ func (t *testPrimitives) String() string { return "" }
 func (t *testPrimitives) ProtoMessage()  {}
 
 func TestPrimitives(t *testing.T) {
-	configs[filterProtoJson] = "true"
 	ts := &testPrimitives{Int64Value: 111, Float32Value: 1, BoolValue: true}
 	buf, _ := JSON(ts)
 	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Float64Value\":0,"+
 		"\"Int32Value\":0,\"Int64Value\":111,\"Uint32Value\":0,\"Uint64Value\":0}", string(buf))
+}
+
+func TestPrimitives_Int64_As_Number_False(t *testing.T) {
+	configs[filterProtoJsonInt64AsNumber] = "false"
+	ts := &testPrimitives{Int64Value: 111, Float32Value: 1, BoolValue: true}
+	buf, _ := JSON(ts)
+	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Float64Value\":0,"+
+		"\"Int32Value\":0,\"Int64Value\":\"111\",\"Uint32Value\":0,\"Uint64Value\":0}", string(buf))
+	configs[filterProtoJsonInt64AsNumber] = "true"
+}
+
+func TestPrimitives_Emit_Zerovalues_False(t *testing.T) {
+	configs[filterProtoJsonEmitZeroValues] = "false"
+	ts := &testPrimitives{Int64Value: 111, Float32Value: 1, BoolValue: true}
+	buf, _ := JSON(ts)
+	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Int64Value\":111}", string(buf))
+	configs[filterProtoJsonEmitZeroValues] = "true"
 }
 
 type args struct {
@@ -66,16 +90,17 @@ func TestJSON(t *testing.T) {
 }
 
 func TestJSON_Proto_OPTION_TRUE(t *testing.T) {
-	configs[filterProtoJson] = "true"
 	ts := &testProtoStruct{}
 	buf, _ := JSON(ts)
 	assert.Equal(t, "{\"value\":0}", string(buf))
 }
 
 func TestJSON_Proto_OPTION_FALSE(t *testing.T) {
+	configs[filterProtoJson] = "false"
 	ts := &testProtoStruct{}
 	buf, _ := JSON(ts)
-	assert.Equal(t, "{\"value\":0}", string(buf))
+	assert.Equal(t, "{}", string(buf))
+	configs[filterProtoJson] = "true"
 }
 
 func TestFilterFieldInt64Str(t *testing.T) {

@@ -247,7 +247,7 @@ package interceptor
 
 import (
 	"github.com/vaporz/turbo"
-	"fat"
+	"fmt"
 	"net/http"
 )
 
@@ -470,7 +470,21 @@ config:
 # 1, if struct field type is 'int64', then change the value in Json into a number
 # 2, if field type is 'Ptr', and field value is 'nil', then set "[key_name]":null in Json
 # 3, if any key in json is missing, set zero value to that key
+# Notice: 'map' is not filtered (yet).
   filter_proto_json: true
+  
+# Valid only if "filter_proto_json: true",
+# Default value: true
+# If this option is set to "true", protobuf message fields with zero values will show in Json.
+# As [Golang spec](https://golang.org/ref/spec#The_zero_value) says, zero values are 
+# "false for booleans, 0 for integers, 0.0 for floats, "" for strings, 
+# and nil for pointers, functions, interfaces, slices, channels, and maps".
+  filter_proto_json_emit_zerovalues: true
+  
+# Valid only if "filter_proto_json: true",
+# Default value: true
+# If this option is set to "true", int64 values will be shown as number in Json, instead of string
+  filter_proto_json_int64_as_number: true
 
 # TODO make a grpc plugin to generate this mapping
 # If you use a nested message, you have to tell Turbo how it is nested.

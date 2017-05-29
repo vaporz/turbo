@@ -7,12 +7,15 @@ import (
 	"strings"
 )
 
+// TODO export a Configs struct
 const grpcServiceName string = "grpc_service_name"
 const grpcServiceAddress string = "grpc_service_address"
 const thriftServiceName string = "thrift_service_name"
 const thriftServiceAddress string = "thrift_service_address"
 const httpPort string = "http_port"
 const filterProtoJson string = "filter_proto_json"
+const filterProtoJsonEmitZeroValues string = "filter_proto_json_emit_zerovalues"
+const filterProtoJsonInt64AsNumber string = "filter_proto_json_int64_as_number"
 
 var rpcType string
 
