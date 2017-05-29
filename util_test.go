@@ -9,9 +9,9 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	configs[filterProtoJsonEmitZeroValues] = "true"
-	configs[filterProtoJsonInt64AsNumber] = "true"
-	configs[filterProtoJson] = "true"
+	Config.SetFilterProtoJson(true)
+	Config.SetFilterProtoJsonEmitZeroValues(true)
+	Config.SetFilterProtoJsonInt64AsNumber(true)
 	os.Exit(m.Run())
 }
 
@@ -51,20 +51,20 @@ func TestPrimitives(t *testing.T) {
 }
 
 func TestPrimitives_Int64_As_Number_False(t *testing.T) {
-	configs[filterProtoJsonInt64AsNumber] = "false"
+	Config.SetFilterProtoJsonInt64AsNumber(false)
 	ts := &testPrimitives{Int64Value: 111, Float32Value: 1, BoolValue: true}
 	buf, _ := JSON(ts)
 	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Float64Value\":0,"+
 		"\"Int32Value\":0,\"Int64Value\":\"111\",\"Uint32Value\":0,\"Uint64Value\":0}", string(buf))
-	configs[filterProtoJsonInt64AsNumber] = "true"
+	Config.SetFilterProtoJsonInt64AsNumber(true)
 }
 
 func TestPrimitives_Emit_Zerovalues_False(t *testing.T) {
-	configs[filterProtoJsonEmitZeroValues] = "false"
+	Config.SetFilterProtoJsonEmitZeroValues(false)
 	ts := &testPrimitives{Int64Value: 111, Float32Value: 1, BoolValue: true}
 	buf, _ := JSON(ts)
 	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Int64Value\":111}", string(buf))
-	configs[filterProtoJsonEmitZeroValues] = "true"
+	Config.SetFilterProtoJsonEmitZeroValues(true)
 }
 
 type args struct {
@@ -96,11 +96,11 @@ func TestJSON_Proto_OPTION_TRUE(t *testing.T) {
 }
 
 func TestJSON_Proto_OPTION_FALSE(t *testing.T) {
-	configs[filterProtoJson] = "false"
+	Config.SetFilterProtoJson(false)
 	ts := &testProtoStruct{}
 	buf, _ := JSON(ts)
 	assert.Equal(t, "{}", string(buf))
-	configs[filterProtoJson] = "true"
+	Config.SetFilterProtoJson(true)
 }
 
 func TestFilterFieldInt64Str(t *testing.T) {

@@ -87,8 +87,7 @@ func JSON(v interface{}) ([]byte, error) {
 			return []byte{}, err
 		}
 
-		filterProtoJson, ok := configs[filterProtoJson]
-		if ok && filterProtoJson == "true" {
+		if Config.FilterProtoJson() {
 			return FilterJsonWithStruct(buf.Bytes(), v)
 		}
 		return buf.Bytes(), nil
@@ -138,9 +137,6 @@ func filterStruct(structJson *sjson.Json, t reflect.Type, v reflect.Value) {
 type fieldFilterFunc func(*sjson.Json, reflect.StructField, reflect.Value)
 
 func filterOf(kind reflect.Kind) fieldFilterFunc {
-	// TODO make this configurable
-	// EmitZeroValues
-	// int64AsNumber
 	switch kind {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32:
 		return intFieldFilter
@@ -167,55 +163,31 @@ func emptyFilter(*sjson.Json, reflect.StructField, reflect.Value) {
 	// do nothing
 }
 
-func emitZeroValues() bool {
-	option, ok := configs[filterProtoJson]
-	if !ok || option != "true" {
-		return false
-	}
-	option, ok = configs[filterProtoJsonEmitZeroValues]
-	if ok && option == "false" {
-		return false
-	}
-	return true
-}
-
-func int64AsNumber() bool {
-	option, ok := configs[filterProtoJson]
-	if !ok || option != "true" {
-		return false
-	}
-	option, ok = configs[filterProtoJsonInt64AsNumber]
-	if ok && option == "false" {
-		return false
-	}
-	return true
-}
-
 func boolFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
 	jsonFieldName, ok := jsonFieldName(structJson, field)
-	if ok || emitZeroValues() {
+	if ok || Config.FilterProtoJsonEmitZeroValues() {
 		structJson.Set(jsonFieldName, v.Bool())
 	}
 }
 
 func stringFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
 	jsonFieldName, ok := jsonFieldName(structJson, field)
-	if ok || emitZeroValues() {
+	if ok || Config.FilterProtoJsonEmitZeroValues() {
 		structJson.Set(jsonFieldName, v.String())
 	}
 }
 
 func intFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
 	jsonFieldName, ok := jsonFieldName(structJson, field)
-	if ok || emitZeroValues() {
+	if ok || Config.FilterProtoJsonEmitZeroValues() {
 		structJson.Set(jsonFieldName, v.Int())
 	}
 }
 
 func int64FieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
-	if int64AsNumber() {
+	if Config.FilterProtoJsonInt64AsNumber() {
 		jsonFieldName, ok := jsonFieldName(structJson, field)
-		if ok || emitZeroValues() {
+		if ok || Config.FilterProtoJsonEmitZeroValues() {
 			structJson.Set(jsonFieldName, v.Int())
 		}
 	}
@@ -223,21 +195,21 @@ func int64FieldFilter(structJson *sjson.Json, field reflect.StructField, v refle
 
 func uintFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
 	jsonFieldName, ok := jsonFieldName(structJson, field)
-	if ok || emitZeroValues() {
+	if ok || Config.FilterProtoJsonEmitZeroValues() {
 		structJson.Set(jsonFieldName, v.Uint())
 	}
 }
 
 func floatFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
 	jsonFieldName, ok := jsonFieldName(structJson, field)
-	if ok || emitZeroValues() {
+	if ok || Config.FilterProtoJsonEmitZeroValues() {
 		structJson.Set(jsonFieldName, v.Float())
 	}
 }
 
 func ptrFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
 	jsonFieldName, ok := jsonFieldName(structJson, field)
-	if v.Elem().Kind() == reflect.Invalid && emitZeroValues() {
+	if v.Elem().Kind() == reflect.Invalid && Config.FilterProtoJsonEmitZeroValues() {
 		structJson.Set(jsonFieldName, nil)
 	} else {
 		if !ok {
@@ -249,7 +221,7 @@ func ptrFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect
 
 func sliceFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
 	jsonFieldName, ok := jsonFieldName(structJson, field)
-	if !ok && emitZeroValues() {
+	if !ok && Config.FilterProtoJsonEmitZeroValues() {
 		structJson.Set(jsonFieldName, make([]interface{}, 0))
 	}
 	if v.Len() == 0 {

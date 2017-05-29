@@ -1,13 +1,14 @@
 package turbo
 
 import (
+	"fmt"
 	"github.com/kylelemons/go-gypsy/yaml"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
-// TODO export a Configs struct
 const grpcServiceName string = "grpc_service_name"
 const grpcServiceAddress string = "grpc_service_address"
 const thriftServiceName string = "thrift_service_name"
@@ -17,9 +18,105 @@ const filterProtoJson string = "filter_proto_json"
 const filterProtoJsonEmitZeroValues string = "filter_proto_json_emit_zerovalues"
 const filterProtoJsonInt64AsNumber string = "filter_proto_json_int64_as_number"
 
+type configs map[string]string
+
+var Config configs = make(map[string]string)
+
+func (c *configs) GrpcServiceName() string {
+	return Config[grpcServiceName]
+}
+
+func (c *configs) SetGrpcServiceName(name string) {
+	Config[grpcServiceName] = name
+}
+
+func (c *configs) GrpcServiceAddress() string {
+	return Config[grpcServiceAddress]
+}
+
+func (c *configs) SetGrpcServiceAddress(address string) {
+	Config[grpcServiceAddress] = address
+}
+
+func (c *configs) ThriftServiceName() string {
+	return Config[thriftServiceName]
+}
+
+func (c *configs) SetThriftServiceName(name string) {
+	Config[thriftServiceName] = name
+}
+
+func (c *configs) ThriftServiceAddress() string {
+	return Config[thriftServiceAddress]
+}
+
+func (c *configs) SetThriftServiceAddress(address string) {
+	Config[thriftServiceAddress] = address
+}
+
+func (c *configs) HTTPPort() int64 {
+	i, err := strconv.ParseInt(Config[httpPort], 10, 32)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return i
+}
+
+func (c *configs) HTTPPortStr() string {
+	return ":" + Config[httpPort]
+}
+
+func (c *configs) SetHTTPPort(p int64) {
+	Config[httpPort] = strconv.FormatInt(p, 10)
+}
+
+func (c *configs) FilterProtoJson() bool {
+	option, ok := Config[filterProtoJson]
+	if !ok || option != "true" {
+		return false
+	}
+	return true
+}
+
+func (c *configs) SetFilterProtoJson(filterJson bool) {
+	Config[filterProtoJson] = strconv.FormatBool(filterJson)
+}
+
+func (c *configs) FilterProtoJsonEmitZeroValues() bool {
+	option, ok := Config[filterProtoJson]
+	if !ok || option != "true" {
+		return false
+	}
+	option, ok = Config[filterProtoJsonEmitZeroValues]
+	if ok && option == "false" {
+		return false
+	}
+	return true
+}
+
+func (c *configs) SetFilterProtoJsonEmitZeroValues(emitZeroValues bool) {
+	Config[filterProtoJsonEmitZeroValues] = strconv.FormatBool(emitZeroValues)
+}
+
+func (c *configs) FilterProtoJsonInt64AsNumber() bool {
+	option, ok := Config[filterProtoJson]
+	if !ok || option != "true" {
+		return false
+	}
+	option, ok = Config[filterProtoJsonInt64AsNumber]
+	if ok && option == "false" {
+		return false
+	}
+	return true
+}
+
+func (c *configs) SetFilterProtoJsonInt64AsNumber(asNumber bool) {
+	Config[filterProtoJsonInt64AsNumber] = strconv.FormatBool(asNumber)
+}
+
 var rpcType string
 
-var config yaml.File
+var configFile yaml.File
 
 var urlServiceMaps [][3]string
 
@@ -27,8 +124,6 @@ var urlServiceMaps [][3]string
 var serviceRootPath string
 
 var servicePkgPath string
-
-var configs map[string]string = make(map[string]string)
 
 var fieldMappings map[string][]string = make(map[string][]string)
 
@@ -61,25 +156,25 @@ func loadServiceConfig() {
 	if err != nil {
 		log.Fatalf("readfile(%q): %s", serviceRootPath+"/service.yaml", err)
 	}
-	config = *conf
+	configFile = *conf
 	initUrlMap()
 	initConfigs()
 	initFieldMapping()
 }
 
 func initConfigs() {
-	cnf, err := yaml.Child(config.Root, "config")
+	cnf, err := yaml.Child(configFile.Root, "config")
 	if err != nil {
 		log.Fatalf("parse config error: %s", err)
 	}
 	configMap := cnf.(yaml.Map)
 	for k, v := range configMap {
-		configs[k] = (v.(yaml.Scalar)).String()
+		Config[k] = (v.(yaml.Scalar)).String()
 	}
 }
 
 func initUrlMap() {
-	node, err := yaml.Child(config.Root, "urlmapping")
+	node, err := yaml.Child(configFile.Root, "urlmapping")
 	if err != nil {
 		log.Fatalf("parse urlmapping error: %s", err)
 	}
@@ -90,7 +185,7 @@ func initUrlMap() {
 }
 
 func initFieldMapping() {
-	node, err := yaml.Child(config.Root, rpcType+"-fieldmapping")
+	node, err := yaml.Child(configFile.Root, rpcType+"-fieldmapping")
 	if err != nil {
 		return
 	}

@@ -207,7 +207,7 @@ func GenerateGrpcSwitcher() {
 		serviceRootPath+"/gen/grpcswitcher.go",
 		grpcSwitcherFunc,
 		handlerContent{
-			ServiceName: configs[grpcServiceName],
+			ServiceName: Config.GrpcServiceName(),
 			Cases:       casesStr,
 			PkgPath:     servicePkgPath},
 	)
@@ -298,7 +298,7 @@ func GenerateThriftSwitcher() {
 		writeWithTemplate(
 			&casesBuf,
 			thriftCases,
-			thriftMethod{configs[thriftServiceName], v},
+			thriftMethod{Config.ThriftServiceName(), v},
 		)
 		casesStr = casesStr + casesBuf.String()
 	}
@@ -317,7 +317,7 @@ func GenerateThriftSwitcher() {
 		serviceRootPath+"/gen/thriftswitcher.go",
 		thriftSwitcherFunc,
 		thriftHandlerContent{
-			ServiceName:    configs[thriftServiceName],
+			ServiceName:    Config.ThriftServiceName(),
 			Cases:          casesStr,
 			PkgPath:        servicePkgPath,
 			BuildArgsCases: argCasesStr},
@@ -396,7 +396,7 @@ func GenerateThriftStub(options string) {
 		fmt.Println("thrift folder missing, create one")
 		os.MkdirAll(serviceRootPath+"/gen/thrift", 0755)
 	}
-	nameLower := strings.ToLower(configs[thriftServiceName])
+	nameLower := strings.ToLower(Config.ThriftServiceName())
 	cmd := "thrift " + options + " -r --gen go:package_prefix=" + servicePkgPath + "/gen/thrift/gen-go/ -o" +
 		" " + serviceRootPath + "/" + "gen/thrift " + serviceRootPath + "/" + nameLower + ".thrift"
 	executeCmd("bash", "-c", cmd)
@@ -413,11 +413,11 @@ func executeCmd(cmd string, args ...string) {
 }
 
 func generateGrpcServiceMain() {
-	nameLower := strings.ToLower(configs[grpcServiceName])
+	nameLower := strings.ToLower(Config.GrpcServiceName())
 	writeFileWithTemplate(
 		serviceRootPath+"/grpcservice/"+nameLower+".go",
 		serviceMain,
-		serviceMainValues{PkgPath: servicePkgPath, Port: "50051", ServiceName: configs[grpcServiceName]},
+		serviceMainValues{PkgPath: servicePkgPath, Port: "50051", ServiceName: Config.GrpcServiceName()},
 	)
 }
 
@@ -454,11 +454,11 @@ func main() {
 `
 
 func generateThriftServiceMain() {
-	nameLower := strings.ToLower(configs[thriftServiceName])
+	nameLower := strings.ToLower(Config.ThriftServiceName())
 	writeFileWithTemplate(
 		serviceRootPath+"/thriftservice/"+nameLower+".go",
 		thriftServiceMain,
-		thriftServiceMainValues{PkgPath: servicePkgPath, Port: "50052", ServiceName: configs[thriftServiceName]},
+		thriftServiceMainValues{PkgPath: servicePkgPath, Port: "50052", ServiceName: Config.ThriftServiceName()},
 	)
 }
 
@@ -492,11 +492,11 @@ func main() {
 `
 
 func generateGrpcServiceImpl() {
-	nameLower := strings.ToLower(configs[grpcServiceName])
+	nameLower := strings.ToLower(Config.GrpcServiceName())
 	writeFileWithTemplate(
 		serviceRootPath+"/grpcservice/impl/"+nameLower+"impl.go",
 		serviceImpl,
-		serviceImplValues{PkgPath: servicePkgPath, ServiceName: configs[grpcServiceName]},
+		serviceImplValues{PkgPath: servicePkgPath, ServiceName: Config.GrpcServiceName()},
 	)
 }
 
@@ -521,11 +521,11 @@ func (s *{{.ServiceName}}) SayHello(ctx context.Context, req *proto.SayHelloRequ
 `
 
 func generateThriftServiceImpl() {
-	nameLower := strings.ToLower(configs[thriftServiceName])
+	nameLower := strings.ToLower(Config.ThriftServiceName())
 	writeFileWithTemplate(
 		serviceRootPath+"/thriftservice/impl/"+nameLower+"impl.go",
 		thriftServiceImpl,
-		thriftServiceImplValues{PkgPath: servicePkgPath, ServiceName: configs[thriftServiceName]},
+		thriftServiceImplValues{PkgPath: servicePkgPath, ServiceName: Config.ThriftServiceName()},
 	)
 }
 
@@ -549,11 +549,11 @@ func (s {{.ServiceName}}) SayHello(yourName string) (r *gen.SayHelloResponse, er
 `
 
 func generateGrpcHTTPMain() {
-	nameLower := strings.ToLower(configs[grpcServiceName])
+	nameLower := strings.ToLower(Config.GrpcServiceName())
 	writeFileWithTemplate(
 		serviceRootPath+"/grpcapi/"+nameLower+"api.go",
 		_HTTPMain,
-		_HTTPMainValues{ServiceName: configs[grpcServiceName], PkgPath: servicePkgPath},
+		_HTTPMainValues{ServiceName: Config.GrpcServiceName(), PkgPath: servicePkgPath},
 	)
 }
 
@@ -581,11 +581,11 @@ func grpcClient(conn *grpc.ClientConn) interface{} {
 `
 
 func generateThriftHTTPMain() {
-	nameLower := strings.ToLower(configs[thriftServiceName])
+	nameLower := strings.ToLower(Config.ThriftServiceName())
 	writeFileWithTemplate(
 		serviceRootPath+"/thriftapi/"+nameLower+"api.go",
 		thriftHTTPMain,
-		_HTTPMainValues{ServiceName: configs[thriftServiceName], PkgPath: servicePkgPath},
+		_HTTPMainValues{ServiceName: Config.ThriftServiceName(), PkgPath: servicePkgPath},
 	)
 }
 
