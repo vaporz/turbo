@@ -21,6 +21,28 @@ func TestIsCamelCase(t *testing.T) {
 	assert.Equal(t, false, IsNotCamelCase("CamelCase"))
 }
 
+type testPrimitives struct {
+	Int64Value   int64
+	Int32Value   int32
+	Uint64Value  uint64
+	Uint32Value  uint32
+	Float32Value float32
+	Float64Value float64
+	BoolValue    bool
+}
+
+func (t *testPrimitives) Reset()         {}
+func (t *testPrimitives) String() string { return "" }
+func (t *testPrimitives) ProtoMessage()  {}
+
+func TestPrimitives(t *testing.T) {
+	configs[filterProtoJson] = "true"
+	ts := &testPrimitives{Int64Value: 111, Float32Value: 1, BoolValue: true}
+	buf, _ := JSON(ts)
+	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Float64Value\":0,"+
+		"\"Int32Value\":0,\"Int64Value\":111,\"Uint32Value\":0,\"Uint64Value\":0}", string(buf))
+}
+
 type args struct {
 }
 
