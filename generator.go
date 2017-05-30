@@ -18,11 +18,11 @@ func CreateProject(pkgPath, serviceName, serverType string) {
 		}
 	}()
 	initPkgPath(pkgPath)
+	initConfigFileName("service")
 	validateServiceRootPath()
 	createRootFolder()
 	createServiceYaml(serviceName)
 	initRpcType(serverType)
-	initConfigFileName("service")
 	loadServiceConfig()
 	if serverType == "grpc" {
 		createGrpcProject(serviceName)
@@ -36,12 +36,13 @@ func validateServiceRootPath() {
 	if os.IsNotExist(err) {
 		return
 	}
+	// TODO add a option to delete existing folder
 	fmt.Print("Path '" + Config.ServiceRootPath + " already exist!\n" +
-		"Are you sure to recreate this project? (type 'y' to continue):'")
+		"Do you want to remove this directory before creating a new project? (type 'y' to remove):'")
 	var input string
 	fmt.Scanln(&input)
 	if input != "y" {
-		panic("aborted")
+		return
 	}
 	fmt.Print("All files in that directory will be lost, are you sure? (type 'y' to continue):'")
 	fmt.Scanln(&input)
@@ -107,11 +108,11 @@ func writeFileWithTemplate(filePath, text string, data interface{}) {
 }
 
 func createServiceYaml(serviceName string) {
-	if _, err := os.Stat(Config.ServiceRootPath + "/service.yaml"); os.IsExist(err) {
+	if _, err := os.Stat(Config.ServiceRootPath + "/" + Config.ConfigFileName + ".yaml"); err == nil {
 		return
 	}
 	writeFileWithTemplate(
-		Config.ServiceRootPath+"/service.yaml",
+		Config.ServiceRootPath+"/"+Config.ConfigFileName+".yaml",
 		serviceYamlFile,
 		serviceYamlValues{ServiceName: serviceName},
 	)
@@ -225,7 +226,7 @@ func structFields(structName string) string {
 		nameSlice := []rune(pair[1])
 		name := strings.ToUpper(string(nameSlice[0])) + string(nameSlice[1:])
 		typeName := pair[0]
-		fieldStr = fieldStr + name + ": &proto." + typeName + "{" + structFields(typeName) + "},"
+		fieldStr = fieldStr + name + ": &g." + typeName + "{" + structFields(typeName) + "},"
 	}
 	return fieldStr
 }
@@ -244,11 +245,11 @@ type handlerContent struct {
 var grpcSwitcherFunc string = `package gen
 
 import (
+	g "{{.PkgPath}}/gen/proto"
+	"github.com/vaporz/turbo"
 	"reflect"
 	"net/http"
-	"github.com/vaporz/turbo"
 	"errors"
-	"{{.PkgPath}}/gen/proto"
 )
 
 /*
@@ -262,13 +263,13 @@ var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.R
 }
 
 func callGrpcMethod(methodName string, params []reflect.Value) []reflect.Value {
-	return reflect.ValueOf(turbo.GrpcService().(proto.{{.ServiceName}}Client)).MethodByName(methodName).Call(params)
+	return reflect.ValueOf(turbo.GrpcService().(g.{{.ServiceName}}Client)).MethodByName(methodName).Call(params)
 }
 `
 
 var grpcCases string = `
 	case "{{.MethodName}}":
-		request := &proto.{{.MethodName}}Request{ {{.StructFields}} }
+		request := &g.{{.MethodName}}Request{ {{.StructFields}} }
 		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
 		if err != nil {
 			return nil, err
@@ -312,7 +313,7 @@ func GenerateThriftSwitcher() {
 		writeWithTemplate(
 			&argCasesBuf,
 			buildArgCases,
-			buildArgParams{k},
+			buildArgParams{k, structFields(k)},
 		)
 		argCasesStr = argCasesStr + argCasesBuf.String()
 	}
@@ -340,16 +341,17 @@ type thriftHandlerContent struct {
 }
 
 type buildArgParams struct {
-	StructName string
+	StructName   string
+	StructFields string
 }
 
 var thriftSwitcherFunc string = `package gen
 
 import (
-	"{{.PkgPath}}/gen/thrift/gen-go/gen"
+	g "{{.PkgPath}}/gen/thrift/gen-go/gen"
+	"github.com/vaporz/turbo"
 	"reflect"
 	"net/http"
-	"github.com/vaporz/turbo"
 	"errors"
 )
 
@@ -364,7 +366,7 @@ var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http
 }
 
 func callThriftMethod(methodName string, params []reflect.Value) []reflect.Value {
-	return reflect.ValueOf(turbo.ThriftService().(*gen.{{.ServiceName}}Client)).MethodByName(methodName).Call(params)
+	return reflect.ValueOf(turbo.ThriftService().(*g.{{.ServiceName}}Client)).MethodByName(methodName).Call(params)
 }
 
 func buildStructArg(typeName string, req *http.Request) (v reflect.Value, err error) {
@@ -377,7 +379,7 @@ func buildStructArg(typeName string, req *http.Request) (v reflect.Value, err er
 
 var thriftCases string = `
 	case "{{.MethodName}}":
-		args := gen.{{.ServiceName}}{{.MethodName}}Args{}
+		args := g.{{.ServiceName}}{{.MethodName}}Args{}
 		params, err := turbo.BuildArgs(reflect.TypeOf(args), reflect.ValueOf(args), req, buildStructArg)
 		if err != nil {
 			return nil, err
@@ -386,7 +388,7 @@ var thriftCases string = `
 
 var buildArgCases string = `
 	case "{{.StructName}}":
-		request := &gen.{{.StructName}}{}
+		request := &g.{{.StructName}}{ {{.StructFields}} }
 		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
 		if err != nil {
 			return v, err
@@ -433,12 +435,12 @@ type serviceMainValues struct {
 var serviceMain string = `package main
 
 import (
-	"net"
-	"log"
-	"google.golang.org/grpc"
 	"{{.PkgPath}}/grpcservice/impl"
 	"{{.PkgPath}}/gen/proto"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc"
+	"log"
+	"net"
 )
 
 func main() {
@@ -568,10 +570,10 @@ type _HTTPMainValues struct {
 var _HTTPMain string = `package main
 
 import (
+	"{{.PkgPath}}/gen/proto"
+	"{{.PkgPath}}/gen"
 	"github.com/vaporz/turbo"
 	"google.golang.org/grpc"
-	"{{.PkgPath}}/gen"
-	"{{.PkgPath}}/gen/proto"
 )
 
 func main() {
@@ -596,9 +598,9 @@ var thriftHTTPMain string = `package main
 
 import (
 	"github.com/vaporz/turbo"
-	"{{.PkgPath}}/gen"
 	t "{{.PkgPath}}/gen/thrift/gen-go/gen"
 	"git.apache.org/thrift.git/lib/go/thrift"
+	"{{.PkgPath}}/gen"
 )
 
 func main() {

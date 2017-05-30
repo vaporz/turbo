@@ -23,7 +23,7 @@ var Config = &config{}
 type config struct {
 	GOPATH          string // the GOPATH used by Turbo
 	RpcType         string // "grpc"/"thrift"
-	ConfigFileName  string // yaml file name, exclude extention
+	ConfigFileName  string // yaml file name, exclude extension
 	ServiceRootPath string // absolute path
 	ServicePkgPath  string // package path, e.g. "github.com/vaporz/turbo"
 
@@ -188,7 +188,12 @@ func initFieldMapping() {
 	Config.fieldMappings = make(map[string][]string)
 	mappings := viper.GetStringSlice(Config.RpcType + "-fieldmapping")
 	for _, m := range mappings {
-		k := strings.TrimSpace(matchKey.FindStringSubmatch(m)[1])
+		keyStr := matchKey.FindStringSubmatch(m)
+		key := m
+		if len(keyStr) >= 2 {
+			key = keyStr[1]
+		}
+		k := strings.TrimSpace(key)
 		valueSliceStr := matchSlice.FindStringSubmatch(m)
 		if len(valueSliceStr) >= 2 {
 			fields := strings.Split(valueSliceStr[1], ",")
