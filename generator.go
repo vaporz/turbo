@@ -36,7 +36,6 @@ func validateServiceRootPath() {
 	if os.IsNotExist(err) {
 		return
 	}
-	// TODO add a option to delete existing folder
 	fmt.Print("Path '" + Config.ServiceRootPath + " already exist!\n" +
 		"Do you want to remove this directory before creating a new project? (type 'y' to remove):'")
 	var input string
@@ -437,25 +436,18 @@ var serviceMain string = `package main
 import (
 	"{{.PkgPath}}/grpcservice/impl"
 	"{{.PkgPath}}/gen/proto"
-	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc"
-	"log"
-	"net"
+	"github.com/vaporz/turbo"
 )
 
 func main() {
-	lis, err := net.Listen("tcp", ":{{.Port}}")
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-	grpcServer := grpc.NewServer()
-	proto.Register{{.ServiceName}}Server(grpcServer, &impl.{{.ServiceName}}{})
-
-	reflection.Register(grpcServer)
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-	}
+	turbo.StartGrpcService({{.Port}}, registerServer)
 }
+
+func registerServer(s *grpc.Server) {
+	proto.RegisterTestServiceServer(s, &impl.{{.ServiceName}}{})
+}
+
 `
 
 func generateThriftServiceMain() {
@@ -479,20 +471,15 @@ import (
 	"{{.PkgPath}}/thriftservice/impl"
 	"{{.PkgPath}}/gen/thrift/gen-go/gen"
 	"git.apache.org/thrift.git/lib/go/thrift"
-	"log"
-	"os"
+	"github.com/vaporz/turbo"
 )
 
 func main() {
-	transport, err := thrift.NewTServerSocket(":{{.Port}}")
-	if err != nil {
-		log.Println("socket error")
-		os.Exit(1)
-	}
+	turbo.StartThriftService({{.Port}}, _TProcessor)
+}
 
-	server := thrift.NewTSimpleServer4(gen.New{{.ServiceName}}Processor(impl.{{.ServiceName}}{}), transport,
-		thrift.NewTTransportFactory(),thrift.NewTBinaryProtocolFactoryDefault())
-	server.Serve()
+func _TProcessor() thrift.TProcessor {
+	return gen.New{{.ServiceName}}Processor(impl.{{.ServiceName}}{})
 }
 `
 

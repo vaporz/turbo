@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,8 +15,10 @@ import (
 
 // TODO start both http and grpc/thrift with one command
 
+type grpcClientCreator func(conn *grpc.ClientConn) interface{}
+
 // StartGrpcHTTPServer starts a HTTP server which sends requests via grpc
-func StartGrpcHTTPServer(pkgPath, configFileName string, clientCreator func(conn *grpc.ClientConn) interface{}, switcher func(string, http.ResponseWriter, *http.Request) (interface{}, error)) {
+func StartGrpcHTTPServer(pkgPath, configFileName string, clientCreator grpcClientCreator, s switcher) {
 	LoadServiceConfig("grpc", pkgPath, configFileName)
 	err := initGrpcService(clientCreator)
 	if err != nil {
@@ -21,11 +26,13 @@ func StartGrpcHTTPServer(pkgPath, configFileName string, clientCreator func(conn
 		os.Exit(1)
 	}
 	defer closeGrpcService()
-	startHTTPServer(Config.HTTPPortStr(), router(switcher))
+	startHTTPServer(Config.HTTPPortStr(), router(s))
 }
 
+type thriftClientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}
+
 // StartThriftHTTPServer starts a HTTP server which sends requests via Thrift
-func StartThriftHTTPServer(pkgPath, configFileName string, clientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}, switcher func(string, http.ResponseWriter, *http.Request) (interface{}, error)) {
+func StartThriftHTTPServer(pkgPath, configFileName string, clientCreator thriftClientCreator, s switcher) {
 	LoadServiceConfig("thrift", pkgPath, configFileName)
 	err := initThriftService(clientCreator)
 	if err != nil {
@@ -33,7 +40,7 @@ func StartThriftHTTPServer(pkgPath, configFileName string, clientCreator func(tr
 		os.Exit(1)
 	}
 	defer closeThriftService()
-	startHTTPServer(Config.HTTPPortStr(), router(switcher))
+	startHTTPServer(Config.HTTPPortStr(), router(s))
 }
 
 func startHTTPServer(portStr string, router http.Handler) {
@@ -51,4 +58,30 @@ func startHTTPServer(portStr string, router http.Handler) {
 		break
 	}
 	fmt.Println("Server exit")
+}
+
+func StartGrpcService(port int, registerServer func(s *grpc.Server)) {
+	portStr := fmt.Sprintf(":%d", port)
+	lis, err := net.Listen("tcp", portStr)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+	grpcServer := grpc.NewServer()
+	registerServer(grpcServer)
+	reflection.Register(grpcServer)
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
+}
+
+func StartThriftService(port int, registerTProcessor func() thrift.TProcessor) {
+	portStr := fmt.Sprintf(":%d", port)
+	transport, err := thrift.NewTServerSocket(portStr)
+	if err != nil {
+		log.Println("socket error")
+		os.Exit(1)
+	}
+	server := thrift.NewTSimpleServer4(registerTProcessor(), transport,
+		thrift.NewTTransportFactory(), thrift.NewTBinaryProtocolFactoryDefault())
+	server.Serve()
 }

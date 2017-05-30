@@ -22,6 +22,7 @@ func TestConfig(t *testing.T) {
 	assert.Equal(t, "test", Config.GrpcServiceName())
 
 	assert.Equal(t, "127.0.0.1:50051", Config.GrpcServiceAddress())
+	assert.Equal(t, ":50051", Config.GrpcServicePortStr())
 	Config.SetGrpcServiceAddress("test address")
 	assert.Equal(t, "test address", Config.GrpcServiceAddress())
 
@@ -30,6 +31,7 @@ func TestConfig(t *testing.T) {
 	assert.Equal(t, "test thrift", Config.ThriftServiceName())
 
 	assert.Equal(t, "127.0.0.1:50052", Config.ThriftServiceAddress())
+	assert.Equal(t, ":50052", Config.ThriftServicePortStr())
 	Config.SetThriftServiceAddress("thrift address")
 	assert.Equal(t, "thrift address", Config.ThriftServiceAddress())
 

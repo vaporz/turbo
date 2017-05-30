@@ -44,12 +44,30 @@ func (c *config) GrpcServiceAddress() string {
 	return c.configs[grpcServiceAddress]
 }
 
+func (c *config) GrpcServicePortStr() string {
+	addr := c.configs[grpcServiceAddress]
+	i := strings.Index(addr, ":")
+	if i <= 0 {
+		panic("invalid grpc_service_address")
+	}
+	return addr[i:]
+}
+
 func (c *config) SetGrpcServiceAddress(address string) {
 	c.configs[grpcServiceAddress] = address
 }
 
 func (c *config) ThriftServiceName() string {
 	return c.configs[thriftServiceName]
+}
+
+func (c *config) ThriftServicePortStr() string {
+	addr := c.configs[thriftServiceAddress]
+	i := strings.Index(addr, ":")
+	if i <= 0 {
+		panic("invalid thrift_service_address")
+	}
+	return addr[i:]
 }
 
 func (c *config) SetThriftServiceName(name string) {
@@ -179,6 +197,7 @@ func appendUrlServiceMap(line string) {
 
 func initConfigs() {
 	Config.configs = viper.GetStringMapString("config")
+	// TODO check required config item
 }
 
 var matchKey = regexp.MustCompile("^(.*)\\[")
