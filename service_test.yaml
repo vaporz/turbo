@@ -9,12 +9,11 @@ config:
   filter_proto_json_int64_as_number: true
 
 grpc-fieldmapping:
-  SayHelloRequest:
-    - CommonValues values
+  - SayHelloRequest [CommonValues values]
 
 thrift-fieldmapping:
-  CommonValues:
-  HelloValues:
+  - CommonValues
+  - HelloValues
 
 urlmapping:
   - GET,POST /hello SayHello

@@ -231,6 +231,10 @@ func ReflectValue(fieldValue reflect.Value, v string) (reflect.Value, error) {
 
 //BuildStruct finds values from request, and set them to struct fields recursively
 func BuildStruct(theType reflect.Type, theValue reflect.Value, req *http.Request) error {
+	if theValue.Kind() == reflect.Invalid {
+		fmt.Println("value is invalid, please check grpc-fieldmapping")
+		return nil
+	}
 	fieldNum := theType.NumField()
 	for i := 0; i < fieldNum; i++ {
 		fieldName := theType.Field(i).Name
@@ -253,7 +257,7 @@ func BuildStruct(theType reflect.Type, theValue reflect.Value, req *http.Request
 		}
 		err := SetValue(fieldValue, v)
 		if err != nil {
-			return err
+			fmt.Println(err)
 		}
 	}
 	return nil

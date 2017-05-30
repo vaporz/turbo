@@ -22,6 +22,7 @@ func CreateProject(pkgPath, serviceName, serverType string) {
 	createRootFolder()
 	createServiceYaml(serviceName)
 	initRpcType(serverType)
+	initConfigFileName("service")
 	loadServiceConfig()
 	if serverType == "grpc" {
 		createGrpcProject(serviceName)
@@ -199,7 +200,7 @@ func GenerateGrpcSwitcher() {
 		writeWithTemplate(
 			&casesBuf,
 			grpcCases,
-			method{v, structFields(v)},
+			method{v, structFields(v + "Request")},
 		)
 		casesStr = casesStr + casesBuf.String()
 	}
@@ -213,18 +214,20 @@ func GenerateGrpcSwitcher() {
 	)
 }
 
-func structFields(methodName string) string {
-	requestName := methodName + "Request"
-	fields := Config.fieldMappings[requestName]
-	var structFields string
+func structFields(structName string) string {
+	fields, ok := Config.fieldMappings[structName]
+	if !ok {
+		return ""
+	}
+	var fieldStr string
 	for _, field := range fields {
 		pair := strings.Split(field, " ")
 		nameSlice := []rune(pair[1])
 		name := strings.ToUpper(string(nameSlice[0])) + string(nameSlice[1:])
 		typeName := pair[0]
-		structFields = structFields + name + ": &proto." + typeName + "{},"
+		fieldStr = fieldStr + name + ": &proto." + typeName + "{" + structFields(typeName) + "},"
 	}
-	return structFields
+	return fieldStr
 }
 
 type method struct {

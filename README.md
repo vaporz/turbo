@@ -489,14 +489,21 @@ config:
 # TODO make a grpc plugin to generate this mapping
 # If you use a nested message, you have to tell Turbo how it is nested.
 # For a protobuf message like this:
+# message Child {}
+#
+# message TestValue {
+#     int64 intValue = 1;
+#     Child child = 2;
+# }
 # message SayHelloRequest {
 #     CommonValues values = 1;
 #     string yourName = 2;
+#     TestVlues test = 3;
 # }
 # Following mapping is needed.
 grpc-fieldmapping:
-  SayHelloRequest:
-    - CommonValues values
+  - TestValue [Child child]
+  - SayHelloRequest [CommonValues values, TestVlues test]
 
 # TODO make a thrift plugin to generate this mapping
 # If you use structs as method args, you have to tell Turbo what are they.
@@ -506,8 +513,8 @@ grpc-fieldmapping:
 # }
 # Just list the names of struct args as following:
 thrift-fieldmapping:
-  CommonValues:
-  HelloValues:
+  - CommonValues
+  - HelloValues
 
 # This mapping is the core function of Turbo.
 # This mapping tells Turbo how to proxy a HTTP request to a grpc/thrift entry point.

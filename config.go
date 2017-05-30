@@ -2,10 +2,9 @@ package turbo
 
 import (
 	"fmt"
-	"github.com/kylelemons/go-gypsy/yaml"
 	"github.com/spf13/viper"
-	"log"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -19,7 +18,7 @@ const filterProtoJson string = "filter_proto_json"
 const filterProtoJsonEmitZeroValues string = "filter_proto_json_emit_zerovalues"
 const filterProtoJsonInt64AsNumber string = "filter_proto_json_int64_as_number"
 
-var Config *config = &config{}
+var Config = &config{}
 
 type config struct {
 	GOPATH          string // the GOPATH used by Turbo
@@ -182,29 +181,20 @@ func initConfigs() {
 	Config.configs = viper.GetStringMapString("config")
 }
 
-func initFieldMapping() {
-	//TODO viper is case-insensitive, CamelCase map key is lower cased
-	//Config.fieldMappings = viper.GetStringMapStringSlice(Config.RpcType + "-fieldmapping")
+var matchKey = regexp.MustCompile("^(.*)\\[")
+var matchSlice = regexp.MustCompile("\\[(.*)\\]")
 
-	conf, err := yaml.ReadFile(Config.ServiceRootPath + "/" + Config.ConfigFileName + ".yaml")
-	if err != nil {
-		log.Fatalf("readfile(%q): %s", Config.ServiceRootPath+"/service.yaml", err)
-	}
-	configFile := *conf
-	node, err := yaml.Child(configFile.Root, Config.RpcType+"-fieldmapping")
-	if err != nil {
-		return
-	}
+func initFieldMapping() {
 	Config.fieldMappings = make(map[string][]string)
-	fieldMappingMap := node.(yaml.Map)
-	for k, v := range fieldMappingMap {
-		valueStrList := make([]string, 0)
-		if v != nil {
-			valueList := v.(yaml.List)
-			for _, line := range valueList {
-				valueStrList = append(valueStrList, strings.TrimSpace(yaml.Render(line)))
+	mappings := viper.GetStringSlice(Config.RpcType + "-fieldmapping")
+	for _, m := range mappings {
+		k := strings.TrimSpace(matchKey.FindStringSubmatch(m)[1])
+		valueSliceStr := matchSlice.FindStringSubmatch(m)
+		if len(valueSliceStr) >= 2 {
+			fields := strings.Split(valueSliceStr[1], ",")
+			for _, v := range fields {
+				Config.fieldMappings[k] = append(Config.fieldMappings[k], strings.TrimSpace(v))
 			}
 		}
-		Config.fieldMappings[k] = valueStrList
 	}
 }
