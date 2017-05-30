@@ -13,8 +13,8 @@ import (
 // TODO start both http and grpc/thrift with one command
 
 // StartGrpcHTTPServer starts a HTTP server which sends requests via grpc
-func StartGrpcHTTPServer(pkgPath string, clientCreator func(conn *grpc.ClientConn) interface{}, switcher func(string, http.ResponseWriter, *http.Request) (interface{}, error)) {
-	LoadServiceConfig("grpc", pkgPath, "service")
+func StartGrpcHTTPServer(pkgPath, configFileName string, clientCreator func(conn *grpc.ClientConn) interface{}, switcher func(string, http.ResponseWriter, *http.Request) (interface{}, error)) {
+	LoadServiceConfig("grpc", pkgPath, configFileName)
 	err := initGrpcService(clientCreator)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -25,8 +25,8 @@ func StartGrpcHTTPServer(pkgPath string, clientCreator func(conn *grpc.ClientCon
 }
 
 // StartThriftHTTPServer starts a HTTP server which sends requests via Thrift
-func StartThriftHTTPServer(pkgPath string, clientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}, switcher func(string, http.ResponseWriter, *http.Request) (interface{}, error)) {
-	LoadServiceConfig("thrift", pkgPath, "service")
+func StartThriftHTTPServer(pkgPath, configFileName string, clientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}, switcher func(string, http.ResponseWriter, *http.Request) (interface{}, error)) {
+	LoadServiceConfig("thrift", pkgPath, configFileName)
 	err := initThriftService(clientCreator)
 	if err != nil {
 		fmt.Println(err.Error())

@@ -575,7 +575,7 @@ import (
 )
 
 func main() {
-	turbo.StartGrpcHTTPServer("{{.PkgPath}}", grpcClient, gen.GrpcSwitcher)
+	turbo.StartGrpcHTTPServer("{{.PkgPath}}", "service", grpcClient, gen.GrpcSwitcher)
 }
 
 func grpcClient(conn *grpc.ClientConn) interface{} {
@@ -602,7 +602,7 @@ import (
 )
 
 func main() {
-	turbo.StartThriftHTTPServer("{{.PkgPath}}", thriftClient, gen.ThriftSwitcher)
+	turbo.StartThriftHTTPServer("{{.PkgPath}}", "service", thriftClient, gen.ThriftSwitcher)
 }
 
 func thriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) interface{} {
