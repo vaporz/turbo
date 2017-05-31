@@ -34,7 +34,11 @@ func initGrpcService(clientCreator func(conn *grpc.ClientConn) interface{}) erro
 	if grpcService != nil {
 		return nil
 	}
-	err := gClient.dial(Config.GrpcServiceAddress())
+	addr := Config.GrpcServiceAddress()
+	if len(addr) == 0 {
+		panic("Error: missing [grpc_service_address] in config")
+	}
+	err := gClient.dial(addr)
 	if err == nil {
 		grpcService = clientCreator(gClient.conn)
 	}

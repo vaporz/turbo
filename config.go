@@ -2,6 +2,7 @@ package turbo
 
 import (
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 	"os"
 	"regexp"
@@ -83,7 +84,11 @@ func (c *config) SetThriftServiceAddress(address string) {
 }
 
 func (c *config) HTTPPort() int64 {
-	i, err := strconv.ParseInt(c.configs[httpPort], 10, 32)
+	p, ok := c.configs[httpPort]
+	if !ok {
+		panic("Error: [http_port] is required!")
+	}
+	i, err := strconv.ParseInt(p, 10, 32)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -91,7 +96,7 @@ func (c *config) HTTPPort() int64 {
 }
 
 func (c *config) HTTPPortStr() string {
-	return ":" + c.configs[httpPort]
+	return ":" + strconv.FormatInt(c.HTTPPort(), 10)
 }
 
 func (c *config) SetHTTPPort(p int64) {
@@ -148,6 +153,17 @@ func LoadServiceConfig(rpcType, pkgPath, configFileName string) {
 	initConfigFileName(configFileName)
 	initPkgPath(pkgPath)
 	loadServiceConfig()
+	watchConfig()
+}
+
+func watchConfig() {
+	viper.WatchConfig()
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		fmt.Println("Config file changed:", e.Name)
+		loadServiceConfig()
+		fmt.Println("Config file reloaded!")
+		reloadConfig <- true
+	})
 }
 
 func initConfigFileName(name string) {
@@ -167,7 +183,6 @@ func initPkgPath(pkgPath string) {
 }
 
 func loadServiceConfig() {
-	// TODO reload config at runtime
 	viper.SetConfigName(Config.ConfigFileName)
 	viper.AddConfigPath(Config.ServiceRootPath)
 	err := viper.ReadInConfig()
@@ -197,7 +212,6 @@ func appendUrlServiceMap(line string) {
 
 func initConfigs() {
 	Config.configs = viper.GetStringMapString("config")
-	// TODO check required config item
 }
 
 var matchKey = regexp.MustCompile("^(.*)\\[")

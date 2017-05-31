@@ -16,8 +16,7 @@ type switcher func(methodName string, resp http.ResponseWriter, req *http.Reques
 
 var switcherFunc switcher
 
-func router(s switcher) *mux.Router {
-	switcherFunc = s
+func router() *mux.Router {
 	r := mux.NewRouter()
 	for _, v := range Config.urlServiceMaps {
 		httpMethods := strings.Split(v[0], ",")

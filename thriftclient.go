@@ -39,7 +39,11 @@ func initThriftService(clientCreator func(trans thrift.TTransport, f thrift.TPro
 	if thriftService != nil {
 		return nil
 	}
-	err := tClient.connect(Config.ThriftServiceAddress())
+	addr := Config.ThriftServiceAddress()
+	if len(addr) == 0 {
+		panic("Error: missing [thrift_service_address] in config")
+	}
+	err := tClient.connect(addr)
 	if err == nil {
 		thriftService = clientCreator(tClient.transport, tClient.factory)
 	}
