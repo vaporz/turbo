@@ -127,7 +127,8 @@ func startHTTPServer(portStr string, handler http.Handler) {
 }
 
 func shutDownHTTP(s *http.Server) {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
 	s.Shutdown(ctx)
 }
 

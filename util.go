@@ -18,10 +18,12 @@ import (
 
 var matchCamelCase = regexp.MustCompile("^([A-Z]+[a-z]*)+$")
 
+// IsCamelCase returns true if name is a CamelCase string
 func IsCamelCase(name string) bool {
 	return matchCamelCase.Match([]byte(name))
 }
 
+// IsNotCamelCase returns true if name is not a CamelCase string
 func IsNotCamelCase(name string) bool {
 	return !IsCamelCase(name)
 }

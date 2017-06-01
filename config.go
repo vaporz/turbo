@@ -19,18 +19,48 @@ const filterProtoJson string = "filter_proto_json"
 const filterProtoJsonEmitZeroValues string = "filter_proto_json_emit_zerovalues"
 const filterProtoJsonInt64AsNumber string = "filter_proto_json_int64_as_number"
 
+// Config struct which holds contents from yaml file
 var Config = &config{}
 
-type config struct {
-	GOPATH          string // the GOPATH used by Turbo
-	RpcType         string // "grpc"/"thrift"
-	ConfigFileName  string // yaml file name, exclude extension
-	ServiceRootPath string // absolute path
-	ServicePkgPath  string // package path, e.g. "github.com/vaporz/turbo"
+// the GOPATH used by Turbo
+var GOPATH string
 
+// "grpc"/"thrift"
+var RpcType string
+
+// yaml file name, exclude extension("service" to "service.yaml")
+var ConfigFileName string
+
+// absolute path
+var ServiceRootPath string
+
+// package path, e.g. "github.com/vaporz/turbo"
+var ServicePkgPath string
+
+type config struct {
 	configs        map[string]string
 	urlServiceMaps [][3]string
 	fieldMappings  map[string][]string
+}
+
+func (c *config) GOPATH() string {
+	return GOPATH
+}
+
+func (c *config) RpcType() string {
+	return RpcType
+}
+
+func (c *config) ConfigFileName() string {
+	return ConfigFileName
+}
+
+func (c *config) ServiceRootPath() string {
+	return ServiceRootPath
+}
+
+func (c *config) ServicePkgPath() string {
+	return ServicePkgPath
 }
 
 func (c *config) GrpcServiceName() string {
@@ -147,7 +177,7 @@ func (c *config) SetFilterProtoJsonInt64AsNumber(asNumber bool) {
 	c.configs[filterProtoJsonInt64AsNumber] = strconv.FormatBool(asNumber)
 }
 
-// LoadServiceConfigWith accepts a package path, then load service.yaml in that path
+// LoadServiceConfig accepts a package path, then load service.yaml in that path
 func LoadServiceConfig(rpcType, pkgPath, configFileName string) {
 	initRpcType(rpcType)
 	initConfigFileName(configFileName)
@@ -167,24 +197,24 @@ func watchConfig() {
 }
 
 func initConfigFileName(name string) {
-	Config.ConfigFileName = name
+	ConfigFileName = name
 }
 
 func initRpcType(r string) {
-	Config.RpcType = r
+	RpcType = r
 }
 
 func initPkgPath(pkgPath string) {
 	goPath := os.Getenv("GOPATH")
 	paths := strings.Split(goPath, ":")
-	Config.GOPATH = paths[0]
-	Config.ServiceRootPath = Config.GOPATH + "/src/" + pkgPath
-	Config.ServicePkgPath = pkgPath
+	GOPATH = paths[0]
+	ServiceRootPath = GOPATH + "/src/" + pkgPath
+	ServicePkgPath = pkgPath
 }
 
 func loadServiceConfig() {
-	viper.SetConfigName(Config.ConfigFileName)
-	viper.AddConfigPath(Config.ServiceRootPath)
+	viper.SetConfigName(ConfigFileName)
+	viper.AddConfigPath(ServiceRootPath)
 	err := viper.ReadInConfig()
 	if err != nil {
 		panic(err)
@@ -219,7 +249,7 @@ var matchSlice = regexp.MustCompile("\\[(.*)\\]")
 
 func initFieldMapping() {
 	Config.fieldMappings = make(map[string][]string)
-	mappings := viper.GetStringSlice(Config.RpcType + "-fieldmapping")
+	mappings := viper.GetStringSlice(RpcType + "-fieldmapping")
 	for _, m := range mappings {
 		keyStr := matchKey.FindStringSubmatch(m)
 		key := m

@@ -7,10 +7,10 @@ import (
 
 func TestConfig(t *testing.T) {
 	//LoadServiceConfig("grpc", "github.com/vaporz/turbo", "service_test")
-	assert.Equal(t, "grpc", Config.RpcType)
-	assert.Equal(t, "service_test", Config.ConfigFileName)
-	assert.Equal(t, Config.GOPATH+"/src/github.com/vaporz/turbo", Config.ServiceRootPath)
-	assert.Equal(t, "github.com/vaporz/turbo", Config.ServicePkgPath)
+	assert.Equal(t, "grpc", Config.RpcType())
+	assert.Equal(t, "service_test", Config.ConfigFileName())
+	assert.Equal(t, Config.GOPATH()+"/src/github.com/vaporz/turbo", Config.ServiceRootPath())
+	assert.Equal(t, "github.com/vaporz/turbo", Config.ServicePkgPath())
 
 	assert.Equal(t, int64(8081), Config.HTTPPort())
 	Config.SetHTTPPort(1234)
