@@ -263,6 +263,8 @@ func initFieldMapping() {
 			for _, v := range fields {
 				Config.fieldMappings[k] = append(Config.fieldMappings[k], strings.TrimSpace(v))
 			}
+		} else {
+			Config.fieldMappings[k] = []string{}
 		}
 	}
 }
