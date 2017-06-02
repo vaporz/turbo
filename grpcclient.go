@@ -29,8 +29,8 @@ func (g *grpcClient) close() error {
 }
 
 func initGrpcService(clientCreator func(conn *grpc.ClientConn) interface{}) error {
-	// TODO support multiple grpc clients
-	// TODO support grpcservice discovery
+	// ???? support multiple grpc clients
+	// ???? support grpcservice discovery
 	if grpcService != nil {
 		return nil
 	}

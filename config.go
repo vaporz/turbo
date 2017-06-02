@@ -22,19 +22,19 @@ const filterProtoJsonInt64AsNumber string = "filter_proto_json_int64_as_number"
 // Config struct which holds contents from yaml file
 var Config = &config{}
 
-// the GOPATH used by Turbo
+// GOPATH is the GOPATH used by Turbo
 var GOPATH string
 
-// "grpc"/"thrift"
+// RpcType should be "grpc" or "thrift"
 var RpcType string
 
-// yaml file name, exclude extension("service" to "service.yaml")
+// ConfigFileName is the yaml file name, excluding extension("service" to "service.yaml")
 var ConfigFileName string
 
-// absolute path
+// ServiceRootPath is the absolute path to service root directory
 var ServiceRootPath string
 
-// package path, e.g. "github.com/vaporz/turbo"
+// ServicePkgPath is the package path, e.g. "github.com/vaporz/turbo"
 var ServicePkgPath string
 
 type config struct {

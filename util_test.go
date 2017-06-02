@@ -248,32 +248,29 @@ func TestFilterNestedStruct_Empty_Field(t *testing.T) {
 }
 
 type testTag struct {
-	Value  int `protobuf:"varint,1,opt,name=test_name_proto" json:"id,omitempty"`
-	Value1 int `protobuf:"varint,1,opt" json:"test_name_json,omitempty"`
+	Value          int `protobuf:"varint,1,opt,name=test_name_proto,json=json_proto" json:"id,omitempty"`
+	Value1         int `protobuf:"varint,1,opt" json:"test_name_json,omitempty"`
+	CamelCaseValue int `protobuf:"varint,1,opt,name=CamelCaseValue" json:"camel_case_value,omitempty"`
 }
 
-func TestLookupNameInProtoTag(t *testing.T) {
+func TestLookupOrigNameInProtoTag(t *testing.T) {
 	var v testTag
 	sf := reflect.TypeOf(v).Field(0)
-	name, _ := lookupNameInProtoTag(sf)
+	name, _ := lookupOrigNameInProtoTag(sf)
 	assert.Equal(t, "test_name_proto", name)
+}
+
+func TestLookupJSONNameInProtoTag(t *testing.T) {
+	var v testTag
+	sf := reflect.TypeOf(v).Field(0)
+	name, _ := lookupJSONNameInProtoTag(sf)
+	assert.Equal(t, "json_proto", name)
 }
 
 func TestLookupNameInJsonTag(t *testing.T) {
 	var v testTag
 	sf := reflect.TypeOf(v).Field(1)
 	name, _ := lookupNameInJsonTag(sf)
-	assert.Equal(t, "test_name_json", name)
-}
-
-func TestLookupNameInTag(t *testing.T) {
-	var v testTag
-	sf := reflect.TypeOf(v).Field(0)
-	name, _ := lookupNameInTag(sf)
-	assert.Equal(t, "test_name_proto", name)
-
-	sf = reflect.TypeOf(v).Field(1)
-	name, _ = lookupNameInTag(sf)
 	assert.Equal(t, "test_name_json", name)
 }
 
@@ -396,4 +393,49 @@ func TestFilterComplexNestedStructWithTags(t *testing.T) {
 		    "s_value": "struct string"
 		}
 	*/
+}
+
+type TestTags struct {
+	Data *TestTags_Data `protobuf:"bytes,1,opt,name=data" json:"data,omitempty"`
+}
+
+func (t *TestTags) Reset()         {}
+func (t *TestTags) String() string { return "" }
+func (t *TestTags) ProtoMessage()  {}
+
+type TestTags_Data struct {
+	UploadFile       string  `protobuf:"bytes,1,opt,name=upload_file,json=uploadFile" json:"upload_file,omitempty"`
+	UploadUrl        string  `protobuf:"bytes,2,opt,name=upload_url,json=uploadUrl" json:"upload_url,omitempty"`
+	MetadataOnly     string  `protobuf:"bytes,3,opt,name=metadata_only,json=metadataOnly" json:"metadata_only,omitempty"`
+	ContentTypeId    int64   `protobuf:"varint,4,opt,name=content_type_id,json=contentTypeId" json:"content_type_id,omitempty"`
+	CreativeApiId    int64   `protobuf:"varint,5,opt,name=creative_api_id,json=creativeApiId" json:"creative_api_id,omitempty"`
+	Duration         int32   `protobuf:"varint,6,opt,name=duration" json:"duration,omitempty"`
+	PhysicalDuration float32 `protobuf:"fixed32,7,opt,name=physical_duration,json=physicalDuration" json:"physical_duration,omitempty"`
+	Bitrate          int32   `protobuf:"varint,8,opt,name=bitrate" json:"bitrate,omitempty"`
+	Height           int32   `protobuf:"varint,9,opt,name=height" json:"height,omitempty"`
+	Width            int32   `protobuf:"varint,10,opt,name=width" json:"width,omitempty"`
+	Fps              float32 `protobuf:"fixed32,11,opt,name=fps" json:"fps,omitempty"`
+	Id3Tag           string  `protobuf:"bytes,12,opt,name=id3tag" json:"id3tag,omitempty"`
+}
+
+func (t *TestTags_Data) Reset()         {}
+func (t *TestTags_Data) String() string { return "" }
+func (t *TestTags_Data) ProtoMessage()  {}
+
+func TestFilterStructWithTag(t *testing.T) {
+	ts := &TestTags{Data: &TestTags_Data{
+		UploadUrl:        "http://testlink.dev.fwmrm.net/testlink/ui_asset/111_1311662179.mp4",
+		ContentTypeId:    42,
+		CreativeApiId:    100,
+		Duration:         15,
+		PhysicalDuration: 15.044,
+		Bitrate:          1322,
+		Height:           360,
+		Width:            640,
+		Fps:              23}}
+	bytes, _ := JSON(ts)
+	assert.Equal(t, "{\"data\":{\"bitrate\":1322,\"content_type_id\":42,\"creative_api_id\":100,"+
+		"\"duration\":15,\"fps\":23,\"height\":360,\"id3tag\":\"\",\"metadata_only\":\"\","+
+		"\"physical_duration\":15.043999671936035,\"upload_file\":\"\",\"upload_url\":\"http://testlink.dev."+
+		"fwmrm.net/testlink/ui_asset/111_1311662179.mp4\",\"width\":640}}", string(bytes))
 }

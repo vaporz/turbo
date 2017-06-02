@@ -15,5 +15,6 @@
 11, Reload config at runtime.
 
 
-update readme for starter.go change
-modify generator.go for new main.go
+update readme for starter.go change  
+modify generator.go for new main.go  
+error handling mechanism  

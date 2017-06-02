@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	sjson "github.com/bitly/go-simplejson"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
@@ -86,6 +85,7 @@ func JSON(v interface{}) ([]byte, error) {
 	if _, ok := v.(proto.Message); ok {
 		var buf bytes.Buffer
 		m := &jsonpb.Marshaler{}
+		m.OrigName = true
 		if err := m.Marshal(&buf, v.(proto.Message)); err != nil {
 			return []byte{}, err
 		}
@@ -284,28 +284,49 @@ func jsonFieldName(structJson *sjson.Json, field reflect.StructField) (string, b
 	if ok {
 		return nameToSnake, true
 	}
-	nameInTag, ok := lookupNameInTag(field)
+	defaultName := ""
+	nameInTag, ok := lookupJSONNameInProtoTag(field)
 	if ok {
-		_, ok = structJson.CheckGet(nameInTag)
-		return nameInTag, ok
+		defaultName = nameInTag
+		if _, ok = structJson.CheckGet(nameInTag); ok {
+			return nameInTag, true
+		}
 	}
-	return fieldName, false
+	nameInTag, ok = lookupOrigNameInProtoTag(field)
+	if ok {
+		defaultName = nameInTag
+		if _, ok = structJson.CheckGet(nameInTag); ok {
+			return nameInTag, true
+		}
+	}
+	nameInTag, ok = lookupNameInJsonTag(field)
+	if ok {
+		if defaultName == "" {
+			defaultName = nameInTag
+		}
+		if _, ok = structJson.CheckGet(nameInTag); ok {
+			return nameInTag, true
+		}
+	}
+	if defaultName == "" {
+		defaultName = fieldName
+	}
+	return defaultName, false
 }
 
-func lookupNameInTag(field reflect.StructField) (string, bool) {
-	name, ok := lookupNameInProtoTag(field)
-	if ok {
-		return name, true
+func lookupJSONNameInProtoTag(field reflect.StructField) (string, bool) {
+	protoTag := strings.TrimSpace(field.Tag.Get("protobuf"))
+	if len(protoTag) > 0 {
+		var prop proto.Properties
+		prop.Parse(protoTag)
+		if len(prop.JSONName) > 0 {
+			return prop.JSONName, true
+		}
 	}
-	name, ok = lookupNameInJsonTag(field)
-	if ok {
-		return name, true
-	}
-	fmt.Print("no name in tag")
 	return "", false
 }
 
-func lookupNameInProtoTag(field reflect.StructField) (string, bool) {
+func lookupOrigNameInProtoTag(field reflect.StructField) (string, bool) {
 	protoTag := strings.TrimSpace(field.Tag.Get("protobuf"))
 	if len(protoTag) > 0 {
 		var prop proto.Properties
@@ -314,7 +335,6 @@ func lookupNameInProtoTag(field reflect.StructField) (string, bool) {
 			return prop.OrigName, true
 		}
 	}
-	fmt.Print("no such tag: protobuf")
 	return "", false
 }
 
@@ -329,6 +349,5 @@ func lookupNameInJsonTag(field reflect.StructField) (string, bool) {
 			return tagItems[0], true
 		}
 	}
-	fmt.Print("no such tag: json")
 	return "", false
 }
