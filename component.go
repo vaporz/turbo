@@ -94,7 +94,7 @@ func Preprocessor(req *http.Request) preprocessor {
 // PostProcessor--------------
 var postprocessorMap *mux.Router = mux.NewRouter()
 
-type postprocessor func(http.ResponseWriter, *http.Request, interface{})
+type postprocessor func(http.ResponseWriter, *http.Request, interface{}, error)
 
 // ServeHTTP is an empty func, only for implementing http.Handler
 func (p postprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}

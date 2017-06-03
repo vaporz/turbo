@@ -42,11 +42,10 @@ var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 		}
 		if !skipSwitch {
 			serviceResp, err := switcherFunc(methodName, resp, req)
-			if err == nil {
-				doPostprocessor(resp, req, serviceResp)
+			if err != nil {
+				handleError(resp, req, err)
 			} else {
-				log.Println(err.Error())
-				// do not 'return' here, this is not a bug
+				doPostprocessor(resp, req, serviceResp, err)
 			}
 		}
 		err = doAfter(interceptors, resp, req)
@@ -54,6 +53,17 @@ var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 			log.Println(err.Error())
 			return
 		}
+	}
+}
+
+func handleError(resp http.ResponseWriter, req *http.Request, err error) {
+	// TODO customizable ErrorHandler
+	jsonBytes, err := JSON(err)
+	if err == nil {
+		resp.Write(jsonBytes)
+	} else {
+		log.Println(err.Error())
+		resp.Write([]byte(err.Error()))
 	}
 }
 
@@ -78,14 +88,11 @@ func doBefore(interceptors *[]Interceptor, resp http.ResponseWriter, req *http.R
 }
 
 func doHijackerPreprocessor(resp http.ResponseWriter, req *http.Request) bool {
-	pre := Preprocessor(req)
 	if hijack := Hijacker(req); hijack != nil {
-		if pre != nil {
-			log.Printf("Warning: PreProcessor ignored, URL: %s", req.URL.String())
-		}
 		hijack(resp, req)
 		return true
-	} else if pre != nil {
+	}
+	if pre := Preprocessor(req); pre != nil {
 		if err := pre(resp, req); err != nil {
 			log.Println(err.Error())
 			return true
@@ -94,11 +101,11 @@ func doHijackerPreprocessor(resp http.ResponseWriter, req *http.Request) bool {
 	return false
 }
 
-func doPostprocessor(resp http.ResponseWriter, req *http.Request, serviceResponse interface{}) {
+func doPostprocessor(resp http.ResponseWriter, req *http.Request, serviceResponse interface{}, err error) {
 	// 1, run postprocessor, if any
 	post := Postprocessor(req)
 	if post != nil {
-		post(resp, req, serviceResponse)
+		post(resp, req, serviceResponse, err)
 		return
 	}
 
@@ -111,10 +118,12 @@ func doPostprocessor(resp http.ResponseWriter, req *http.Request, serviceRespons
 
 	//3, return as json
 	jsonBytes, err := JSON(serviceResponse)
-	if err != nil {
+	if err == nil {
+		resp.Write(jsonBytes)
+	} else {
 		log.Println(err.Error())
+		resp.Write([]byte(err.Error()))
 	}
-	resp.Write(jsonBytes)
 }
 
 func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Request) (err error) {
@@ -292,7 +301,7 @@ func ParseResult(result []reflect.Value) (serviceResponse interface{}, err error
 	if result[1].Interface() == nil {
 		return result[0].Interface(), nil
 	}
-	return nil, result[1].Interface().(error)
+	return result[0].Interface(), result[1].Interface().(error)
 }
 
 // BuildArgs returns a list of reflect.Value for thrift request
