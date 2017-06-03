@@ -59,6 +59,8 @@ func createGrpcProject(serviceName string) {
 	generateGrpcServiceMain()
 	generateGrpcServiceImpl()
 	generateGrpcHTTPMain()
+	generateGrpcHTTPComponent()
+	generateServiceMain("grpc")
 }
 
 func createThriftProject(serviceName string) {
@@ -69,6 +71,8 @@ func createThriftProject(serviceName string) {
 	generateThriftServiceMain()
 	generateThriftServiceImpl()
 	generateThriftHTTPMain()
+	generateThriftHTTPComponent()
+	generateServiceMain("thrift")
 }
 
 func createRootFolder() {
@@ -77,13 +81,13 @@ func createRootFolder() {
 
 func createGrpcFolders() {
 	os.MkdirAll(Config.ServiceRootPath()+"/gen/proto", 0755)
-	os.MkdirAll(Config.ServiceRootPath()+"/grpcapi", 0755)
+	os.MkdirAll(Config.ServiceRootPath()+"/grpcapi/component", 0755)
 	os.MkdirAll(Config.ServiceRootPath()+"/grpcservice/impl", 0755)
 }
 
 func createThriftFolders() {
 	os.MkdirAll(Config.ServiceRootPath()+"/gen/thrift", 0755)
-	os.MkdirAll(Config.ServiceRootPath()+"/thriftapi", 0755)
+	os.MkdirAll(Config.ServiceRootPath()+"/thriftapi/component", 0755)
 	os.MkdirAll(Config.ServiceRootPath()+"/thriftservice/impl", 0755)
 }
 
@@ -421,7 +425,7 @@ func generateGrpcServiceMain() {
 	writeFileWithTemplate(
 		Config.ServiceRootPath()+"/grpcservice/"+nameLower+".go",
 		serviceMain,
-		serviceMainValues{PkgPath: Config.ServicePkgPath(), Port: "50052", ServiceName: Config.GrpcServiceName()},
+		serviceMainValues{PkgPath: Config.ServicePkgPath(), Port: "50051", ServiceName: Config.GrpcServiceName()},
 	)
 }
 
@@ -435,19 +439,12 @@ var serviceMain string = `package main
 
 import (
 	"{{.PkgPath}}/grpcservice/impl"
-	"{{.PkgPath}}/gen/proto"
-	"google.golang.org/grpc"
 	"github.com/vaporz/turbo"
 )
 
 func main() {
-	turbo.StartGrpcService("{{.PkgPath}}", "service", registerServer)
+	turbo.StartGrpcService({{.Port}}, impl.RegisterServer)
 }
-
-func registerServer(s *grpc.Server) {
-	proto.RegisterTestServiceServer(s, &impl.{{.ServiceName}}{})
-}
-
 `
 
 func generateThriftServiceMain() {
@@ -469,17 +466,11 @@ var thriftServiceMain string = `package main
 
 import (
 	"{{.PkgPath}}/thriftservice/impl"
-	"{{.PkgPath}}/gen/thrift/gen-go/gen"
-	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/vaporz/turbo"
 )
 
 func main() {
-	turbo.StartThriftService({{.Port}}, _TProcessor)
-}
-
-func _TProcessor() thrift.TProcessor {
-	return gen.New{{.ServiceName}}Processor(impl.{{.ServiceName}}{})
+	turbo.StartThriftService({{.Port}}, impl.TProcessor)
 }
 `
 
@@ -502,7 +493,12 @@ var serviceImpl string = `package impl
 import (
 	"golang.org/x/net/context"
 	"{{.PkgPath}}/gen/proto"
+	"google.golang.org/grpc"
 )
+
+func RegisterServer(s *grpc.Server) {
+	proto.RegisterTestServiceServer(s, &{{.ServiceName}}{})
+}
 
 type {{.ServiceName}} struct {
 }
@@ -530,7 +526,12 @@ var thriftServiceImpl string = `package impl
 
 import (
 	"{{.PkgPath}}/gen/thrift/gen-go/gen"
+	"git.apache.org/thrift.git/lib/go/thrift"
 )
+
+func TProcessor() thrift.TProcessor {
+	return gen.New{{.ServiceName}}Processor({{.ServiceName}}{})
+}
 
 type {{.ServiceName}} struct {
 }
@@ -557,18 +558,70 @@ type _HTTPMainValues struct {
 var _HTTPMain string = `package main
 
 import (
-	"{{.PkgPath}}/gen/proto"
 	"{{.PkgPath}}/gen"
+	"{{.PkgPath}}/grpcapi/component"
 	"github.com/vaporz/turbo"
-	"google.golang.org/grpc"
 )
 
 func main() {
-	turbo.StartGrpcHTTPServer("{{.PkgPath}}", "service", grpcClient, gen.GrpcSwitcher)
+	component.InitComponents()
+	turbo.StartGrpcHTTPServer("{{.PkgPath}}", "service", component.GrpcClient, gen.GrpcSwitcher)
+}
+`
+
+func generateGrpcHTTPComponent() {
+	writeFileWithTemplate(
+		Config.ServiceRootPath()+"/grpcapi/component/components.go",
+		_HTTPComponent,
+		_HTTPComponentValues{ServiceName: Config.GrpcServiceName(), PkgPath: Config.ServicePkgPath()},
+	)
 }
 
-func grpcClient(conn *grpc.ClientConn) interface{} {
+type _HTTPComponentValues struct {
+	ServiceName string
+	PkgPath     string
+}
+
+var _HTTPComponent string = `package component
+
+import (
+	"{{.PkgPath}}/gen/proto"
+	"google.golang.org/grpc"
+)
+
+func GrpcClient(conn *grpc.ClientConn) interface{} {
 	return proto.New{{.ServiceName}}Client(conn)
+}
+
+func InitComponents() {
+}
+`
+
+func generateThriftHTTPComponent() {
+	writeFileWithTemplate(
+		Config.ServiceRootPath()+"/thriftapi/component/components.go",
+		thrfitHTTPComponent,
+		thriftHTTPComponentValues{ServiceName: Config.GrpcServiceName(), PkgPath: Config.ServicePkgPath()},
+	)
+}
+
+type thriftHTTPComponentValues struct {
+	ServiceName string
+	PkgPath     string
+}
+
+var thrfitHTTPComponent string = `package component
+
+import (
+	t "{{.PkgPath}}/gen/thrift/gen-go/gen"
+	"git.apache.org/thrift.git/lib/go/thrift"
+)
+
+func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) interface{} {
+	return t.New{{.ServiceName}}ClientFactory(trans, f)
+}
+
+func InitComponents() {
 }
 `
 
@@ -585,16 +638,74 @@ var thriftHTTPMain string = `package main
 
 import (
 	"github.com/vaporz/turbo"
-	t "{{.PkgPath}}/gen/thrift/gen-go/gen"
-	"git.apache.org/thrift.git/lib/go/thrift"
 	"{{.PkgPath}}/gen"
+	"{{.PkgPath}}/thriftapi/component"
 )
 
 func main() {
-	turbo.StartThriftHTTPServer("{{.PkgPath}}", "service", thriftClient, gen.ThriftSwitcher)
+	component.InitComponents()
+	turbo.StartThriftHTTPServer("{{.PkgPath}}", "service",
+		component.ThriftClient, gen.ThriftSwitcher)
+}
+`
+
+func generateServiceMain(rpcType string) {
+	if rpcType == "grpc" {
+		writeFileWithTemplate(
+			Config.ServiceRootPath()+"/main.go",
+			rootMain_grpc,
+			rootMainValues{ServiceName: Config.ThriftServiceName(), PkgPath: Config.ServicePkgPath()},
+		)
+	} else if rpcType == "thrift" {
+		writeFileWithTemplate(
+			Config.ServiceRootPath()+"/main.go",
+			rootMain_thrift,
+			rootMainValues{ServiceName: Config.ThriftServiceName(), PkgPath: Config.ServicePkgPath()},
+		)
+	}
 }
 
-func thriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) interface{} {
-	return t.New{{.ServiceName}}ClientFactory(trans, f)
+type rootMainValues struct {
+	ServiceName string
+	PkgPath     string
+}
+
+var rootMain_grpc string = `package main
+
+import (
+	"github.com/vaporz/turbo"
+	"{{.PkgPath}}/gen"
+	gcomponent "{{.PkgPath}}/grpcapi/component"
+	gimpl "{{.PkgPath}}/grpcservice/impl"
+	//tcompoent "{{.PkgPath}}/thriftapi/component"
+	//timpl "{{.PkgPath}}/thriftservice/impl"
+)
+
+func main() {
+	turbo.StartGRPC("{{.PkgPath}}", "service",
+		50051, gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
+
+	//turbo.StartTHRIFT("{{.PkgPath}}", "service",
+	//	50052, tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
+}
+`
+
+var rootMain_thrift string = `package main
+
+import (
+	"github.com/vaporz/turbo"
+	"{{.PkgPath}}/gen"
+	//gcomponent "{{.PkgPath}}/grpcapi/component"
+	//gimpl "{{.PkgPath}}/grpcservice/impl"
+	tcompoent "{{.PkgPath}}/thriftapi/component"
+	timpl "{{.PkgPath}}/thriftservice/impl"
+)
+
+func main() {
+	//turbo.StartGRPC("{{.PkgPath}}", "service",
+	//	50051, gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
+
+	turbo.StartTHRIFT("{{.PkgPath}}", "service",
+		50052, tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 }
 `

@@ -15,10 +15,10 @@ import (
 	"time"
 )
 
+var serviceStarted = make(chan bool)
+
 var httpServerQuit = make(chan bool)
 var serviceQuit = make(chan bool)
-
-var waitOnList []chan bool = make([]chan bool, 2)
 
 var reloadConfig = make(chan bool)
 
@@ -40,6 +40,7 @@ func StartGRPC(pkgPath, configFileName string, servicePort int, clientCreator gr
 	fmt.Println("Starting Turbo...")
 	LoadServiceConfig("grpc", pkgPath, configFileName)
 	go startGrpcServiceInternal(servicePort, registerServer, false)
+	<-serviceStarted
 	go startGrpcHTTPServerInternal(clientCreator, s)
 	waitForQuit()
 	fmt.Println("Turbo exit, bye!")
@@ -65,14 +66,12 @@ func startGrpcHTTPServerInternal(clientCreator grpcClientCreator, s switcher) {
 
 type thriftClientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}
 
-var thriftServiceStarted = make(chan bool)
-
 // StartTHRIFT starts both HTTP server and Thrift service
 func StartTHRIFT(pkgPath, configFileName string, port int, clientCreator thriftClientCreator, s switcher, registerTProcessor func() thrift.TProcessor) {
 	fmt.Println("Starting Turbo...")
 	LoadServiceConfig("grpc", pkgPath, configFileName)
 	go startThriftServiceInternal(port, registerTProcessor, false)
-	<-thriftServiceStarted
+	<-serviceStarted
 	go startThriftHTTPServerInternal(clientCreator, s)
 	waitForQuit()
 	fmt.Println("Turbo exit, bye!")
@@ -106,7 +105,6 @@ func startHTTPServer(portStr string, handler http.Handler) {
 			log.Printf("HTTP Server failed to serve: %v", err)
 		}
 	}()
-	waitOnList = append(waitOnList, httpServerQuit)
 	fmt.Println("HTTP Server started")
 	for {
 		//wait for exit
@@ -152,8 +150,8 @@ func startGrpcServiceInternal(port int, registerServer func(s *grpc.Server), alo
 			log.Printf("GRPC Service failed to serve: %v", err)
 		}
 	}()
-	waitOnList = append(waitOnList, serviceQuit)
 	fmt.Println("GRPC Service started")
+	serviceStarted <- true
 
 	if !alone {
 		<-httpServerQuit // wait for http server quit
@@ -196,7 +194,7 @@ func startThriftServiceInternal(port int, registerTProcessor func() thrift.TProc
 	}
 	go server.AcceptLoop()
 	fmt.Println("Thrift Service started")
-	thriftServiceStarted <- true
+	serviceStarted <- true
 
 	if !alone {
 		<-httpServerQuit // wait for http server quit
