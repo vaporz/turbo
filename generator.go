@@ -682,9 +682,11 @@ import (
 )
 
 func main() {
+	gcomponent.InitComponents()
 	turbo.StartGRPC("{{.PkgPath}}", "service",
 		50051, gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
+	//tcompoent.InitComponents()
 	//turbo.StartTHRIFT("{{.PkgPath}}", "service",
 	//	50052, tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 }
@@ -702,9 +704,11 @@ import (
 )
 
 func main() {
+	//gcomponent.InitComponents()
 	//turbo.StartGRPC("{{.PkgPath}}", "service",
 	//	50051, gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
+	tcompoent.InitComponents()
 	turbo.StartTHRIFT("{{.PkgPath}}", "service",
 		50052, tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 }

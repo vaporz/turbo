@@ -1,5 +1,4 @@
 release v0.1:
-error handling mechanism  
 update readme for starter.go change  
 
 generate fieldmapping with plugin

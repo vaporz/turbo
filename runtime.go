@@ -16,6 +16,10 @@ type switcher func(methodName string, resp http.ResponseWriter, req *http.Reques
 
 var switcherFunc switcher
 
+type errorHandlerFunc func(http.ResponseWriter, *http.Request, error)
+
+var errorHandler errorHandlerFunc = defaultErrorHandler
+
 func router() *mux.Router {
 	r := mux.NewRouter()
 	for _, v := range Config.urlServiceMaps {
@@ -43,7 +47,7 @@ var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 		if !skipSwitch {
 			serviceResp, err := switcherFunc(methodName, resp, req)
 			if err != nil {
-				handleError(resp, req, err)
+				errorHandler(resp, req, err)
 			} else {
 				doPostprocessor(resp, req, serviceResp, err)
 			}
@@ -56,15 +60,12 @@ var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func handleError(resp http.ResponseWriter, req *http.Request, err error) {
-	// TODO customizable ErrorHandler
-	jsonBytes, err := JSON(err)
-	if err == nil {
-		resp.Write(jsonBytes)
-	} else {
-		log.Println(err.Error())
-		resp.Write([]byte(err.Error()))
-	}
+func defaultErrorHandler(resp http.ResponseWriter, req *http.Request, err error) {
+	http.Error(resp, err.Error(), http.StatusInternalServerError)
+}
+
+func WithErrorHandler(e errorHandlerFunc) {
+	errorHandler = e
 }
 
 func getInterceptors(req *http.Request) []Interceptor {
