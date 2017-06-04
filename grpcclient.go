@@ -2,7 +2,6 @@ package turbo
 
 import (
 	"google.golang.org/grpc"
-	"log"
 )
 
 var (
@@ -16,7 +15,7 @@ type grpcClient struct {
 
 func (g *grpcClient) dial(address string) (err error) {
 	if g.conn, err = grpc.Dial(address, grpc.WithInsecure()); err != nil {
-		log.Fatalln("connect error:" + err.Error())
+		log.Fatal("connect error:" + err.Error())
 	}
 	return err
 }
@@ -53,7 +52,7 @@ func closeGrpcService() error {
 // example: client := turbo.GrpcService().(proto.YourServiceClient)
 func GrpcService() interface{} {
 	if grpcService == nil {
-		log.Fatalln("grpc connection not initiated!")
+		log.Fatal("grpc connection not initiated!")
 	}
 	return grpcService
 }
