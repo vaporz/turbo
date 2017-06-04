@@ -1,7 +1,6 @@
 package turbo
 
 import (
-	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 	"os"
@@ -120,7 +119,6 @@ func (c *config) HTTPPort() int64 {
 	}
 	i, err := strconv.ParseInt(p, 10, 32)
 	if err != nil {
-		fmt.Println(err)
 		log.Error(err.Error())
 	}
 	return i
@@ -180,7 +178,6 @@ func (c *config) SetFilterProtoJsonInt64AsNumber(asNumber bool) {
 
 // LoadServiceConfig accepts a package path, then load service.yaml in that path
 func LoadServiceConfig(rpcType, pkgPath, configFileName string) {
-	initLogger()
 	initRpcType(rpcType)
 	initConfigFileName(configFileName)
 	initPkgPath(pkgPath)
@@ -191,10 +188,8 @@ func LoadServiceConfig(rpcType, pkgPath, configFileName string) {
 func watchConfig() {
 	viper.WatchConfig()
 	viper.OnConfigChange(func(e fsnotify.Event) {
-		fmt.Println("Config file changed:", e.Name)
 		log.Info("Config file changed:" + e.Name)
 		loadServiceConfig()
-		fmt.Println("Config file reloaded!")
 		log.Info("Config file reloaded!")
 		reloadConfig <- true
 	})

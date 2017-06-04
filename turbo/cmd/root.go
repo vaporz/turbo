@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	log "github.com/sirupsen/logrus"
 )
 
 var cfgFile string
@@ -49,6 +50,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		log.Println("Using config file:", viper.ConfigFileUsed())
 	}
 }

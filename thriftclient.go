@@ -35,7 +35,6 @@ func (t *thriftClient) close() error {
 }
 
 func initThriftService(clientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}) error {
-	initLogger()
 	if thriftService != nil {
 		return nil
 	}

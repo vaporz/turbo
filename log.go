@@ -1,17 +1,19 @@
 package turbo
 
 import (
-	"github.com/apsdehal/go-logger"
+	logger "github.com/sirupsen/logrus"
 	"os"
 )
 
 var log *logger.Logger
 
-func initLogger()  {
-	//log instance init
-	var err error
-	log, err = logger.New("turbo", 1, os.Stdout)
-	if err != nil {
-		panic(err)
-	}
+func init() {
+	// Log as JSON instead of the default ASCII formatter.
+	logger.SetFormatter(&logger.TextFormatter{})
+	// Output to stdout instead of the default stderr
+	logger.SetOutput(os.Stdout)
+	//Log the Debug level and above.
+	logger.SetLevel(logger.DebugLevel)
+	
+	log = logger.StandardLogger()
 }

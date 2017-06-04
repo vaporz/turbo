@@ -14,10 +14,10 @@ import (
 func CreateProject(pkgPath, serviceName, serverType string) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println(err)
+			//fmt.Println(err)
+			log.Errorln(err)
 		}
 	}()
-	initLogger()
 	initPkgPath(pkgPath)
 	initConfigFileName("service")
 	validateServiceRootPath()
@@ -37,14 +37,14 @@ func validateServiceRootPath() {
 	if os.IsNotExist(err) {
 		return
 	}
-	log.Notice("Path '" + Config.ServiceRootPath() + " already exist!\n" +
+	log.Warn("Path '" + Config.ServiceRootPath() + " already exist!\n" +
 		"Do you want to remove this directory before creating a new project? (type 'y' to remove):'")
 	var input string
 	fmt.Scanln(&input)
 	if input != "y" {
 		return
 	}
-	log.Notice("All files in that directory will be lost, are you sure? (type 'y' to continue):'")
+	log.Warn("All files in that directory will be lost, are you sure? (type 'y' to continue):'")
 	fmt.Scanln(&input)
 	if input != "y" {
 		panic("aborted")
@@ -284,8 +284,7 @@ var grpcCases string = `
 // GenerateProtobufStub generates protobuf stub codes
 func GenerateProtobufStub(options string) {
 	if _, err := os.Stat(Config.ServiceRootPath() + "/gen/proto"); os.IsNotExist(err) {
-		fmt.Println("proto folder missing, create one")
-		log.Notice("proto folder missing, create one")
+		log.Warn("proto folder missing, create one")
 		os.MkdirAll(Config.ServiceRootPath()+"/gen/proto", 0755)
 	}
 	cmd := "protoc " + options + " --go_out=plugins=grpc:" + Config.ServiceRootPath() + "/gen/proto"
@@ -404,7 +403,7 @@ var buildArgCases string = `
 func GenerateThriftStub(options string) {
 	if _, err := os.Stat(Config.ServiceRootPath() + "/gen/thrift"); os.IsNotExist(err) {
 		fmt.Println("thrift folder missing, create one")
-		log.Notice("thrift folder missing, create one")
+		log.Warn("thrift folder missing, create one")
 		os.MkdirAll(Config.ServiceRootPath()+"/gen/thrift", 0755)
 	}
 	nameLower := strings.ToLower(Config.ThriftServiceName())
@@ -500,7 +499,7 @@ import (
 )
 
 func RegisterServer(s *grpc.Server) {
-	proto.RegisterTestServiceServer(s, &{{.ServiceName}}{})
+	proto.Register{{.ServiceName}}Server(s, &{{.ServiceName}}{})
 }
 
 type {{.ServiceName}} struct {

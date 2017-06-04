@@ -239,7 +239,6 @@ func ReflectValue(fieldValue reflect.Value, v string) (reflect.Value, error) {
 //BuildStruct finds values from request, and set them to struct fields recursively
 func BuildStruct(theType reflect.Type, theValue reflect.Value, req *http.Request) error {
 	if theValue.Kind() == reflect.Invalid {
-		fmt.Println("value is invalid, please check grpc-fieldmapping")
 		log.Error("value is invalid, please check grpc-fieldmapping")
 		return nil
 	}
@@ -329,12 +328,10 @@ func BuildArgs(argsType reflect.Type, argsValue reflect.Value, req *http.Request
 		}
 		v, ok := findValue(fieldName, req)
 		if !ok {
-			fmt.Println("[info]value not found! key[" + fieldName + "], use default value[" + v + "]")
 			log.Info("value not found! key[" + fieldName + "], use default value[" + v + "]")
 		}
 		value, err := ReflectValue(argsValue.FieldByName(fieldName), v)
 		if err != nil {
-			fmt.Println("[info]using default value, error: " + err.Error())
 			log.Info("[info]using default value, error: " + err.Error())
 		}
 		params[i] = value

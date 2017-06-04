@@ -36,7 +36,6 @@ type grpcClientCreator func(conn *grpc.ClientConn) interface{}
 
 // StartGRPC starts both HTTP server and GRPC service
 func StartGRPC(pkgPath, configFileName string, servicePort int, clientCreator grpcClientCreator, s switcher, registerServer func(s *grpc.Server)) {
-	initLogger()
 	log.Info("Starting Turbo...")
 	LoadServiceConfig("grpc", pkgPath, configFileName)
 	go startGrpcServiceInternal(servicePort, registerServer, false)
@@ -57,8 +56,6 @@ func startGrpcHTTPServerInternal(clientCreator grpcClientCreator, s switcher) {
 	switcherFunc = s
 	err := initGrpcService(clientCreator)
 	if err != nil {
-		//fmt.Println(err.Error())
-		//os.Exit(1)
 		log.Fatal(err.Error())
 	}
 	defer closeGrpcService()
@@ -89,8 +86,6 @@ func startThriftHTTPServerInternal(clientCreator thriftClientCreator, s switcher
 	switcherFunc = s
 	err := initThriftService(clientCreator)
 	if err != nil {
-		//fmt.Println(err.Error())
-		//os.Exit(1)
 		log.Fatal(err.Error())
 	}
 	defer closeThriftService()
@@ -104,7 +99,7 @@ func startHTTPServer(portStr string, handler http.Handler) {
 	}
 	go func() {
 		if err := s.ListenAndServe(); err != nil {
-			log.ErrorF("HTTP Server failed to serve: %v", err)
+			log.Errorf("HTTP Server failed to serve: %v", err)
 		}
 	}()
 	log.Info("HTTP Server started")
@@ -134,7 +129,6 @@ func shutDownHTTP(s *http.Server) {
 
 // StartGrpcService starts a GRPC service
 func StartGrpcService(port int, registerServer func(s *grpc.Server)) {
-	initLogger()
 	startGrpcServiceInternal(port, registerServer, true)
 }
 
@@ -143,14 +137,14 @@ func startGrpcServiceInternal(port int, registerServer func(s *grpc.Server), alo
 	portStr := fmt.Sprintf(":%d", port)
 	lis, err := net.Listen("tcp", portStr)
 	if err != nil {
-		log.FatalF("failed to listen: %v", err)
+		log.Fatalf("failed to listen: %v", err)
 	}
 	grpcServer := grpc.NewServer()
 	registerServer(grpcServer)
 	reflection.Register(grpcServer)
 	go func() {
 		if err := grpcServer.Serve(lis); err != nil {
-			log.ErrorF("GRPC Service failed to serve: %v", err)
+			log.Errorf("GRPC Service failed to serve: %v", err)
 		}
 	}()
 	log.Info("GRPC Service started")
