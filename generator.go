@@ -500,7 +500,7 @@ import (
 )
 
 func RegisterServer(s *grpc.Server) {
-	proto.RegisterTestServiceServer(s, &{{.ServiceName}}{})
+	proto.Register{{.ServiceName}}Server(s, &{{.ServiceName}}{})
 }
 
 type {{.ServiceName}} struct {
