@@ -9,6 +9,7 @@
  * [PreProcessor and PostProcessor](#preprocessor_and_postprocessor): customizable URL-RPC mapping process.
  * [Hijacker](#hijacker): Take over requests, do anything you want!
  * [MessageFieldConvertor](#message_field_convertor): Tell Turbo how to set a struct field.
+ * Modify and reload configuration file at runtime! Without restarting service.
 ## Index
  * [Create a service on the fly](#create_a_service)
  * [Command line tools](#command_line_tools)
@@ -19,6 +20,7 @@
  * [PreProcessor and PostProcessor](#preprocessor_and_postprocessor)
  * [Hijacker](#hijacker)
  * [MessageFieldConvertor](#message_field_convertor)
+ * [Error Handler](#error_handler)
  * [Thrift support](#support_thrift)
  * [Configs in service.yaml](#service_yaml)
 ## <a name="create_a_service"></a>Create a service on the fly
@@ -54,16 +56,23 @@ https://github.com/vaporz/turbo-example/tree/master/yourservice
 ### 3, Run
 That's it! Now let's Play!
 
-Start gRPC server and HTTP server:
+Start both gRPC server and HTTP server:
 ```sh
 cd $GOPATH/src/package/path/to/yourservice
-go run grpcservice/yourservice.go
-go run grpcapi/yourserviceapi.go
+go run main.go
 ```
 Send a request:
 ```sh
 $ curl -w "\n" "http://localhost:8081/hello?your_name=Alice"
 message:"Hello, Alice"
+```
+Or you can start gRPC server and HTTP server separately:
+```sh
+$ cd $GOPATH/src/package/path/to/yourservice
+# start grpc service
+$ go run grpcservice/yourservice.go
+# start http server
+$ go run grpcapi/yourserviceapi.go
 ```
 
 ## <a name="command_line_tools"></a>Command line tools
@@ -81,11 +90,14 @@ $ tree
 |   `-- proto
 |       `-- yourservice.pb.go
 |-- grpcapi
+|   |-- component
+|   |   `-- components.go
 |   `-- yourserviceapi.go
 |-- grpcservice
 |   |-- impl
 |   |   `-- yourserviceimpl.go
 |   `-- yourservice.go
+|-- main.go
 |-- service.yaml
 `-- yourservice.proto
 ```
@@ -269,19 +281,22 @@ func (l LogInterceptor) After(resp http.ResponseWriter, req *http.Request) (*htt
 }
 ```
 Then assign this interceptor to URL "/hello":<br>
-Edit "yourservice/yourserviceapi.go":
+Edit "yourservice/grpcapi/component/components.go":
 ```diff
+package component
+
 import (
-	"github.com/vaporz/turbo"
+	"github.com/vaporz/turbo-example/yourservice/gen/proto"
 	"google.golang.org/grpc"
-	"turbo/example/yourservice/gen"
-	"turbo/example/yourservice/gen/proto"
-+	i "turbo/example/yourservice/interceptor"
++	i "github.com/vaporz/turbo-example/yourservice/interceptor"
 )
 
-func main() {
+func GrpcClient(conn *grpc.ClientConn) interface{} {
+	return proto.NewTestServiceClient(conn)
+}
+
+func InitComponents() {
 +	turbo.Intercept([]string{"GET"}, "/hello", i.LogInterceptor{})
-	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.GrpcSwitcher)
 }
 ```
 Lastly, restart HTTP server and test:
@@ -324,17 +339,9 @@ setting default values, parsing values, logging, etc.
 
 Let's check the value of 'num' with a preprocessor:
 ```diff
-	i "turbo/example/yourservice/interceptor"
-+	"strconv"
-+	"net/http"
-+	"errors"
-}
-
- func main() {
- 	turbo.Intercept("/hello", i.LogInterceptor{})
+func InitComponents() {
 +	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", preEatApple)
- 	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.GrpcSwitcher)
- }
+}
 
 +func preEatApple(resp http.ResponseWriter, req *http.Request) error {
 +	num,err := strconv.Atoi(req.Form["num"][0])
@@ -361,13 +368,10 @@ By default, RPC response objects are format into a JSON string, and returned as 
 Postprocessors handle responses from backend service. You can change default behavior by assigning a postprocessor.
 
 Let's change the response of API "/eat_apple/{num:[0-9]+}":  
-Edit "gprcapi/yourserviceapi.go":
+Edit "yourservice/grpcapi/component/components.go":
 ```diff
-func main() {
- 	turbo.Intercept("/hello", i.LogInterceptor{})
-	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", preEatApple)
+func InitComponents() {
 +	turbo.SetPostprocessor("/eat_apple/{num:[0-9]+}", postEatApple)
- 	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.GrpcSwitcher)
 }
 
 +func postEatApple(resp http.ResponseWriter, req *http.Request, serviceResp interface{}) {
@@ -389,12 +393,9 @@ You can do everything, which means you also have to call gRPC method yourself.
 In this example, URL "/eat_apple/{num:[0-9]+}" is hijacked, no matter what the value is in query string,
 the value of parameter "num" is set to "999".
 ```diff
- func main() {
- 	turbo.Intercept("/eat_apple/{num:[0-9]+}", i.LogInterceptor{})
- 	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", checkNum)
+func InitComponents() {
 +	turbo.SetHijacker("/eat_apple/{num:[0-9]+}", hijackEatApple)
- 	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.GrpcSwitcher)
- }
+}
 
 +func hijackEatApple(resp http.ResponseWriter, req *http.Request) {
 +	client := turbo.GrpcService().(gen.YourServiceClient)
@@ -417,14 +418,10 @@ message:"Good taste! Apple num=999"
 ## <a name="message_field_convertor"></a> MessageFieldConvertor
 Turbo automatically finds from URL route, query string and context.Context, and sets value into a request by struct field name.  
 Turbo also gives you a chance to manually construct a struct.  
-Edit "gprcapi/yourserviceapi.go":
+Edit "yourservice/grpcapi/component/components.go":
 ```diff
-func main() {
- 	turbo.Intercept("/eat_apple/{num:[0-9]+}", i.LogInterceptor{})
- 	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", checkNum)
-	//turbo.SetHijacker("/eat_apple/{num:[0-9]+}", hijackEatApple)
+func InitComponents() {
 +	turbo.RegisterMessageFieldConvertor(new(proto.CommonValues), convertCommonValues)
- 	turbo.StartGrpcHTTPServer("turbo/example/yourservice", grpcClient, gen.GrpcSwitcher)
 }
 
 +func convertCommonValues(req *http.Request) reflect.Value {
@@ -433,11 +430,28 @@ func main() {
 +	return reflect.ValueOf(result)
 +}
 ```
-OK, func "convertCommonValues" is registerd on type "proto.CommonValues" and "SomeId" is changed into "123456789".  
+OK, func "convertCommonValues" is registered on type "proto.CommonValues" and "SomeId" is changed into "123456789".  
 Restart and test:
 ```sh
 $ curl -w "\n" -X GET "http://localhost:8081/hello?your_name=Alice&some_id=123"
 {"message":"[grpc server]Hello, Alice, someId=123456789"}
+```
+## <a name="error_handler"></a> Error Handler
+By default, a HTTP code 500 error is returned if any error occurred.  
+You can customize this behavior via ErrorHandler:
+```diff
+func InitComponents() {
++	turbo.WithErrorHandler(errorHandler)
+}
+
++func errorHandler(resp http.ResponseWriter, req *http.Request, err error) {
++  	resp.Write([]byte("from errorHandler:" + err.Error()))
++}
+```
+Restart and test(Modify "SayHello" to make it return an error):
+```sh
+$ curl -w "\n" "http://localhost:8081/hello?your_name=zx"
+from errorHandler:rpc error: code = Unknown desc = error!
 ```
 ## <a name="support_thrift"></a> Thrift support
 Turbo supports thrift as well.  
