@@ -42,6 +42,7 @@ var generateCmd = &cobra.Command{
 			turbo.GenerateProtobufStub(options)
 		} else if gRpcType == "thrift" {
 			turbo.GenerateThriftSwitcher()
+			turbo.GenerateBuildThriftParameters()
 			turbo.GenerateThriftStub(options)
 		} else {
 			return errors.New("Invalid server type, should be (grpc|thrift)")

@@ -1,6 +1,4 @@
 release v0.1:
-update readme for starter.go change  
-
 generate fieldmapping with plugin
 2, Unit test, performance test(vs wheels), test test test.
 4, Better documentation.  

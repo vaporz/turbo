@@ -67,6 +67,7 @@ func createThriftProject(serviceName string) {
 	createThriftFolders()
 	createThrift(serviceName)
 	GenerateThriftStub(" -I " + Config.ServiceRootPath() + " ")
+	GenerateBuildThriftParameters()
 	GenerateThriftSwitcher()
 	generateThriftServiceMain()
 	generateThriftServiceImpl()
@@ -204,7 +205,10 @@ func GenerateGrpcSwitcher() {
 		writeWithTemplate(
 			&casesBuf,
 			grpcCases,
-			method{v, structFields(v + "Request")},
+			method{
+				ServiceName:  Config.GrpcServiceName(),
+				MethodName:   v,
+				StructFields: structFields(v + "Request")},
 		)
 		casesStr = casesStr + casesBuf.String()
 	}
@@ -212,9 +216,8 @@ func GenerateGrpcSwitcher() {
 		Config.ServiceRootPath()+"/gen/grpcswitcher.go",
 		grpcSwitcherFunc,
 		handlerContent{
-			ServiceName: Config.GrpcServiceName(),
-			Cases:       casesStr,
-			PkgPath:     Config.ServicePkgPath()},
+			Cases:   casesStr,
+			PkgPath: Config.ServicePkgPath()},
 	)
 }
 
@@ -235,14 +238,14 @@ func structFields(structName string) string {
 }
 
 type method struct {
+	ServiceName  string
 	MethodName   string
 	StructFields string
 }
 
 type handlerContent struct {
-	ServiceName string
-	Cases       string
-	PkgPath     string
+	Cases   string
+	PkgPath string
 }
 
 var grpcSwitcherFunc string = `package gen
@@ -264,10 +267,6 @@ var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.R
 		return nil, errors.New("No such method[" + methodName + "]")
 	}
 }
-
-func callGrpcMethod(methodName string, params []reflect.Value) []reflect.Value {
-	return reflect.ValueOf(turbo.GrpcService().(g.{{.ServiceName}}Client)).MethodByName(methodName).Call(params)
-}
 `
 
 var grpcCases string = `
@@ -277,8 +276,7 @@ var grpcCases string = `
 		if err != nil {
 			return nil, err
 		}
-		params := turbo.MakeParams(req, reflect.ValueOf(request))
-		return turbo.ParseResult(callGrpcMethod(methodName, params))`
+		return turbo.GrpcService().(g.{{.ServiceName}}Client).{{.MethodName}}(req.Context(), request)`
 
 // GenerateProtobufStub generates protobuf stub codes
 func GenerateProtobufStub(options string) {
@@ -289,6 +287,83 @@ func GenerateProtobufStub(options string) {
 	cmd := "protoc " + options + " --go_out=plugins=grpc:" + Config.ServiceRootPath() + "/gen/proto"
 	executeCmd("bash", "-c", cmd)
 }
+
+func GenerateBuildThriftParameters() {
+	var casesStr string
+	methodNames := make(map[string]int)
+	for _, v := range Config.urlServiceMaps {
+		methodNames[v[2]] = 0
+	}
+	for v := range methodNames {
+		var casesBuf bytes.Buffer
+		writeWithTemplate(
+			&casesBuf,
+			thriftParameterCases,
+			thriftParameterCasesValues{
+				ServiceName: Config.ThriftServiceName(),
+				MethodName:  v},
+		)
+		casesStr = casesStr + casesBuf.String()
+	}
+
+	writeFileWithTemplate(
+		Config.ServiceRootPath()+"/gen/thrift/buildparameter.go",
+		buildThriftParameters,
+		buildThriftPamametersValues{
+			PkgPath:     Config.ServicePkgPath(),
+			ServiceName: Config.GrpcServiceName(),
+			Cases:       casesStr},
+	)
+}
+
+type thriftParameterCasesValues struct {
+	MethodName  string
+	ServiceName string
+}
+
+var thriftParameterCases string = `
+	case "{{.MethodName}}":
+		var result string
+		args := g.{{.ServiceName}}{{.MethodName}}Args{}
+		at := reflect.TypeOf(args)
+		num := at.NumField()
+		for i := 0; i < num; i++ {
+			result += fmt.Sprintf(
+			"\n\t\t\tparams[%d].Interface().(%s),",
+			i, at.Field(i).Type.String())
+		}
+		return result`
+
+type buildThriftPamametersValues struct {
+	PkgPath     string
+	ServiceName string
+	Cases       string
+}
+
+var buildThriftParameters string = `package main
+
+import (
+	g "{{.PkgPath}}/gen/thrift/gen-go/gen"
+	"reflect"
+	"fmt"
+	"flag"
+)
+
+var methodName = flag.String("n", "", "")
+
+func main() {
+	flag.Parse()
+	str := buildParameterStr(*methodName)
+	fmt.Print(str)
+}
+
+func buildParameterStr(methodName string) string {
+	switch methodName { {{.Cases}}
+	default:
+		return "error"
+	}
+}
+`
 
 // GenerateThriftSwitcher generates "thriftswitcher.go"
 func GenerateThriftSwitcher() {
@@ -301,11 +376,16 @@ func GenerateThriftSwitcher() {
 		methodNames[v[2]] = 0
 	}
 	for v := range methodNames {
+		parametersStr := thriftParameters(v)
 		var casesBuf bytes.Buffer
 		writeWithTemplate(
 			&casesBuf,
 			thriftCases,
-			thriftMethod{Config.ThriftServiceName(), v},
+			thriftMethod{
+				ServiceName:        Config.ThriftServiceName(),
+				MethodName:         v,
+				Parameters:         parametersStr,
+				NotEmptyParameters: len(strings.TrimSpace(parametersStr)) > 0},
 		)
 		casesStr = casesStr + casesBuf.String()
 	}
@@ -324,20 +404,33 @@ func GenerateThriftSwitcher() {
 		Config.ServiceRootPath()+"/gen/thriftswitcher.go",
 		thriftSwitcherFunc,
 		thriftHandlerContent{
-			ServiceName:    Config.ThriftServiceName(),
 			Cases:          casesStr,
 			PkgPath:        Config.ServicePkgPath(),
 			BuildArgsCases: argCasesStr},
 	)
 }
 
+func thriftParameters(methodName string) string {
+	cmd := "go run " + Config.ServiceRootPath() + "/gen/thrift/buildparameter.go -n " + methodName
+	buf := &bytes.Buffer{}
+	c := exec.Command("bash", "-c", cmd)
+	c.Stdin = os.Stdin
+	c.Stderr = os.Stderr
+	c.Stdout = buf
+	if err := c.Run(); err != nil {
+		panic(err)
+	}
+	return buf.String() + " "
+}
+
 type thriftMethod struct {
-	ServiceName string
-	MethodName  string
+	ServiceName        string
+	MethodName         string
+	Parameters         string
+	NotEmptyParameters bool
 }
 
 type thriftHandlerContent struct {
-	ServiceName    string
 	Cases          string
 	PkgPath        string
 	BuildArgsCases string
@@ -351,7 +444,7 @@ type buildArgParams struct {
 var thriftSwitcherFunc string = `package gen
 
 import (
-	g "{{.PkgPath}}/gen/thrift/gen-go/gen"
+	"{{.PkgPath}}/gen/thrift/gen-go/gen"
 	"github.com/vaporz/turbo"
 	"reflect"
 	"net/http"
@@ -368,10 +461,6 @@ var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http
 	}
 }
 
-func callThriftMethod(methodName string, params []reflect.Value) []reflect.Value {
-	return reflect.ValueOf(turbo.ThriftService().(*g.{{.ServiceName}}Client)).MethodByName(methodName).Call(params)
-}
-
 func buildStructArg(typeName string, req *http.Request) (v reflect.Value, err error) {
 	switch typeName { {{.BuildArgsCases}}
 	default:
@@ -381,17 +470,17 @@ func buildStructArg(typeName string, req *http.Request) (v reflect.Value, err er
 `
 
 var thriftCases string = `
-	case "{{.MethodName}}":
-		args := g.{{.ServiceName}}{{.MethodName}}Args{}
+	case "{{.MethodName}}":{{if .NotEmptyParameters }}
+		args := gen.{{.ServiceName}}{{.MethodName}}Args{}
 		params, err := turbo.BuildArgs(reflect.TypeOf(args), reflect.ValueOf(args), req, buildStructArg)
 		if err != nil {
 			return nil, err
-		}
-		return turbo.ParseResult(callThriftMethod(methodName, params))`
+		}{{end}}
+		return turbo.ThriftService().(*gen.{{.ServiceName}}Client).{{.MethodName}}({{.Parameters}})`
 
 var buildArgCases string = `
 	case "{{.StructName}}":
-		request := &g.{{.StructName}}{ {{.StructFields}} }
+		request := &gen.{{.StructName}}{ {{.StructFields}} }
 		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
 		if err != nil {
 			return v, err
