@@ -20,7 +20,10 @@ func (t *thriftClient) connect(hostPort string) (err error) {
 	if err != nil {
 		return err
 	}
-	t.transport = thrift.NewTTransportFactory().GetTransport(transport)
+	t.transport, err = thrift.NewTTransportFactory().GetTransport(transport)
+	if err != nil {
+		return err
+	}
 	if err := t.transport.Open(); err != nil {
 		return err
 	}
