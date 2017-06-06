@@ -9,9 +9,6 @@ import (
 	"strings"
 )
 
-//production or development
-const Environment string = "development"
-
 const grpcServiceName string = "grpc_service_name"
 const grpcServiceAddress string = "grpc_service_address"
 const thriftServiceName string = "thrift_service_name"
@@ -20,6 +17,7 @@ const httpPort string = "http_port"
 const filterProtoJson string = "filter_proto_json"
 const filterProtoJsonEmitZeroValues string = "filter_proto_json_emit_zerovalues"
 const filterProtoJsonInt64AsNumber string = "filter_proto_json_int64_as_number"
+const logPath string = "log_path"
 
 // Config struct which holds contents from yaml file
 var Config = &config{}
@@ -43,6 +41,22 @@ type config struct {
 	configs        map[string]string
 	urlServiceMaps [][3]string
 	fieldMappings  map[string][]string
+}
+
+//global configuration initializer
+
+func init() {
+	loadConfigs()
+	initLogger()
+}
+
+// get environment config
+func (c *config) Env() string {
+	return c.configs["environment"]
+}
+
+func (c *config) LogPath() string {
+	return c.configs[logPath]
 }
 
 func (c *config) GOPATH() string {
@@ -222,7 +236,7 @@ func loadServiceConfig() {
 		panic(err)
 	}
 	initUrlMap()
-	initConfigs()
+	loadConfigs()
 	initFieldMapping()
 }
 
@@ -242,7 +256,7 @@ func appendUrlServiceMap(line string) {
 	Config.urlServiceMaps = append(Config.urlServiceMaps, [3]string{HTTPMethod, url, methodName})
 }
 
-func initConfigs() {
+func loadConfigs() {
 	Config.configs = viper.GetStringMapString("config")
 }
 
