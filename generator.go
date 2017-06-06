@@ -55,6 +55,7 @@ func createGrpcProject(serviceName string) {
 	createGrpcFolders()
 	createProto(serviceName)
 	GenerateProtobufStub(" -I " + Config.ServiceRootPath() + " " + Config.ServiceRootPath() + "/" + strings.ToLower(serviceName) + ".proto ")
+	GenerateGrpcBuildFields()
 	GenerateGrpcSwitcher()
 	generateGrpcServiceMain()
 	generateGrpcServiceImpl()
@@ -81,7 +82,7 @@ func createRootFolder() {
 }
 
 func createGrpcFolders() {
-	os.MkdirAll(Config.ServiceRootPath()+"/gen/proto", 0755)
+	os.MkdirAll(Config.ServiceRootPath()+"/gen/proto/main", 0755)
 	os.MkdirAll(Config.ServiceRootPath()+"/grpcapi/component", 0755)
 	os.MkdirAll(Config.ServiceRootPath()+"/grpcservice/impl", 0755)
 }
@@ -280,13 +281,128 @@ var grpcCases string = `
 
 // GenerateProtobufStub generates protobuf stub codes
 func GenerateProtobufStub(options string) {
-	if _, err := os.Stat(Config.ServiceRootPath() + "/gen/proto"); os.IsNotExist(err) {
-		log.Warn("proto folder missing, create one")
-		os.MkdirAll(Config.ServiceRootPath()+"/gen/proto", 0755)
+	if _, err := os.Stat(Config.ServiceRootPath() + "/gen/proto/main"); os.IsNotExist(err) {
+		os.MkdirAll(Config.ServiceRootPath()+"/gen/proto/main", 0755)
 	}
 	cmd := "protoc " + options + " --go_out=plugins=grpc:" + Config.ServiceRootPath() + "/gen/proto"
 	executeCmd("bash", "-c", cmd)
 }
+
+func GenerateGrpcBuildFields() {
+	writeFileWithTemplate(
+		Config.ServiceRootPath()+"/gen/proto/main/buildfields.go",
+		buildGrpcFields,
+		buildGrpcFieldsValues{
+			ServiceName:     Config.GrpcServiceName(),
+			PkgPath:         Config.ServicePkgPath(),
+			ServiceRootPath: Config.ServiceRootPath(),
+		},
+	)
+	runBuildGrpcFields()
+}
+
+func runBuildGrpcFields() {
+	cmd := "go run " + Config.ServiceRootPath() + "/gen/proto/main/buildfields.go"
+	c := exec.Command("bash", "-c", cmd)
+	c.Stdin = os.Stdin
+	c.Stderr = os.Stderr
+	c.Stdout = os.Stdout
+	if err := c.Run(); err != nil {
+		panic(err)
+	}
+}
+
+type buildGrpcFieldsValues struct {
+	ServiceName     string
+	PkgPath         string
+	ServiceRootPath string
+}
+
+var buildGrpcFields string = `package main
+
+import (
+	"os"
+	"io"
+	"text/template"
+	"{{.PkgPath}}/gen/proto"
+	"reflect"
+	"fmt"
+	"strings"
+)
+
+func main() {
+	i := new(proto.{{.ServiceName}}Server)
+	t := reflect.TypeOf(i).Elem()
+	numMethod := t.NumMethod()
+	items := make([]string, 0)
+	for i := 0; i < numMethod; i++ {
+		method := t.Method(i)
+		numIn := method.Type.NumIn()
+		for j := 0; j < numIn; j++ {
+			argType := method.Type.In(j)
+			argStr := argType.String()
+			if strings.HasSuffix(argStr, "Request") {
+				arr := strings.Split(argStr, ".")
+				name := arr[len(arr)-1:][0]
+				items = findItem(items, name, argType)
+			}
+		}
+	}
+	var list string
+	for _, s := range items {
+		list += s + "\n"
+	}
+	writeFileWithTemplate(
+		"{{.ServiceRootPath}}/gen/grpcfields.yaml",
+		fieldsYaml,
+		fieldsYamlValues{List: list},
+	)
+}
+
+func findItem(items []string, name string, structType reflect.Type) []string {
+	numField := structType.Elem().NumField()
+	item := "  - " + name + "["
+	for i := 0; i < numField; i++ {
+		fieldType := structType.Elem().Field(i)
+		if fieldType.Type.Kind() == reflect.Ptr && fieldType.Type.Elem().Kind() == reflect.Struct {
+			arr := strings.Split(fieldType.Type.String(), ".")
+			typeName := arr[len(arr)-1:][0]
+			argName := fieldType.Name
+			item += fmt.Sprintf("%s %s,", typeName, argName)
+			items = findItem(items, typeName, fieldType.Type)
+		}
+	}
+	item += "]"
+	return append(items, item)
+}
+
+func writeWithTemplate(wr io.Writer, text string, data interface{}) {
+	tmpl, err := template.New("").Parse(text)
+	if err != nil {
+		panic(err)
+	}
+	err = tmpl.Execute(wr, data)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func writeFileWithTemplate(filePath, text string, data interface{}) {
+	f, err := os.Create(filePath)
+	if err != nil {
+		panic("fail to create file:" + filePath)
+	}
+	writeWithTemplate(f, text, data)
+}
+
+type fieldsYamlValues struct {
+	List string
+}
+
+var fieldsYaml string = ` + "`" + `grpc-fieldmapping:
+{{printf "%s" "{{.List}}"}}
+` + "`" + `
+`
 
 func GenerateBuildThriftParameters() {
 	var casesStr string
@@ -490,7 +606,6 @@ var buildArgCases string = `
 // GenerateThriftStub generates Thrift stub codes
 func GenerateThriftStub(options string) {
 	if _, err := os.Stat(Config.ServiceRootPath() + "/gen/thrift"); os.IsNotExist(err) {
-		log.Error("thrift folder missing, create one")
 		os.MkdirAll(Config.ServiceRootPath()+"/gen/thrift", 0755)
 	}
 	nameLower := strings.ToLower(Config.ThriftServiceName())

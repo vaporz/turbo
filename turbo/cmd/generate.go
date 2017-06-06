@@ -38,12 +38,13 @@ var generateCmd = &cobra.Command{
 		}
 		turbo.LoadServiceConfig(gRpcType, args[0], "service")
 		if gRpcType == "grpc" {
-			turbo.GenerateGrpcSwitcher()
 			turbo.GenerateProtobufStub(options)
+			turbo.GenerateGrpcBuildFields()
+			turbo.GenerateGrpcSwitcher()
 		} else if gRpcType == "thrift" {
-			turbo.GenerateThriftSwitcher()
-			turbo.GenerateBuildThriftParameters()
 			turbo.GenerateThriftStub(options)
+			turbo.GenerateBuildThriftParameters()
+			turbo.GenerateThriftSwitcher()
 		} else {
 			return errors.New("Invalid server type, should be (grpc|thrift)")
 		}

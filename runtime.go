@@ -287,22 +287,6 @@ func findValue(fieldName string, req *http.Request) (string, bool) {
 	return "", false
 }
 
-// MakeParams returns a reflect.Value slice for grpc request
-func MakeParams(req *http.Request, requestValue reflect.Value) []reflect.Value {
-	params := make([]reflect.Value, 2)
-	params[0] = reflect.ValueOf(req.Context())
-	params[1] = requestValue
-	return params
-}
-
-// ParseResult checks if error is nil, will returns an error if any
-func ParseResult(result []reflect.Value) (serviceResponse interface{}, err error) {
-	if result[1].Interface() == nil {
-		return result[0].Interface(), nil
-	}
-	return result[0].Interface(), result[1].Interface().(error)
-}
-
 // BuildArgs returns a list of reflect.Value for thrift request
 func BuildArgs(argsType reflect.Type, argsValue reflect.Value, req *http.Request, buildStructArg func(typeName string, req *http.Request) (v reflect.Value, err error)) ([]reflect.Value, error) {
 	fieldNum := argsType.NumField()

@@ -2,8 +2,11 @@ release v0.1:
 generate fieldmapping with plugin
 2, Unit test, performance test(vs wheels), test test test.
 4, Better documentation.  
+中文文档！
+how to use git tag? how to release a new version?
 
 
+simplify template
 1, What is a Go-style framework?  
 3, Logging: log level, log configuration, there should be some nice tools.  
 5, Learn from and integrate with other open source projects, such as go-kit, go-micro, etc.  
