@@ -15,6 +15,7 @@ install:
   - go get github.com/spf13/viper
   - go get github.com/bitly/go-simplejson
   - go get github.com/stretchr/testify/assert
+  - go get github.com/sirupsen/logrus
 #  - go get golang.org/x/tools/cmd/cover
 #  - go get github.com/mattn/goveralls
 script:
