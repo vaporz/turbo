@@ -159,6 +159,7 @@ func startGrpcServiceInternal(port int, registerServer func(s *grpc.Server), alo
 		log.Info("GRPC Service stopped")
 		close(serviceQuit)
 	} else {
+		//TODO bug:exit can't log.
 		//wait for exit
 		exit := make(chan os.Signal, 1)
 		signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)

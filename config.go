@@ -9,6 +9,9 @@ import (
 	"strings"
 )
 
+//production or development
+const Environment string = "development"
+
 const grpcServiceName string = "grpc_service_name"
 const grpcServiceAddress string = "grpc_service_address"
 const thriftServiceName string = "thrift_service_name"
