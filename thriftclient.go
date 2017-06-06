@@ -2,7 +2,6 @@ package turbo
 
 import (
 	"git.apache.org/thrift.git/lib/go/thrift"
-	"log"
 )
 
 var (
@@ -44,7 +43,7 @@ func initThriftService(clientCreator func(trans thrift.TTransport, f thrift.TPro
 	}
 	addr := Config.ThriftServiceAddress()
 	if len(addr) == 0 {
-		panic("Error: missing [thrift_service_address] in config")
+		log.Panic("Error: missing [thrift_service_address] in config")
 	}
 	err := tClient.connect(addr)
 	if err == nil {

@@ -2,7 +2,6 @@ package turbo
 
 import (
 	"google.golang.org/grpc"
-	"log"
 )
 
 var (
@@ -36,7 +35,7 @@ func initGrpcService(clientCreator func(conn *grpc.ClientConn) interface{}) erro
 	}
 	addr := Config.GrpcServiceAddress()
 	if len(addr) == 0 {
-		panic("Error: missing [grpc_service_address] in config")
+		log.Panic("Error: missing [grpc_service_address] in config")
 	}
 	err := gClient.dial(addr)
 	if err == nil {

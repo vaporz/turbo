@@ -3,9 +3,7 @@ package turbo
 import (
 	"errors"
 	// TODO support logging levels, log file path, etc.
-	"fmt"
 	"github.com/gorilla/mux"
-	"log"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -80,7 +78,7 @@ func doBefore(interceptors *[]Interceptor, resp http.ResponseWriter, req *http.R
 	for index, i := range *interceptors {
 		req, err = i.Before(resp, req)
 		if err != nil {
-			log.Println("error in interceptor!" + err.Error())
+			log.Errorln("error in interceptor!" + err.Error())
 			*interceptors = (*interceptors)[0:index]
 			return nil, err
 		}
@@ -132,7 +130,7 @@ func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Req
 	for i := l - 1; i >= 0; i-- {
 		req, err = interceptors[i].After(resp, req)
 		if err != nil {
-			log.Println("error in interceptor!")
+			log.Errorln("error in interceptor!")
 			// if a doBefore() has run, then the corresponding doAfter() func
 			// should run too, so don't return here.
 			// Or, may be not?
@@ -241,7 +239,7 @@ func ReflectValue(fieldValue reflect.Value, v string) (reflect.Value, error) {
 //BuildStruct finds values from request, and set them to struct fields recursively
 func BuildStruct(theType reflect.Type, theValue reflect.Value, req *http.Request) error {
 	if theValue.Kind() == reflect.Invalid {
-		fmt.Println("value is invalid, please check grpc-fieldmapping")
+		log.Info("value is invalid, please check grpc-fieldmapping")
 		return nil
 	}
 	fieldNum := theType.NumField()
@@ -266,7 +264,7 @@ func BuildStruct(theType reflect.Type, theValue reflect.Value, req *http.Request
 		}
 		err := SetValue(fieldValue, v)
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 		}
 	}
 	return nil
@@ -329,11 +327,11 @@ func BuildArgs(argsType reflect.Type, argsValue reflect.Value, req *http.Request
 		}
 		v, ok := findValue(fieldName, req)
 		if !ok {
-			fmt.Println("[info]value not found! key[" + fieldName + "], use default value[" + v + "]")
+			log.Info("value not found! key[" + fieldName + "], use default value[" + v + "]")
 		}
 		value, err := ReflectValue(argsValue.FieldByName(fieldName), v)
 		if err != nil {
-			fmt.Println("[info]using default value, error: " + err.Error())
+			log.Info("using default value, error: " + err.Error())
 		}
 		params[i] = value
 	}
