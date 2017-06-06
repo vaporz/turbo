@@ -2,7 +2,6 @@ package turbo
 
 import (
 	"git.apache.org/thrift.git/lib/go/thrift"
-	"log"
 )
 
 var (
@@ -61,7 +60,7 @@ func closeThriftService() error {
 // example: client := turbo.ThriftService().(proto.YourServiceClient)
 func ThriftService() interface{} {
 	if thriftService == nil {
-		log.Fatalln("thrift connection not initiated!")
+		log.Fatal("thrift connection not initiated!")
 	}
 	return thriftService
 }

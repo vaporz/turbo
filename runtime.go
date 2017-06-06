@@ -5,7 +5,6 @@ import (
 	// TODO support logging levels, log file path, etc.
 	"fmt"
 	"github.com/gorilla/mux"
-	"log"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -38,7 +37,7 @@ var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 		skipSwitch := false
 		req, err := doBefore(&interceptors, resp, req)
 		if err != nil {
-			log.Println(err.Error())
+			log.Error(err.Error())
 			skipSwitch = true
 		}
 		if !skipSwitch {
@@ -54,7 +53,7 @@ var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 		}
 		err = doAfter(interceptors, resp, req)
 		if err != nil {
-			log.Println(err.Error())
+			log.Error(err.Error())
 			return
 		}
 	}
@@ -80,7 +79,7 @@ func doBefore(interceptors *[]Interceptor, resp http.ResponseWriter, req *http.R
 	for index, i := range *interceptors {
 		req, err = i.Before(resp, req)
 		if err != nil {
-			log.Println("error in interceptor!" + err.Error())
+			log.Error("error in interceptor!" + err.Error())
 			*interceptors = (*interceptors)[0:index]
 			return nil, err
 		}
@@ -95,7 +94,7 @@ func doHijackerPreprocessor(resp http.ResponseWriter, req *http.Request) bool {
 	}
 	if pre := Preprocessor(req); pre != nil {
 		if err := pre(resp, req); err != nil {
-			log.Println(err.Error())
+			log.Error(err.Error())
 			return true
 		}
 	}
@@ -122,7 +121,7 @@ func doPostprocessor(resp http.ResponseWriter, req *http.Request, serviceRespons
 	if err == nil {
 		resp.Write(jsonBytes)
 	} else {
-		log.Println(err.Error())
+		log.Error(err.Error())
 		resp.Write([]byte(err.Error()))
 	}
 }
@@ -132,7 +131,7 @@ func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Req
 	for i := l - 1; i >= 0; i-- {
 		req, err = interceptors[i].After(resp, req)
 		if err != nil {
-			log.Println("error in interceptor!")
+			log.Error("error in interceptor!")
 			// if a doBefore() has run, then the corresponding doAfter() func
 			// should run too, so don't return here.
 			// Or, may be not?
@@ -241,7 +240,7 @@ func ReflectValue(fieldValue reflect.Value, v string) (reflect.Value, error) {
 //BuildStruct finds values from request, and set them to struct fields recursively
 func BuildStruct(theType reflect.Type, theValue reflect.Value, req *http.Request) error {
 	if theValue.Kind() == reflect.Invalid {
-		fmt.Println("value is invalid, please check grpc-fieldmapping")
+		log.Error("value is invalid, please check grpc-fieldmapping")
 		return nil
 	}
 	fieldNum := theType.NumField()
@@ -267,6 +266,7 @@ func BuildStruct(theType reflect.Type, theValue reflect.Value, req *http.Request
 		err := SetValue(fieldValue, v)
 		if err != nil {
 			fmt.Println(err)
+			log.Error(err.Error())
 		}
 	}
 	return nil
@@ -329,11 +329,11 @@ func BuildArgs(argsType reflect.Type, argsValue reflect.Value, req *http.Request
 		}
 		v, ok := findValue(fieldName, req)
 		if !ok {
-			fmt.Println("[info]value not found! key[" + fieldName + "], use default value[" + v + "]")
+			log.Info("value not found! key[" + fieldName + "], use default value[" + v + "]")
 		}
 		value, err := ReflectValue(argsValue.FieldByName(fieldName), v)
 		if err != nil {
-			fmt.Println("[info]using default value, error: " + err.Error())
+			log.Info("[info]using default value, error: " + err.Error())
 		}
 		params[i] = value
 	}
