@@ -1,5 +1,4 @@
 release v0.1:
-generate fieldmapping with plugin
 2, Unit test, performance test(vs wheels), test test test.
 4, Better documentation.  
 中文文档！
