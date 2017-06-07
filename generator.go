@@ -17,13 +17,13 @@ func Generate(gRpcType, pkgPath, configFileName, options string) {
 	loadServiceConfig()
 	if gRpcType == "grpc" {
 		GenerateProtobufStub(options)
-		initFieldMapping()
+		loadFieldMapping()
 		GenerateGrpcSwitcher()
 	} else if gRpcType == "thrift" {
 		GenerateThriftStub(options)
 		GenerateThriftBuildFields()
-		initFieldMapping()
 		GenerateBuildThriftParameters()
+		loadFieldMapping()
 		GenerateThriftSwitcher()
 	} else {
 		panic("Invalid server type, should be (grpc|thrift)")

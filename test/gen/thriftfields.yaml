@@ -1,0 +1,4 @@
+thrift-fieldmapping:
+  - CommonValues[]
+  - HelloValues[]
+

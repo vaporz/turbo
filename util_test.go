@@ -9,7 +9,10 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	LoadServiceConfig("grpc", "github.com/vaporz/turbo", "service_test")
+	initRpcType("grpc")
+	initConfigFileName("service_test")
+	initPkgPath("github.com/vaporz/turbo/test")
+	loadServiceConfig()
 	os.Exit(m.Run())
 }
 

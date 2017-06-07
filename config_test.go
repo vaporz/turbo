@@ -10,8 +10,8 @@ func TestConfig(t *testing.T) {
 	assert.Equal(t, "log", Config.TurboLogPath())
 	assert.Equal(t, "grpc", Config.RpcType())
 	assert.Equal(t, "service_test", Config.ConfigFileName())
-	assert.Equal(t, Config.GOPATH()+"/src/github.com/vaporz/turbo", Config.ServiceRootPath())
-	assert.Equal(t, "github.com/vaporz/turbo", Config.ServicePkgPath())
+	assert.Equal(t, Config.GOPATH()+"/src/github.com/vaporz/turbo/test", Config.ServiceRootPath())
+	assert.Equal(t, "github.com/vaporz/turbo/test", Config.ServicePkgPath())
 
 	assert.Equal(t, int64(8081), Config.HTTPPort())
 	Config.SetHTTPPort(1234)
@@ -59,5 +59,7 @@ func TestConfig(t *testing.T) {
 	assert.Equal(t, "GET", Config.urlServiceMaps[1][0])
 	assert.Equal(t, "/eat_apple/{num:[0-9]+}", Config.urlServiceMaps[1][1])
 	assert.Equal(t, "EatApple", Config.urlServiceMaps[1][2])
+
+	loadFieldMapping()
 	assert.Equal(t, "CommonValues values", Config.fieldMappings["SayHelloRequest"][0])
 }

@@ -211,7 +211,6 @@ func LoadServiceConfig(rpcType, pkgPath, configFileName string) {
 	initPkgPath(pkgPath)
 	loadServiceConfig()
 	initLogger()
-	initFieldMapping()
 }
 
 func watchConfig() {
@@ -244,12 +243,12 @@ func loadServiceConfig() {
 	if err != nil {
 		panic(err)
 	}
-	initUrlMap()
+	loadUrlMap()
 	loadConfigs()
 	watchConfig()
 }
 
-func initUrlMap() {
+func loadUrlMap() {
 	Config.urlServiceMaps = make([][3]string, 0)
 	urlMap := viper.GetStringSlice("urlmapping")
 	for _, line := range urlMap {
@@ -272,7 +271,7 @@ func loadConfigs() {
 var matchKey = regexp.MustCompile("^(.*)\\[")
 var matchSlice = regexp.MustCompile("\\[(.*)\\]")
 
-func initFieldMapping() {
+func loadFieldMapping() {
 	v := viper.New()
 	v.SetConfigName(RpcType + "fields")
 	v.AddConfigPath(ServiceRootPath + "/gen")
