@@ -7,9 +7,6 @@ config:
   filter_proto_json: true
   filter_proto_json_emit_zerovalues: true
   filter_proto_json_int64_as_number: true
-# environment include development and production.
-  environment: development
-  log_path: turbo.log
 
 grpc-fieldmapping:
   - SayHelloRequest [CommonValues values]

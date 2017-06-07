@@ -2,11 +2,11 @@ package turbo
 
 import (
 	logger "github.com/sirupsen/logrus"
-	"os"
 	"io"
+	"os"
+	"path"
 	"runtime"
 	"strings"
-	"path"
 )
 
 var log *logger.Logger
@@ -33,7 +33,7 @@ func (hook ContextHook) Levels() []logger.Level {
 func (hook ContextHook) Fire(entry *logger.Entry) error {
 	pc := make([]uintptr, 3, 3)
 	cnt := runtime.Callers(7, pc)
-	
+
 	for i := 0; i < cnt; i++ {
 		pc_i := pc[i] - 1
 		fu := runtime.FuncForPC(pc_i)
@@ -50,19 +50,21 @@ func (hook ContextHook) Fire(entry *logger.Entry) error {
 }
 
 func initLogger() {
-	if Config.Env() == "production" {
-		// Log as JSON instead of the default ASCII formatter.
-		logger.SetFormatter(&logger.JSONFormatter{})
-		
+	if env.envType() == "production" {
 		//set up log file.
-		file, err := os.OpenFile(Config.LogPath(), os.O_CREATE|os.O_WRONLY, 0666)
-		if err == nil {
-			logger.SetOutput(file)
+		if err := os.MkdirAll(env.logPath(), 0755); err == nil {
+			file, errf := os.OpenFile(env.logPath()+"turbo.log", os.O_CREATE|os.O_WRONLY, 0666)
+			if errf == nil {
+				logger.SetOutput(file)
+			}
 		} else {
-			log.Error("Failed to log to file, using default stderr")
+			logger.Error("Failed to log to file, using default stderr")
 			logger.SetOutput(os.Stderr)
 		}
-		
+
+		// Log as JSON instead of the default ASCII formatter.
+		logger.SetFormatter(&logger.JSONFormatter{})
+
 		//set up log level, info level by default.
 		logger.SetLevel(logger.InfoLevel)
 	} else {
@@ -72,7 +74,7 @@ func initLogger() {
 		logger.SetLevel(logger.DebugLevel)
 		logger.AddHook(ContextHook{})
 	}
-	
+
 	log = logger.StandardLogger()
 }
 

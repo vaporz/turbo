@@ -19,6 +19,9 @@ const filterProtoJsonEmitZeroValues string = "filter_proto_json_emit_zerovalues"
 const filterProtoJsonInt64AsNumber string = "filter_proto_json_int64_as_number"
 const logPath string = "log_path"
 
+//global configuration initializer
+var env = &config{}
+
 // Config struct which holds contents from yaml file
 var Config = &config{}
 
@@ -37,25 +40,56 @@ var ServiceRootPath string
 // ServicePkgPath is the package path, e.g. "github.com/vaporz/turbo"
 var ServicePkgPath string
 
+// TurboRootPath is the absolute path to turbo
+var TurboRootPath string
+
 type config struct {
 	configs        map[string]string
 	urlServiceMaps [][3]string
 	fieldMappings  map[string][]string
 }
 
-//global configuration initializer
-
 func init() {
-	loadConfigs()
+	initEnv()
 	initLogger()
 }
 
-// get environment config
-func (c *config) Env() string {
+//init turbo environment
+func initEnv() {
+	initPath()
+	initViper()
+	loadEnvConfig()
+}
+
+//load turbo environment configuration
+func loadEnvConfig() {
+	env.configs = viper.GetStringMapString("config")
+}
+
+//init turbo basic env path, including RootPath and GOPATH
+func initPath() {
+	goPath := os.Getenv("GOPATH")
+	paths := strings.Split(goPath, ":")
+	GOPATH = paths[0]
+	TurboRootPath = GOPATH + "/src/github.com/vaporz/turbo"
+}
+
+//specify turbo env config file
+func initViper() {
+	viper.SetConfigName("env")
+	viper.AddConfigPath(TurboRootPath)
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(err)
+	}
+}
+
+// get environment tyle
+func (c *config) envType() string {
 	return c.configs["environment"]
 }
 
-func (c *config) LogPath() string {
+func (c *config) logPath() string {
 	return c.configs[logPath]
 }
 
@@ -221,9 +255,6 @@ func initRpcType(r string) {
 }
 
 func initPkgPath(pkgPath string) {
-	goPath := os.Getenv("GOPATH")
-	paths := strings.Split(goPath, ":")
-	GOPATH = paths[0]
 	ServiceRootPath = GOPATH + "/src/" + pkgPath
 	ServicePkgPath = pkgPath
 }
