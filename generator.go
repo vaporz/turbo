@@ -229,6 +229,9 @@ func structFields(structName string) string {
 	}
 	var fieldStr string
 	for _, field := range fields {
+		if len(strings.TrimSpace(field)) == 0 {
+			continue
+		}
 		pair := strings.Split(field, " ")
 		nameSlice := []rune(pair[1])
 		name := strings.ToUpper(string(nameSlice[0])) + string(nameSlice[1:])

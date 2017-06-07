@@ -211,7 +211,7 @@ func LoadServiceConfig(rpcType, pkgPath, configFileName string) {
 	initPkgPath(pkgPath)
 	loadServiceConfig()
 	initLogger()
-	watchConfig()
+	initFieldMapping()
 }
 
 func watchConfig() {
@@ -246,7 +246,7 @@ func loadServiceConfig() {
 	}
 	initUrlMap()
 	loadConfigs()
-	initFieldMapping()
+	watchConfig()
 }
 
 func initUrlMap() {
@@ -273,8 +273,15 @@ var matchKey = regexp.MustCompile("^(.*)\\[")
 var matchSlice = regexp.MustCompile("\\[(.*)\\]")
 
 func initFieldMapping() {
+	v := viper.New()
+	v.SetConfigName(RpcType + "fields")
+	v.AddConfigPath(ServiceRootPath + "/gen")
+	err := v.ReadInConfig()
+	if err != nil {
+		panic(err)
+	}
 	Config.fieldMappings = make(map[string][]string)
-	mappings := viper.GetStringSlice(RpcType + "-fieldmapping")
+	mappings := v.GetStringSlice(RpcType + "-fieldmapping")
 	for _, m := range mappings {
 		keyStr := matchKey.FindStringSubmatch(m)
 		key := m
