@@ -36,8 +36,8 @@ type grpcClientCreator func(conn *grpc.ClientConn) interface{}
 
 // StartGRPC starts both HTTP server and GRPC service
 func StartGRPC(pkgPath, configFileName string, servicePort int, clientCreator grpcClientCreator, s switcher, registerServer func(s *grpc.Server)) {
-	log.Info("Starting Turbo...")
 	LoadServiceConfig("grpc", pkgPath, configFileName)
+	log.Info("Starting Turbo...")
 	go startGrpcServiceInternal(servicePort, registerServer, false)
 	<-serviceStarted
 	go startGrpcHTTPServerInternal(clientCreator, s)
@@ -68,8 +68,8 @@ type thriftClientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory
 
 // StartTHRIFT starts both HTTP server and Thrift service
 func StartTHRIFT(pkgPath, configFileName string, port int, clientCreator thriftClientCreator, s switcher, registerTProcessor func() thrift.TProcessor) {
-	log.Info("Starting Turbo...")
 	LoadServiceConfig("grpc", pkgPath, configFileName)
+	log.Info("Starting Turbo...")
 	go startThriftServiceInternal(port, registerTProcessor, false)
 	<-serviceStarted
 	go startThriftHTTPServerInternal(clientCreator, s)

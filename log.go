@@ -52,19 +52,17 @@ func (hook ContextHook) Fire(entry *logger.Entry) error {
 func initLogger() {
 	if Config.EnvType() == "production" {
 		//set up log file.
-		if err := os.MkdirAll(Config.TurboLogPath(), 0755); err == nil {
-			logPath := Config.TurboLogPath()
-			if len(strings.TrimSpace(logPath)) == 0 {
-				logPath = "log"
-			}
-			var logFilePath string
-			if path.IsAbs(Config.TurboLogPath()) {
-				logFilePath = Config.TurboLogPath() + "/turbo.log"
-			} else {
-				logFilePath = Config.ServiceRootPath() + "/" + Config.TurboLogPath() + "/turbo.log"
-			}
-			logFilePath = path.Clean(logFilePath)
-			file, errf := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		logPath := Config.TurboLogPath()
+		if len(strings.TrimSpace(logPath)) == 0 {
+			logPath = "log"
+		}
+		if !path.IsAbs(logPath) {
+			logPath = Config.ServiceRootPath() + "/" + logPath
+		}
+		logPath = path.Clean(logPath)
+		if err := os.MkdirAll(logPath, 0755); err == nil {
+			logFile := path.Clean(logPath + "/turbo.log")
+			file, errf := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 			if errf == nil {
 				logger.SetOutput(file)
 			}

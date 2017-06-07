@@ -6,7 +6,8 @@ import (
 )
 
 func TestConfig(t *testing.T) {
-	//LoadServiceConfig("grpc", "github.com/vaporz/turbo", "service_test")
+	assert.Equal(t, "production", Config.EnvType())
+	assert.Equal(t, "log", Config.TurboLogPath())
 	assert.Equal(t, "grpc", Config.RpcType())
 	assert.Equal(t, "service_test", Config.ConfigFileName())
 	assert.Equal(t, Config.GOPATH()+"/src/github.com/vaporz/turbo", Config.ServiceRootPath())
