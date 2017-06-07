@@ -396,14 +396,14 @@ func TestFilterComplexNestedStructWithTags(t *testing.T) {
 }
 
 type TestTags struct {
-	Data *TestTags_Data `protobuf:"bytes,1,opt,name=data" json:"data,omitempty"`
+	Data *TestTagsData `protobuf:"bytes,1,opt,name=data" json:"data,omitempty"`
 }
 
 func (t *TestTags) Reset()         {}
 func (t *TestTags) String() string { return "" }
 func (t *TestTags) ProtoMessage()  {}
 
-type TestTags_Data struct {
+type TestTagsData struct {
 	UploadFile       string  `protobuf:"bytes,1,opt,name=upload_file,json=uploadFile" json:"upload_file,omitempty"`
 	UploadUrl        string  `protobuf:"bytes,2,opt,name=upload_url,json=uploadUrl" json:"upload_url,omitempty"`
 	MetadataOnly     string  `protobuf:"bytes,3,opt,name=metadata_only,json=metadataOnly" json:"metadata_only,omitempty"`
@@ -418,12 +418,12 @@ type TestTags_Data struct {
 	Id3Tag           string  `protobuf:"bytes,12,opt,name=id3tag" json:"id3tag,omitempty"`
 }
 
-func (t *TestTags_Data) Reset()         {}
-func (t *TestTags_Data) String() string { return "" }
-func (t *TestTags_Data) ProtoMessage()  {}
+func (t *TestTagsData) Reset()         {}
+func (t *TestTagsData) String() string { return "" }
+func (t *TestTagsData) ProtoMessage()  {}
 
 func TestFilterStructWithTag(t *testing.T) {
-	ts := &TestTags{Data: &TestTags_Data{
+	ts := &TestTags{Data: &TestTagsData{
 		UploadUrl:        "http://testlink.dev.fwmrm.net/testlink/ui_asset/111_1311662179.mp4",
 		ContentTypeId:    42,
 		CreativeApiId:    100,

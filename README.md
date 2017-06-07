@@ -42,6 +42,8 @@ go get github.com/bitly/go-simplejson
 go get github.com/vaporz/turbo
 cd github.com/vaporz/turbo/turbo
 go install
+cd github.com/vaporz/turbo/protoc-gen-buildfields
+go install
 ```
 
 ### 2, Create your service

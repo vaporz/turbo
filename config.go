@@ -17,10 +17,8 @@ const httpPort string = "http_port"
 const filterProtoJson string = "filter_proto_json"
 const filterProtoJsonEmitZeroValues string = "filter_proto_json_emit_zerovalues"
 const filterProtoJsonInt64AsNumber string = "filter_proto_json_int64_as_number"
-const logPath string = "log_path"
-
-//global configuration initializer
-var env = &config{}
+const turboLogPath string = "turbo_log_path"
+const environment string = "environment"
 
 // Config struct which holds contents from yaml file
 var Config = &config{}
@@ -43,54 +41,33 @@ var ServicePkgPath string
 // TurboRootPath is the absolute path to turbo
 var TurboRootPath string
 
+func init() {
+	initGOPATH()
+	initTurboRootPath()
+}
+
+func initGOPATH() {
+	goPath := os.Getenv("GOPATH")
+	paths := strings.Split(goPath, ":")
+	GOPATH = paths[0]
+}
+
+func initTurboRootPath() {
+	TurboRootPath = GOPATH + "/src/github.com/vaporz/turbo"
+}
+
 type config struct {
 	configs        map[string]string
 	urlServiceMaps [][3]string
 	fieldMappings  map[string][]string
 }
 
-func init() {
-	initEnv()
-	initLogger()
+func (c *config) EnvType() string {
+	return c.configs[environment]
 }
 
-//init turbo environment
-func initEnv() {
-	initPath()
-	initViper()
-	loadEnvConfig()
-}
-
-//load turbo environment configuration
-func loadEnvConfig() {
-	env.configs = viper.GetStringMapString("config")
-}
-
-//init turbo basic env path, including RootPath and GOPATH
-func initPath() {
-	goPath := os.Getenv("GOPATH")
-	paths := strings.Split(goPath, ":")
-	GOPATH = paths[0]
-	TurboRootPath = GOPATH + "/src/github.com/vaporz/turbo"
-}
-
-//specify turbo env config file
-func initViper() {
-	viper.SetConfigName("env")
-	viper.AddConfigPath(TurboRootPath)
-	err := viper.ReadInConfig()
-	if err != nil {
-		panic(err)
-	}
-}
-
-// get environment tyle
-func (c *config) envType() string {
-	return c.configs["environment"]
-}
-
-func (c *config) logPath() string {
-	return c.configs[logPath]
+func (c *config) TurboLogPath() string {
+	return c.configs[turboLogPath]
 }
 
 func (c *config) GOPATH() string {
@@ -233,6 +210,7 @@ func LoadServiceConfig(rpcType, pkgPath, configFileName string) {
 	initConfigFileName(configFileName)
 	initPkgPath(pkgPath)
 	loadServiceConfig()
+	initLogger()
 	watchConfig()
 }
 

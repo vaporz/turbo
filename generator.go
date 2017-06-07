@@ -14,7 +14,7 @@ import (
 func CreateProject(pkgPath, serviceName, serverType string) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Errorln(err)
+			fmt.Println(err)
 		}
 	}()
 	initPkgPath(pkgPath)
@@ -36,14 +36,14 @@ func validateServiceRootPath() {
 	if os.IsNotExist(err) {
 		return
 	}
-	log.Warn("Path '" + Config.ServiceRootPath() + " already exist!\n" +
-		"Do you want to remove this directory before creating a new project? (type 'y' to remove):'")
+	fmt.Print("Path '" + Config.ServiceRootPath() + "' already exist!\n" +
+		"Do you want to remove this directory before creating a new project? (type 'y' to remove):")
 	var input string
 	fmt.Scanln(&input)
 	if input != "y" {
 		return
 	}
-	log.Warn("All files in that directory will be lost, are you sure? (type 'y' to continue):'")
+	fmt.Print("All files in that directory will be lost, are you sure? (type 'y' to continue):")
 	fmt.Scanln(&input)
 	if input != "y" {
 		panic("aborted")
@@ -55,7 +55,6 @@ func createGrpcProject(serviceName string) {
 	createGrpcFolders()
 	createProto(serviceName)
 	GenerateProtobufStub(" -I " + Config.ServiceRootPath() + " " + Config.ServiceRootPath() + "/" + strings.ToLower(serviceName) + ".proto ")
-	GenerateGrpcBuildFields()
 	GenerateGrpcSwitcher()
 	generateGrpcServiceMain()
 	generateGrpcServiceImpl()
@@ -68,6 +67,7 @@ func createThriftProject(serviceName string) {
 	createThriftFolders()
 	createThrift(serviceName)
 	GenerateThriftStub(" -I " + Config.ServiceRootPath() + " ")
+	GenerateThriftBuildFields()
 	GenerateBuildThriftParameters()
 	GenerateThriftSwitcher()
 	generateThriftServiceMain()
@@ -82,7 +82,7 @@ func createRootFolder() {
 }
 
 func createGrpcFolders() {
-	os.MkdirAll(Config.ServiceRootPath()+"/gen/proto/main", 0755)
+	os.MkdirAll(Config.ServiceRootPath()+"/gen/proto", 0755)
 	os.MkdirAll(Config.ServiceRootPath()+"/grpcapi/component", 0755)
 	os.MkdirAll(Config.ServiceRootPath()+"/grpcservice/impl", 0755)
 }
@@ -281,28 +281,31 @@ var grpcCases string = `
 
 // GenerateProtobufStub generates protobuf stub codes
 func GenerateProtobufStub(options string) {
-	if _, err := os.Stat(Config.ServiceRootPath() + "/gen/proto/main"); os.IsNotExist(err) {
-		os.MkdirAll(Config.ServiceRootPath()+"/gen/proto/main", 0755)
+	if _, err := os.Stat(Config.ServiceRootPath() + "/gen/proto"); os.IsNotExist(err) {
+		os.MkdirAll(Config.ServiceRootPath()+"/gen/proto", 0755)
 	}
-	cmd := "protoc " + options + " --go_out=plugins=grpc:" + Config.ServiceRootPath() + "/gen/proto"
+	cmd := "protoc " + options + " --go_out=plugins=grpc:" + Config.ServiceRootPath() + "/gen/proto" +
+		" --buildfields_out=service_root_path=" + Config.ServiceRootPath() + ":" + Config.ServiceRootPath() + "/gen/proto"
 	executeCmd("bash", "-c", cmd)
 }
 
-func GenerateGrpcBuildFields() {
+// GenerateThriftBuildFields generates "buildfields.go",
+// which create file "gen/thriftfields.yaml"
+func GenerateThriftBuildFields() {
 	writeFileWithTemplate(
-		Config.ServiceRootPath()+"/gen/proto/main/buildfields.go",
-		buildGrpcFields,
-		buildGrpcFieldsValues{
+		Config.ServiceRootPath()+"/gen/thrift/buildfields.go",
+		buildThriftFields,
+		buildThriftFieldsValues{
 			ServiceName:     Config.GrpcServiceName(),
 			PkgPath:         Config.ServicePkgPath(),
 			ServiceRootPath: Config.ServiceRootPath(),
 		},
 	)
-	runBuildGrpcFields()
+	runBuildThriftFields()
 }
 
-func runBuildGrpcFields() {
-	cmd := "go run " + Config.ServiceRootPath() + "/gen/proto/main/buildfields.go"
+func runBuildThriftFields() {
+	cmd := "go run " + Config.ServiceRootPath() + "/gen/thrift/buildfields.go"
 	c := exec.Command("bash", "-c", cmd)
 	c.Stdin = os.Stdin
 	c.Stderr = os.Stderr
@@ -312,26 +315,26 @@ func runBuildGrpcFields() {
 	}
 }
 
-type buildGrpcFieldsValues struct {
+type buildThriftFieldsValues struct {
 	ServiceName     string
 	PkgPath         string
 	ServiceRootPath string
 }
 
-var buildGrpcFields string = `package main
+var buildThriftFields string = `package main
 
 import (
 	"os"
 	"io"
 	"text/template"
-	"{{.PkgPath}}/gen/proto"
+	"{{.PkgPath}}/gen/thrift/gen-go/gen"
 	"reflect"
 	"fmt"
 	"strings"
 )
 
 func main() {
-	i := new(proto.{{.ServiceName}}Server)
+	i := new(gen.{{.ServiceName}})
 	t := reflect.TypeOf(i).Elem()
 	numMethod := t.NumMethod()
 	items := make([]string, 0)
@@ -341,7 +344,7 @@ func main() {
 		for j := 0; j < numIn; j++ {
 			argType := method.Type.In(j)
 			argStr := argType.String()
-			if strings.HasSuffix(argStr, "Request") {
+			if argType.Kind() == reflect.Ptr && argType.Elem().Kind() == reflect.Struct {
 				arr := strings.Split(argStr, ".")
 				name := arr[len(arr)-1:][0]
 				items = findItem(items, name, argType)
@@ -353,7 +356,7 @@ func main() {
 		list += s + "\n"
 	}
 	writeFileWithTemplate(
-		"{{.ServiceRootPath}}/gen/grpcfields.yaml",
+		"{{.ServiceRootPath}}/gen/thriftfields.yaml",
 		fieldsYaml,
 		fieldsYamlValues{List: list},
 	)
@@ -399,11 +402,12 @@ type fieldsYamlValues struct {
 	List string
 }
 
-var fieldsYaml string = ` + "`" + `grpc-fieldmapping:
+var fieldsYaml string = ` + "`" + `thrift-fieldmapping:
 {{printf "%s" "{{.List}}"}}
 ` + "`" + `
 `
 
+// GenerateBuildThriftParameters generates "buildparameter.go"
 func GenerateBuildThriftParameters() {
 	var casesStr string
 	methodNames := make(map[string]int)
@@ -857,13 +861,13 @@ func generateServiceMain(rpcType string) {
 	if rpcType == "grpc" {
 		writeFileWithTemplate(
 			Config.ServiceRootPath()+"/main.go",
-			rootMain_grpc,
+			rootMainGrpc,
 			rootMainValues{ServiceName: Config.ThriftServiceName(), PkgPath: Config.ServicePkgPath()},
 		)
 	} else if rpcType == "thrift" {
 		writeFileWithTemplate(
 			Config.ServiceRootPath()+"/main.go",
-			rootMain_thrift,
+			rootMainThrift,
 			rootMainValues{ServiceName: Config.ThriftServiceName(), PkgPath: Config.ServicePkgPath()},
 		)
 	}
@@ -874,7 +878,7 @@ type rootMainValues struct {
 	PkgPath     string
 }
 
-var rootMain_grpc string = `package main
+var rootMainGrpc string = `package main
 
 import (
 	"github.com/vaporz/turbo"
@@ -896,7 +900,7 @@ func main() {
 }
 `
 
-var rootMain_thrift string = `package main
+var rootMainThrift string = `package main
 
 import (
 	"github.com/vaporz/turbo"

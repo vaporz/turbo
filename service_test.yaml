@@ -1,4 +1,6 @@
 config:
+  environment: production
+  turbo_log_path: log
   http_port: 8081
   grpc_service_name: YourService
   grpc_service_address: 127.0.0.1:50051

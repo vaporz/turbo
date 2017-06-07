@@ -1,14 +1,15 @@
-package turbo
+package main
 
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/golang/protobuf/protoc-gen-go/plugin"
+	"io"
 	"io/ioutil"
 	"os"
-	"reflect"
 	"strings"
+	"text/template"
 )
 
 func main() {
@@ -16,24 +17,19 @@ func main() {
 	response := new(plugin_go.CodeGeneratorResponse)
 	data, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
-		log.Println("reading input error:", err)
+		fmt.Println("reading input error:", err)
 	}
 	if err = proto.Unmarshal(data, request); err != nil {
-		log.Println("parsing input proto:", err)
+		fmt.Println("parsing input proto:", err)
 	}
 	generateValidator(request, response)
-	reflect.String.String()
 }
 
 func generateValidator(req *plugin_go.CodeGeneratorRequest, resp *plugin_go.CodeGeneratorResponse) {
-	// 得到文件列表
 	files := req.ProtoFile
-	// 对每个文件循环
 	items := make([]string, 0)
 	for _, f := range files {
-		// 得到message列表
 		messages := f.MessageType
-		// 对每个message循环
 		for _, m := range messages {
 			argStr := *m.Name
 			if strings.HasSuffix(argStr, "Request") {
@@ -44,15 +40,26 @@ func generateValidator(req *plugin_go.CodeGeneratorRequest, resp *plugin_go.Code
 		}
 
 	}
+	m := parameterMap(*req.Parameter)
 	var list string
 	for _, s := range items {
 		list += s + "\n"
 	}
 	writeFileWithTemplate(
-		"/Users/xiaozhang/goworkspace/src/github.com/vaporz/turbo-example/yourservice/gen/grpcfields.yaml",
+		m["service_root_path"]+"/gen/grpcfields.yaml",
 		fieldsYaml,
 		fieldsYamlValues{List: list},
 	)
+}
+
+func parameterMap(parameter string) map[string]string {
+	m := make(map[string]string, 1)
+	items := strings.Split(parameter, ",")
+	for _, item := range items {
+		pair := strings.Split(item, "=")
+		m[pair[0]] = pair[1]
+	}
+	return m
 }
 
 func findItem(items []string, name string, structType descriptor.DescriptorProto) []string {
@@ -61,11 +68,10 @@ func findItem(items []string, name string, structType descriptor.DescriptorProto
 	for i := 0; i < numField; i++ {
 		fieldType := structType.Field[i]
 		if *fieldType.Type == descriptor.FieldDescriptorProto_TYPE_MESSAGE {
-			arr := strings.Split(fieldType.Type.String(), ".")
+			arr := strings.Split(*fieldType.TypeName, ".")
 			typeName := arr[len(arr)-1:][0]
-			argName := fieldType.Name
-			item += fmt.Sprintf("%s %s,", typeName, argName)
-			items = findItem(items, typeName, *structType.NestedType[i])
+			argName := *fieldType.Name
+			item += fmt.Sprintf("%v %s,", typeName, argName)
 		}
 	}
 	item += "]"
@@ -79,3 +85,22 @@ type fieldsYamlValues struct {
 var fieldsYaml string = `grpc-fieldmapping:
 {{.List}}
 `
+
+func writeWithTemplate(wr io.Writer, text string, data interface{}) {
+	tmpl, err := template.New("").Parse(text)
+	if err != nil {
+		panic(err)
+	}
+	err = tmpl.Execute(wr, data)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func writeFileWithTemplate(filePath, text string, data interface{}) {
+	f, err := os.Create(filePath)
+	if err != nil {
+		panic("fail to create file:" + filePath)
+	}
+	writeWithTemplate(f, text, data)
+}

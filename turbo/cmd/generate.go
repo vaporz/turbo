@@ -39,10 +39,10 @@ var generateCmd = &cobra.Command{
 		turbo.LoadServiceConfig(gRpcType, args[0], "service")
 		if gRpcType == "grpc" {
 			turbo.GenerateProtobufStub(options)
-			turbo.GenerateGrpcBuildFields()
 			turbo.GenerateGrpcSwitcher()
 		} else if gRpcType == "thrift" {
 			turbo.GenerateThriftStub(options)
+			turbo.GenerateThriftBuildFields()
 			turbo.GenerateBuildThriftParameters()
 			turbo.GenerateThriftSwitcher()
 		} else {

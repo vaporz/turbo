@@ -62,6 +62,7 @@ func defaultErrorHandler(resp http.ResponseWriter, req *http.Request, err error)
 	http.Error(resp, err.Error(), http.StatusInternalServerError)
 }
 
+// WithErrorHandler registers an errorHandler to handle errors
 func WithErrorHandler(e errorHandlerFunc) {
 	errorHandler = e
 }
