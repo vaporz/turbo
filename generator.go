@@ -10,6 +10,26 @@ import (
 	"text/template"
 )
 
+func Generate(gRpcType, pkgPath, configFileName, options string) {
+	initRpcType(gRpcType)
+	initConfigFileName(configFileName)
+	initPkgPath(pkgPath)
+	loadServiceConfig()
+	if gRpcType == "grpc" {
+		GenerateProtobufStub(options)
+		initFieldMapping()
+		GenerateGrpcSwitcher()
+	} else if gRpcType == "thrift" {
+		GenerateThriftStub(options)
+		GenerateThriftBuildFields()
+		initFieldMapping()
+		GenerateBuildThriftParameters()
+		GenerateThriftSwitcher()
+	} else {
+		panic("Invalid server type, should be (grpc|thrift)")
+	}
+}
+
 // CreateProject creates a whole new project!
 func CreateProject(pkgPath, serviceName, serverType string) {
 	defer func() {
@@ -289,6 +309,7 @@ func GenerateProtobufStub(options string) {
 	}
 	cmd := "protoc " + options + " --go_out=plugins=grpc:" + Config.ServiceRootPath() + "/gen/proto" +
 		" --buildfields_out=service_root_path=" + Config.ServiceRootPath() + ":" + Config.ServiceRootPath() + "/gen/proto"
+
 	executeCmd("bash", "-c", cmd)
 }
 

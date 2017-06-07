@@ -22,10 +22,10 @@ func main() {
 	if err = proto.Unmarshal(data, request); err != nil {
 		fmt.Println("parsing input proto:", err)
 	}
-	generateValidator(request, response)
+	generateBuildFields(request, response)
 }
 
-func generateValidator(req *plugin_go.CodeGeneratorRequest, resp *plugin_go.CodeGeneratorResponse) {
+func generateBuildFields(req *plugin_go.CodeGeneratorRequest, resp *plugin_go.CodeGeneratorResponse) {
 	files := req.ProtoFile
 	items := make([]string, 0)
 	for _, f := range files {
@@ -38,7 +38,6 @@ func generateValidator(req *plugin_go.CodeGeneratorRequest, resp *plugin_go.Code
 				items = findItem(items, name, *m)
 			}
 		}
-
 	}
 	m := parameterMap(*req.Parameter)
 	var list string

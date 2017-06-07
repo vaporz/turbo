@@ -36,18 +36,7 @@ var generateCmd = &cobra.Command{
 				options = options + " -I " + p + " "
 			}
 		}
-		turbo.LoadServiceConfig(gRpcType, args[0], "service")
-		if gRpcType == "grpc" {
-			turbo.GenerateProtobufStub(options)
-			turbo.GenerateGrpcSwitcher()
-		} else if gRpcType == "thrift" {
-			turbo.GenerateThriftStub(options)
-			turbo.GenerateThriftBuildFields()
-			turbo.GenerateBuildThriftParameters()
-			turbo.GenerateThriftSwitcher()
-		} else {
-			return errors.New("Invalid server type, should be (grpc|thrift)")
-		}
+		turbo.Generate(gRpcType, args[0], "service", options)
 		return nil
 	},
 }
