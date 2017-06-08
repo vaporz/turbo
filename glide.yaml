@@ -1,0 +1,34 @@
+package: github.com/vaporz/turbo
+import:
+- package: git.apache.org/thrift.git
+  version: 48ea3cde081b6343ceda2f1e3811887c1d11859b
+  subpackages:
+  - lib/go/thrift
+- package: github.com/bitly/go-simplejson
+  version: da1a8928f709389522c8023062a3739f3b4af419
+- package: github.com/fsnotify/fsnotify
+  version: 4da3e2cfbabc9f751898f250b49f2439785783a1
+- package: github.com/golang/protobuf
+  version: 5a0f697c9ed9d68fef0116532c6e05cfeae00e55
+  subpackages:
+  - jsonpb
+  - proto
+  - protoc-gen-go/descriptor
+  - protoc-gen-go/plugin
+- package: github.com/gorilla/mux
+  version: 18fca31550181693b3a834a15b74b564b3605876
+- package: github.com/sirupsen/logrus
+  version: 68cec9f21fbf3ea8d8f98c044bc6ce05f17b267a
+- package: github.com/spf13/cobra
+  version: 99ff9334bda26384b5ef4a4aaa4d444d29bdde73
+- package: github.com/spf13/viper
+  version: 0967fc9aceab2ce9da34061253ac10fb99bba5b2
+- package: google.golang.org/grpc
+  version: d2a85bf7ad299df70daee28117f707025bddac22
+  subpackages:
+  - reflection
+testImport:
+- package: github.com/stretchr/testify
+  version: f6abca593680b2315d2075e0f5e2a9751e3f431a
+  subpackages:
+  - assert
