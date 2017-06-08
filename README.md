@@ -26,7 +26,17 @@
 ## <a name="create_a_service"></a>Create a service on the fly
 ### 0, Before the start
 Obviously, you have to install [Golang](https://golang.org) and [Protocol buffers](https://developers.google.com/protocol-buffers/) first.  
-And install [glide](https://github.com/Masterminds/glide) for dependency management.
+(Recommended) And install [glide](https://github.com/Masterminds/glide) for dependency management.  
+(Not Recommended) Or install required packages manually.
+```sh
+go get google.golang.org/grpc
+go get git.apache.org/thrift.git/lib/go/thrift
+go get github.com/kylelemons/go-gypsy/yaml
+go get github.com/gorilla/mux
+go get github.com/spf13/cobra
+go get github.com/spf13/viper
+go get github.com/bitly/go-simplejson
+```
 
 ### 1, Install Turbo command line tools
 ```sh

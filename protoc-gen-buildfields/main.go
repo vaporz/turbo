@@ -55,7 +55,7 @@ func parameterMap(parameter string) map[string]string {
 	m := make(map[string]string, 1)
 	items := strings.Split(parameter, ",")
 	for _, item := range items {
-		pair := strings.Split(item, "=")
+		pair := strings.SplitN(item, "=", 2)
 		m[pair[0]] = pair[1]
 	}
 	return m
