@@ -62,7 +62,7 @@ type config struct {
 	fieldMappings  map[string][]string
 }
 
-func (c *config) EnvType() string {
+func (c *config) Env() string {
 	return c.configs[environment]
 }
 

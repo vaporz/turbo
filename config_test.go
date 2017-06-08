@@ -6,7 +6,7 @@ import (
 )
 
 func TestConfig(t *testing.T) {
-	assert.Equal(t, "production", Config.EnvType())
+	assert.Equal(t, "production", Config.Env())
 	assert.Equal(t, "log", Config.TurboLogPath())
 	assert.Equal(t, "grpc", Config.RpcType())
 	assert.Equal(t, "service_test", Config.ConfigFileName())
