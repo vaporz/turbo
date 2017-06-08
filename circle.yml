@@ -12,6 +12,5 @@ dependencies:
     - go get github.com/vaporz/turbo
 #    - rm -rf /home/ubuntu/.go_workspace/src/turbo
 #    - ln -s /home/ubuntu/.go_workspace/src/github.com/vaporz/turbo /home/ubuntu/.go_workspace/src/turbo
-    - go get -v github.com/Masterminds/glide
-    - cd $GOPATH/src/github.com/Masterminds/glide && git checkout e73500c735917e39a8b782e0632418ab70250341 && go install && cd -
+    - curl https://glide.sh/get | sh
     - glide install
