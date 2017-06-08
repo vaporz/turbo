@@ -1,4 +1,4 @@
-# Turbo  [![Build Status](https://travis-ci.org/vaporz/turbo.svg?branch=master)](https://travis-ci.org/vaporz/turbo) [![Go Report Card](https://goreportcard.com/badge/github.com/vaporz/turbo)](https://goreportcard.com/report/github.com/vaporz/turbo) [![codebeat badge](https://codebeat.co/badges/7a166e48-dae1-454c-b925-4fbcd3f1f461)](https://codebeat.co/projects/github-com-vaporz-turbo-master) [![Coverage Status](https://coveralls.io/repos/github/vaporz/turbo/badge.svg?branch=master)](https://coveralls.io/github/vaporz/turbo?branch=master)
+# Turbo  [![Build Status](https://travis-ci.org/vaporz/turbo.svg?branch=master)](https://travis-ci.org/vaporz/turbo) [![Coverage Status](https://coveralls.io/repos/github/vaporz/turbo/badge.svg?branch=master)](https://coveralls.io/github/vaporz/turbo?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/vaporz/turbo)](https://goreportcard.com/report/github.com/vaporz/turbo) [![codebeat badge](https://codebeat.co/badges/7a166e48-dae1-454c-b925-4fbcd3f1f461)](https://codebeat.co/projects/github-com-vaporz-turbo-master) [![Code Climate](https://codeclimate.com/github/vaporz/turbo/badges/gpa.svg)](https://codeclimate.com/github/vaporz/turbo)
 
 <b>WORK IN PROGRESS! There may be many bugs, and the README may not be synced in time as the codes changed.</b>
 
@@ -208,20 +208,7 @@ message SayHelloRequest {
 +    CommonValues values = 2;
 }
 ```
-### 3, Register field structs
-// TODO this step is planed to be merged into "turbo generate" with a grpc|thrift plugin.
-Edit "service.yaml":
-```diff
-  thrift_service_address: 127.0.0.1:50052
-+
-+grpc-fieldmapping:
-+  SayHelloRequest:
-+    - CommonValues values
-
-urlmapping:
-  - GET /hello SayHello
-```
-### 4, Generate codes
+### 3, Generate codes
 ```sh
 $ turbo generate package/path/to/yourservice -r grpc -I $GOPATH/src/package/path/to/yourservice
  -I $GOPATH/src/package/path/to/common
