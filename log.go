@@ -49,31 +49,35 @@ func (hook ContextHook) Fire(entry *logger.Entry) error {
 	return nil
 }
 
-func initLogger() {
-	if Config.EnvType() == "production" {
-		//set up log file.
-		logPath := Config.TurboLogPath()
-		if len(strings.TrimSpace(logPath)) == 0 {
-			logPath = "log"
-		}
-		if !path.IsAbs(logPath) {
-			logPath = Config.ServiceRootPath() + "/" + logPath
-		}
-		logPath = path.Clean(logPath)
-		if err := os.MkdirAll(logPath, 0755); err == nil {
-			logFile := path.Clean(logPath + "/turbo.log")
-			file, errf := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-			if errf == nil {
-				logger.SetOutput(file)
-			}
+func setupLoggerFile() {
+	//set up log file.
+	logPath := Config.TurboLogPath()
+	if len(strings.TrimSpace(logPath)) == 0 {
+		logPath = "log"
+	}
+	if !path.IsAbs(logPath) {
+		logPath = Config.ServiceRootPath() + "/" + logPath
+	}
+	logPath = path.Clean(logPath)
+	if err := os.MkdirAll(logPath, 0755); err == nil {
+		logFile := path.Clean(logPath + "/turbo.log")
+		file, errf := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if errf == nil {
+			logger.SetOutput(file)
 		} else {
-			logger.Error("Failed to log to file, using default stderr")
-			logger.SetOutput(os.Stderr)
+			panic("Failed to setup log path, please check your service.yaml config.")
 		}
+	} else {
+		panic("Failed to setup log path, please check your service.yaml config.")
+	}
+}
 
+func initLogger() {
+	if Config.Env() == "production" {
+		//init log file path
+		setupLoggerFile()
 		// Log as JSON instead of the default ASCII formatter.
 		logger.SetFormatter(&logger.JSONFormatter{})
-
 		//set up log level, info level by default.
 		logger.SetLevel(logger.InfoLevel)
 	} else {

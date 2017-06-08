@@ -147,6 +147,8 @@ type serviceYamlValues struct {
 
 var serviceYamlFile string = `config:
   http_port: 8081
+  environment: production
+  turbo_log_path: log
   grpc_service_name: {{.ServiceName}}
   grpc_service_address: 127.0.0.1:50051
   thrift_service_name: {{.ServiceName}}
