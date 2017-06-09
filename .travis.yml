@@ -1,18 +1,26 @@
 language: go
-sudo: false
+sudo: required
 
 go:
-  - tip
+  - 1.8.x
+go_import_path: github.com/vaporz/turbo
 before_install:
+  - ./.travis/install-thrift.sh
+  - ./.travis/install-protoc.sh 3.1.0
   - go get github.com/mattn/goveralls
+  - go get github.com/vaporz/turbo
+  - go install github.com/vaporz/turbo/protoc-gen-buildfields
+  - go get github.com/golang/protobuf/protoc-gen-go
+  - go install github.com/golang/protobuf/protoc-gen-go
+  - go get github.com/Masterminds/glide
+  - go install github.com/Masterminds/glide
 
 install:
-  - go get -v github.com/Masterminds/glide
-  - curl https://glide.sh/get | sh
   - glide install
-#  - go get golang.org/x/tools/cmd/cover
-#  - go get github.com/mattn/goveralls
+
 script:
-  - $HOME/gopath/bin/goveralls -service=travis-ci
-#  - cd $GOPATH/src/github.com/vaporz/turbo
-#  - $HOME/gopath/bin/goveralls -repotoken LKmWen7DjWjYrvaX8N80tX9LbnCRCww8k
+  - $HOME/gopath/bin/goveralls -service=travis-ci -ignore=protoc-gen-buildfields/*,test/testservice/*,test/testservice/*/*,test/testservice/*/*/*,test/testservice/*/*/*/*/*,test/testservice/*/*/*/*/*/*,turbo/*,turbo/cmd/root.go
+
+env:
+  global:
+  - "PATH=$PATH:$HOME/local/bin"

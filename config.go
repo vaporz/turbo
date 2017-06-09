@@ -42,11 +42,12 @@ var ServicePkgPath string
 var TurboRootPath string
 
 func init() {
-	initGOPATH()
+	InitGOPATH()
 	initTurboRootPath()
 }
 
-func initGOPATH() {
+// InitGOPATH inits the GOPATH turbo used.
+func InitGOPATH() {
 	goPath := os.Getenv("GOPATH")
 	paths := strings.Split(goPath, ":")
 	GOPATH = paths[0]
@@ -211,6 +212,7 @@ func LoadServiceConfig(rpcType, pkgPath, configFileName string) {
 	initPkgPath(pkgPath)
 	loadServiceConfig()
 	initLogger()
+	watchConfig()
 }
 
 func watchConfig() {
@@ -245,7 +247,6 @@ func loadServiceConfig() {
 	}
 	loadUrlMap()
 	loadConfigs()
-	watchConfig()
 }
 
 func loadUrlMap() {

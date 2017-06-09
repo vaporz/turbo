@@ -14,12 +14,25 @@ import (
 	"time"
 )
 
-var serviceStarted = make(chan bool)
+var serviceStarted = make(chan bool, 1)
 
 var httpServerQuit = make(chan bool)
 var serviceQuit = make(chan bool)
 
 var reloadConfig = make(chan bool)
+var stopHttp = make(chan string, 1)
+var stopService = make(chan string, 1)
+
+func ResetChans() {
+	serviceStarted = make(chan bool, 1)
+
+	httpServerQuit = make(chan bool)
+	serviceQuit = make(chan bool)
+
+	reloadConfig = make(chan bool)
+	stopHttp = make(chan string, 1)
+	stopService = make(chan string, 1)
+}
 
 func waitForQuit() {
 	<-httpServerQuit
@@ -35,7 +48,8 @@ func waitForQuit() {
 type grpcClientCreator func(conn *grpc.ClientConn) interface{}
 
 // StartGRPC starts both HTTP server and GRPC service
-func StartGRPC(pkgPath, configFileName string, servicePort int, clientCreator grpcClientCreator, s switcher, registerServer func(s *grpc.Server)) {
+func StartGRPC(pkgPath, configFileName string, servicePort int, clientCreator grpcClientCreator, s switcher,
+	registerServer func(s *grpc.Server)) {
 	LoadServiceConfig("grpc", pkgPath, configFileName)
 	log.Info("Starting Turbo...")
 	go startGrpcServiceInternal(servicePort, registerServer, false)
@@ -56,8 +70,6 @@ func startGrpcHTTPServerInternal(clientCreator grpcClientCreator, s switcher) {
 	switcherFunc = s
 	err := initGrpcService(clientCreator)
 	if err != nil {
-		//fmt.Println(err.Error())
-		//os.Exit(1)
 		log.Fatal(err.Error())
 	}
 	defer closeGrpcService()
@@ -67,11 +79,13 @@ func startGrpcHTTPServerInternal(clientCreator grpcClientCreator, s switcher) {
 type thriftClientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}
 
 // StartTHRIFT starts both HTTP server and Thrift service
-func StartTHRIFT(pkgPath, configFileName string, port int, clientCreator thriftClientCreator, s switcher, registerTProcessor func() thrift.TProcessor) {
+func StartTHRIFT(pkgPath, configFileName string, port int, clientCreator thriftClientCreator, s switcher,
+	registerTProcessor func() thrift.TProcessor) {
 	LoadServiceConfig("grpc", pkgPath, configFileName)
 	log.Info("Starting Turbo...")
 	go startThriftServiceInternal(port, registerTProcessor, false)
 	<-serviceStarted
+	time.Sleep(time.Second*1)
 	go startThriftHTTPServerInternal(clientCreator, s)
 	waitForQuit()
 	log.Info("Turbo exit, bye!")
@@ -105,16 +119,19 @@ func startHTTPServer(portStr string, handler http.Handler) {
 		}
 	}()
 	log.Info("HTTP Server started")
+	//wait for exit
+	exit := make(chan os.Signal, 1)
+	signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
 	for {
-		//wait for exit
-		exit := make(chan os.Signal, 1)
-		signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
 		select {
+		case v := <-stopHttp:
+			if v == "http" {
+				shutDownHTTP(s)
+				return
+			}
 		case <-exit:
-			log.Info("Received CTRL-C, HTTP Server is shutting down...")
 			shutDownHTTP(s)
-			log.Info("HTTP Server stopped")
-			close(httpServerQuit)
+			stopService <- "service"
 			return
 		case <-reloadConfig:
 			s.Handler = router()
@@ -124,13 +141,17 @@ func startHTTPServer(portStr string, handler http.Handler) {
 }
 
 func shutDownHTTP(s *http.Server) {
+	log.Info("HTTP Server is shutting down...")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 	s.Shutdown(ctx)
+	log.Info("HTTP Server stop")
+	close(httpServerQuit)
 }
 
 // StartGrpcService starts a GRPC service
-func StartGrpcService(port int, registerServer func(s *grpc.Server)) {
+func StartGrpcService(port int, pkgPath, configFileName string, registerServer func(s *grpc.Server)) {
+	LoadServiceConfig("grpc", pkgPath, configFileName)
 	startGrpcServiceInternal(port, registerServer, true)
 }
 
@@ -152,28 +173,39 @@ func startGrpcServiceInternal(port int, registerServer func(s *grpc.Server), alo
 	log.Info("GRPC Service started")
 	serviceStarted <- true
 
-	if !alone {
-		<-httpServerQuit // wait for http server quit
-		log.Info("Stopping GRPC Service...")
-		grpcServer.Stop()
-		log.Info("GRPC Service stopped")
-		close(serviceQuit)
-	} else {
+	if alone {
 		//TODO bug:exit can't log.
 		//wait for exit
 		exit := make(chan os.Signal, 1)
 		signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
+	doSelect:
 		select {
+		case v := <-stopService:
+			if v != "service" {
+				goto doSelect
+			}
+			grpcServer.Stop()
+			log.Info("GRPC Service stop")
 		case <-exit:
 			log.Info("Received CTRL-C, GRPC Service is stopping...")
 			grpcServer.Stop()
-			log.Info("GRPC Service stopped")
+			log.Info("GRPC Service stop")
 		}
+		close(serviceQuit)
+	} else {
+		fmt.Println("waiting for http server quit")
+		<-stopService
+		<-httpServerQuit // wait for http server quit
+		log.Info("Stopping GRPC Service...")
+		grpcServer.Stop()
+		log.Info("GRPC Service stop")
+		close(serviceQuit)
 	}
 }
 
 // StartThriftService starts a Thrift service
-func StartThriftService(port int, registerTProcessor func() thrift.TProcessor) {
+func StartThriftService(port int, pkgPath, configFileName string, registerTProcessor func() thrift.TProcessor) {
+	LoadServiceConfig("thrift", pkgPath, configFileName)
 	startThriftServiceInternal(port, registerTProcessor, true)
 }
 
@@ -183,35 +215,46 @@ func startThriftServiceInternal(port int, registerTProcessor func() thrift.TProc
 	transport, err := thrift.NewTServerSocket(portStr)
 	if err != nil {
 		log.Fatal("socket error")
-		//log.Println("socket error")
-		//os.Exit(1)
 	}
 	server := thrift.NewTSimpleServer4(registerTProcessor(), transport,
 		thrift.NewTTransportFactory(), thrift.NewTBinaryProtocolFactoryDefault())
-	//go server.Serve()
-	err = server.Listen()
-	if err != nil {
-		panic(err)
-	}
-	go server.AcceptLoop()
+	go server.Serve()
 	log.Info("Thrift Service started")
 	serviceStarted <- true
 
-	if !alone {
-		<-httpServerQuit // wait for http server quit
-		log.Info("Stopping Thrift Service...")
-		server.Stop()
-		log.Info("Thrift Service stopped")
-		close(serviceQuit)
-	} else {
+	if alone {
 		//wait for exit
 		exit := make(chan os.Signal, 1)
 		signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
+	doSelect:
 		select {
+		case v := <-stopService:
+			if v != "service" {
+				goto doSelect
+			}
+			log.Info("stop, Thrift Service is stopping...")
+			server.Stop()
+			log.Info("Thrift Service stop")
 		case <-exit:
 			log.Info("Received CTRL-C, Thrift Service is stopping...")
 			server.Stop()
-			log.Info("Thrift Service stopped")
+			log.Info("Thrift Service stop")
 		}
+		close(serviceQuit)
+	} else {
+		fmt.Println("waiting for http server quit")
+		<-stopService
+		<-httpServerQuit // wait for http server quit
+		log.Info("Stopping Thrift Service...")
+		server.Stop()
+		log.Info("Thrift Service stop")
+		close(serviceQuit)
 	}
+}
+
+func Stop() {
+	stopHttp <- "http"
+	<-httpServerQuit
+	stopService <- "service"
+	<-serviceQuit
 }

@@ -10,6 +10,7 @@ import (
 	"text/template"
 )
 
+// gofmt bytes
 func Generate(gRpcType, pkgPath, configFileName, options string) {
 	initRpcType(gRpcType)
 	initConfigFileName(configFileName)
@@ -30,7 +31,7 @@ func Generate(gRpcType, pkgPath, configFileName, options string) {
 }
 
 // CreateProject creates a whole new project!
-func CreateProject(pkgPath, serviceName, serverType string) {
+func CreateProject(pkgPath, serviceName, serverType string, force bool) {
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Println(err)
@@ -38,7 +39,9 @@ func CreateProject(pkgPath, serviceName, serverType string) {
 	}()
 	initPkgPath(pkgPath)
 	initConfigFileName("service")
-	validateServiceRootPath()
+	if !force {
+		validateServiceRootPath()
+	}
 	createRootFolder()
 	createServiceYaml(serviceName)
 	initRpcType(serverType)
@@ -147,7 +150,7 @@ type serviceYamlValues struct {
 
 var serviceYamlFile string = `config:
   http_port: 8081
-  environment: production
+  environment: development
   turbo_log_path: log
   grpc_service_name: {{.ServiceName}}
   grpc_service_address: 127.0.0.1:50051
@@ -620,6 +623,7 @@ func GenerateThriftStub(options string) {
 }
 
 func executeCmd(cmd string, args ...string) {
+	// TODO learn
 	c := exec.Command(cmd, args...)
 	c.Stdin = os.Stdin
 	c.Stderr = os.Stderr
@@ -652,7 +656,7 @@ import (
 )
 
 func main() {
-	turbo.StartGrpcService({{.Port}}, impl.RegisterServer)
+	turbo.StartGrpcService({{.Port}}, "{{.PkgPath}}", "service", impl.RegisterServer)
 }
 `
 
@@ -679,7 +683,7 @@ import (
 )
 
 func main() {
-	turbo.StartThriftService({{.Port}}, impl.TProcessor)
+	turbo.StartThriftService({{.Port}}, "{{.PkgPath}}", "service", impl.TProcessor)
 }
 `
 

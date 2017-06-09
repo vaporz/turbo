@@ -7,8 +7,9 @@ import (
 	"strings"
 )
 
+// TODO setup component mappings via service.yaml
+// TODO reload mappings on config change
 // Interceptor -----------------
-
 // Interceptor intercepts requests, can run a func before and after a request
 type Interceptor interface {
 	Before(http.ResponseWriter, *http.Request) (*http.Request, error)
@@ -18,6 +19,7 @@ type Interceptor interface {
 // BaseInterceptor implements an empty Before() and After()
 type BaseInterceptor struct{}
 
+// TODO use ptr receiver?
 // Before will run before a request performs
 func (i BaseInterceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
 	return req, nil
@@ -69,6 +71,11 @@ func Interceptors(req *http.Request) interceptors {
 	return []Interceptor{}
 }
 
+func ResetInterceptor(){
+	commonInterceptors = []Interceptor{}
+	interceptorMap = mux.NewRouter()
+}
+
 // PreProcessor-------------
 var preprocessorMap *mux.Router = mux.NewRouter()
 
@@ -79,6 +86,7 @@ func (p preprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
 // SetPreprocessor registers a preprocessor to an URL pattern
 func SetPreprocessor(urlPattern string, pre preprocessor) {
+	// TODO support http methods
 	preprocessorMap.Handle(urlPattern, pre)
 }
 
@@ -91,6 +99,10 @@ func Preprocessor(req *http.Request) preprocessor {
 	return nil
 }
 
+func ResetPreprocessor(){
+	preprocessorMap = mux.NewRouter()
+}
+
 // PostProcessor--------------
 var postprocessorMap *mux.Router = mux.NewRouter()
 
@@ -101,6 +113,7 @@ func (p postprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
 // SetPostprocessor registers a postprocessor to an URL pattern
 func SetPostprocessor(urlPattern string, post postprocessor) {
+	// TODO support http methods
 	postprocessorMap.Handle(urlPattern, post)
 }
 
@@ -113,6 +126,10 @@ func Postprocessor(req *http.Request) postprocessor {
 	return nil
 }
 
+func ResetPostprocessor(){
+	postprocessorMap = mux.NewRouter()
+}
+
 // Hijacker-----------------
 var hijackerMap *mux.Router = mux.NewRouter()
 
@@ -123,6 +140,7 @@ func (h hijacker) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
 // SetHijacker registers a hijacker to an URL pattern
 func SetHijacker(urlPattern string, h hijacker) {
+	// TODO support http methods
 	hijackerMap.Handle(urlPattern, h)
 }
 
@@ -133,6 +151,10 @@ func Hijacker(req *http.Request) hijacker {
 		return m.Handler.(hijacker)
 	}
 	return nil
+}
+
+func ResetHijacker(){
+	hijackerMap = mux.NewRouter()
 }
 
 // Convertor--------------
@@ -148,4 +170,8 @@ func RegisterMessageFieldConvertor(field interface{}, convertorFunc convertor) {
 // MessageFieldConvertor returns the convertor for this type
 func MessageFieldConvertor(theType reflect.Type) convertor {
 	return convertorMap[theType]
+}
+
+func ResetConvertor(){
+	convertorMap = make(map[reflect.Type]convertor)
 }

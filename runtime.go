@@ -29,10 +29,11 @@ func router() *mux.Router {
 	return r
 }
 
-var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
+func handler(methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		ParseRequestForm(req)
 		interceptors := getInterceptors(req)
+		// TODO refactor this, 'skipSwitch' is wired
 		skipSwitch := false
 		req, err := doBefore(&interceptors, resp, req)
 		if err != nil {
@@ -50,11 +51,7 @@ var handler = func(methodName string) func(http.ResponseWriter, *http.Request) {
 				doPostprocessor(resp, req, serviceResp, err)
 			}
 		}
-		err = doAfter(interceptors, resp, req)
-		if err != nil {
-			log.Println(err.Error())
-			return
-		}
+		doAfter(interceptors, resp, req)
 	}
 }
 
@@ -67,6 +64,10 @@ func WithErrorHandler(e errorHandlerFunc) {
 	errorHandler = e
 }
 
+func ResetErrorHandler() {
+	errorHandler = defaultErrorHandler
+}
+
 func getInterceptors(req *http.Request) []Interceptor {
 	interceptors := Interceptors(req)
 	if len(interceptors) == 0 {
@@ -77,11 +78,11 @@ func getInterceptors(req *http.Request) []Interceptor {
 
 func doBefore(interceptors *[]Interceptor, resp http.ResponseWriter, req *http.Request) (request *http.Request, err error) {
 	for index, i := range *interceptors {
-		req, err = i.Before(resp, req)
+		request, err = i.Before(resp, req)
 		if err != nil {
 			log.Errorln("error in interceptor!" + err.Error())
 			*interceptors = (*interceptors)[0:index]
-			return nil, err
+			return request, err
 		}
 	}
 	return req, nil

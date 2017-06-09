@@ -9,6 +9,8 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	executeCmd("bash", "-c", "go install github.com/vaporz/turbo/turbo")
+	executeCmd("bash", "-c", "go install github.com/vaporz/turbo/protoc-gen-buildfields")
 	initRpcType("grpc")
 	initConfigFileName("service_test")
 	initPkgPath("github.com/vaporz/turbo/test")
