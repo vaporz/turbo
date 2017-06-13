@@ -65,3 +65,8 @@ func ThriftService() interface{} {
 	}
 	return thriftService
 }
+
+func ResetThriftClient() {
+	tClient = new(thriftClient)
+	thriftService = nil
+}

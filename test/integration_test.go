@@ -67,12 +67,7 @@ func TestGrpcService(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?bool_value=true",
 		"{\"message\":\"{\\\"values\\\":{\\\"someId\\\":1111111},\\\"yourName\\\":\\\"testtest\\\",\\\"boolValue\\\":true}\"}")
 	turbo.Stop()
-}
-
-func convertProtoCommonValues(req *http.Request) reflect.Value {
-	result := &proto.CommonValues{}
-	result.SomeId = 1111111
-	return reflect.ValueOf(result)
+	turbo.ResetGrpcClient()
 }
 
 func TestThriftService(t *testing.T) {
@@ -99,12 +94,45 @@ func TestThriftService(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?bool_value=true",
 		"{\"message\":\"[thrift server]values.TransactionId=222222, yourName=testtest,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0\"}")
 	turbo.Stop()
+	turbo.ResetThriftClient()
 }
 
-func convertThriftCommonValues(req *http.Request) reflect.Value {
-	result := &tgen.CommonValues{}
-	result.TransactionId = 222222
-	return reflect.ValueOf(result)
+func TestHTTPGrpcService(t *testing.T) {
+	httpPort := "8083"
+	turbo.ResetChans()
+	OverrideServiceYaml(httpPort, "50053", "development")
+	go turbo.StartGrpcService(50053, "github.com/vaporz/turbo/test/testservice",
+		"service", gimpl.RegisterServer)
+	time.Sleep(time.Second * 1)
+
+	go turbo.StartGrpcHTTPServer("github.com/vaporz/turbo/test/testservice", "service",
+		gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Second)
+
+	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", "{\"message\":\"[grpc server]Hello, testtest\"}")
+
+	turbo.Stop()
+	time.Sleep(time.Second)
+	turbo.ResetGrpcClient()
+}
+
+func TestHTTPThriftService(t *testing.T) {
+	httpPort := "8084"
+	turbo.ResetChans()
+	OverrideServiceYaml(httpPort, "50054", "development")
+	go turbo.StartThriftService(50054, "github.com/vaporz/turbo/test/testservice",
+		"service", timpl.TProcessor)
+	time.Sleep(time.Second * 1)
+
+	go turbo.StartThriftHTTPServer("github.com/vaporz/turbo/test/testservice", "service",
+		tcompoent.ThriftClient, gen.ThriftSwitcher)
+	time.Sleep(time.Second)
+
+	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", "{\"message\":\"[thrift server]Hello, testtest\"}")
+
+	turbo.Stop()
+	time.Sleep(time.Second)
+	turbo.ResetThriftClient()
 }
 
 func writeProto() {
@@ -409,4 +437,16 @@ func hijacker(resp http.ResponseWriter, req *http.Request) {
 
 func errorHandler(resp http.ResponseWriter, req *http.Request, err error) {
 	resp.Write([]byte("from errorHandler:" + err.Error()))
+}
+
+func convertProtoCommonValues(req *http.Request) reflect.Value {
+	result := &proto.CommonValues{}
+	result.SomeId = 1111111
+	return reflect.ValueOf(result)
+}
+
+func convertThriftCommonValues(req *http.Request) reflect.Value {
+	result := &tgen.CommonValues{}
+	result.TransactionId = 222222
+	return reflect.ValueOf(result)
 }

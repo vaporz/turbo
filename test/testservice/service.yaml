@@ -1,11 +1,11 @@
 config:
-  http_port: 8082
-  environment: production
+  http_port: 8084
+  environment: development
   turbo_log_path: log
   grpc_service_name: TestService
-  grpc_service_address: 127.0.0.1:50052
+  grpc_service_address: 127.0.0.1:50054
   thrift_service_name: TestService
-  thrift_service_address: 127.0.0.1:50052
+  thrift_service_address: 127.0.0.1:50054
 
 urlmapping:
   - GET /hello/{your_name:[a-zA-Z0-9]+} SayHello

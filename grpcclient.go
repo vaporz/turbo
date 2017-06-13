@@ -37,6 +37,7 @@ func initGrpcService(clientCreator func(conn *grpc.ClientConn) interface{}) erro
 	if len(addr) == 0 {
 		log.Panic("Error: missing [grpc_service_address] in config")
 	}
+	log.Info("[grpc]connecting addr:", addr)
 	err := gClient.dial(addr)
 	if err == nil {
 		grpcService = clientCreator(gClient.conn)
@@ -55,4 +56,10 @@ func GrpcService() interface{} {
 		log.Fatalln("grpc connection not initiated!")
 	}
 	return grpcService
+}
+
+// TODO refactor and remove all such Reset Funcs
+func ResetGrpcClient(){
+	gClient     = new(grpcClient)
+	grpcService = nil
 }
