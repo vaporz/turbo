@@ -12,6 +12,9 @@ import (
 
 // gofmt bytes
 func Generate(gRpcType, pkgPath, configFileName, options string) {
+	if gRpcType != "grpc" && gRpcType != "thrift" {
+		panic("Invalid server type, should be (grpc|thrift)")
+	}
 	initRpcType(gRpcType)
 	initConfigFileName(configFileName)
 	initPkgPath(pkgPath)
@@ -25,8 +28,6 @@ func Generate(gRpcType, pkgPath, configFileName, options string) {
 		GenerateBuildThriftParameters()
 		loadFieldMapping()
 		GenerateThriftSwitcher()
-	} else {
-		panic("Invalid server type, should be (grpc|thrift)")
 	}
 }
 
@@ -40,7 +41,7 @@ func CreateProject(pkgPath, serviceName, serverType string, force bool) {
 	initPkgPath(pkgPath)
 	initConfigFileName("service")
 	if !force {
-		validateServiceRootPath()
+		validateServiceRootPath(nil)
 	}
 	createRootFolder()
 	createServiceYaml(serviceName)
@@ -53,7 +54,10 @@ func CreateProject(pkgPath, serviceName, serverType string, force bool) {
 	}
 }
 
-func validateServiceRootPath() {
+func validateServiceRootPath(in io.Reader) {
+	if in == nil {
+		in = os.Stdin
+	}
 	_, err := os.Stat(Config.ServiceRootPath())
 	if os.IsNotExist(err) {
 		return
@@ -61,12 +65,12 @@ func validateServiceRootPath() {
 	fmt.Print("Path '" + Config.ServiceRootPath() + "' already exist!\n" +
 		"Do you want to remove this directory before creating a new project? (type 'y' to remove):")
 	var input string
-	fmt.Scanln(&input)
+	fmt.Fscan(in, &input)
 	if input != "y" {
 		return
 	}
 	fmt.Print("All files in that directory will be lost, are you sure? (type 'y' to continue):")
-	fmt.Scanln(&input)
+	fmt.Fscan(in, &input)
 	if input != "y" {
 		panic("aborted")
 	}

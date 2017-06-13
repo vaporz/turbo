@@ -81,7 +81,7 @@ type thriftClientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory
 // StartTHRIFT starts both HTTP server and Thrift service
 func StartTHRIFT(pkgPath, configFileName string, port int, clientCreator thriftClientCreator, s switcher,
 	registerTProcessor func() thrift.TProcessor) {
-	LoadServiceConfig("grpc", pkgPath, configFileName)
+	LoadServiceConfig("thrift", pkgPath, configFileName)
 	log.Info("Starting Turbo...")
 	go startThriftServiceInternal(port, registerTProcessor, false)
 	<-serviceStarted
@@ -210,7 +210,7 @@ func StartThriftService(port int, pkgPath, configFileName string, registerTProce
 }
 
 func startThriftServiceInternal(port int, registerTProcessor func() thrift.TProcessor, alone bool) {
-	log.Info("Starting Thrift Service...")
+	log.Infof("Starting Thrift Service at :%d...", port)
 	portStr := fmt.Sprintf(":%d", port)
 	transport, err := thrift.NewTServerSocket(portStr)
 	if err != nil {

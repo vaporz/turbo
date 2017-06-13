@@ -20,7 +20,14 @@ var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http
 			return nil, err
 		}
 		return turbo.ThriftService().(*gen.TestServiceClient).SayHello(
-			params[0].Interface().(string), )
+			params[0].Interface().(*gen.CommonValues),
+			params[1].Interface().(string),
+			params[2].Interface().(int64),
+			params[3].Interface().(bool),
+			params[4].Interface().(float64),
+			params[5].Interface().(int64),
+			params[6].Interface().(int32),
+			params[7].Interface().(int16), )
 	default:
 		return nil, errors.New("No such method[" + methodName + "]")
 	}
@@ -28,6 +35,13 @@ var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http
 
 func buildStructArg(typeName string, req *http.Request) (v reflect.Value, err error) {
 	switch typeName { 
+	case "CommonValues":
+		request := &gen.CommonValues{  }
+		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
+		if err != nil {
+			return v, err
+		}
+		return reflect.ValueOf(request), nil
 	default:
 		return v, errors.New("unknown typeName[" + typeName + "]")
 	}

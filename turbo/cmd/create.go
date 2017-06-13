@@ -19,7 +19,7 @@ var createCmd = &cobra.Command{
 		if turbo.IsNotCamelCase(args[1]) {
 			return errors.New("[" + args[1] + "] is not a CamelCase string")
 		}
-		turbo.CreateProject(args[0], args[1], rpcType, force)
+		turbo.CreateProject(args[0], args[1], RpcType, force)
 		return nil
 	},
 }
@@ -27,7 +27,7 @@ var createCmd = &cobra.Command{
 var force bool
 
 func init() {
-	createCmd.Flags().StringVarP(&rpcType, "rpctype", "r", "grpc", "[grpc|thrift]")
+	createCmd.Flags().StringVarP(&RpcType, "rpctype", "r", "grpc", "[grpc|thrift]")
 	createCmd.Flags().BoolVarP(&force, "force", "f", false, "create service and override existing files")
 	RootCmd.AddCommand(createCmd)
 }

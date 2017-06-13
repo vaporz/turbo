@@ -1,8 +1,14 @@
 syntax = "proto3";
+import "shared.proto";
 package proto;
 
 message SayHelloRequest {
-    string yourName = 1;
+    CommonValues values = 1;
+    string yourName = 2;
+    int64 int64Value = 3;
+    bool boolValue = 4;
+    double float64Value = 5;
+    uint64 uint64Value = 6;
 }
 
 message SayHelloResponse {

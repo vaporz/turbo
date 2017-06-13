@@ -78,11 +78,11 @@ func getInterceptors(req *http.Request) []Interceptor {
 
 func doBefore(interceptors *[]Interceptor, resp http.ResponseWriter, req *http.Request) (request *http.Request, err error) {
 	for index, i := range *interceptors {
-		request, err = i.Before(resp, req)
+		req, err = i.Before(resp, req)
 		if err != nil {
 			log.Errorln("error in interceptor!" + err.Error())
 			*interceptors = (*interceptors)[0:index]
-			return request, err
+			return req, err
 		}
 	}
 	return req, nil
@@ -133,10 +133,6 @@ func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Req
 		req, err = interceptors[i].After(resp, req)
 		if err != nil {
 			log.Errorln("error in interceptor!")
-			// if a doBefore() has run, then the corresponding doAfter() func
-			// should run too, so don't return here.
-			// Or, may be not?
-			//return err
 		}
 	}
 	return nil
@@ -210,29 +206,12 @@ func ReflectValue(fieldValue reflect.Value, v string) (reflect.Value, error) {
 			return reflect.ValueOf(false), err
 		}
 		return reflect.ValueOf(bool(b)), nil
-	case reflect.Float32:
-		f, err := strconv.ParseFloat(v, 32)
-		if err != nil {
-			return reflect.ValueOf(0), errors.New("error float")
-		}
-		return reflect.ValueOf(float32(f)), nil
 	case reflect.Float64:
 		f, err := strconv.ParseFloat(v, 64)
 		if err != nil {
-			return reflect.ValueOf(0), errors.New("error float")
+			return reflect.ValueOf(float64(0)), errors.New("error float")
 		}
 		return reflect.ValueOf(float64(f)), nil
-		//case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		//	var u uint64
-		//	if v == "" {
-		//		u = 0
-		//	} else {
-		//		u, err := strconv.ParseUint(v, 10, 64)
-		//		if err != nil {
-		//			return reflect.ValueOf(u), errors.New("error uint")
-		//		}
-		//	}
-		//	return reflect.ValueOf(u), nil
 	default:
 		return reflect.ValueOf(0), errors.New("not supported kind[" + k.String() + "]")
 	}

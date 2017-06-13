@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"git.apache.org/thrift.git/lib/go/thrift"
+
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -101,8 +102,15 @@ func (p *SayHelloResponse) String() string {
 
 type TestService interface {
   // Parameters:
+  //  - Values
   //  - YourName
-  SayHello(yourName string) (r *SayHelloResponse, err error)
+  //  - Int64Value
+  //  - BoolValue
+  //  - Float64Value
+  //  - Uint64Value
+  //  - Int32Value
+  //  - Int16Value
+  SayHello(values *CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64, uint64Value int64, int32Value int32, int16Value int16) (r *SayHelloResponse, err error)
 }
 
 type TestServiceClient struct {
@@ -132,13 +140,20 @@ func NewTestServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, o
 }
 
 // Parameters:
+//  - Values
 //  - YourName
-func (p *TestServiceClient) SayHello(yourName string) (r *SayHelloResponse, err error) {
-  if err = p.sendSayHello(yourName); err != nil { return }
+//  - Int64Value
+//  - BoolValue
+//  - Float64Value
+//  - Uint64Value
+//  - Int32Value
+//  - Int16Value
+func (p *TestServiceClient) SayHello(values *CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64, uint64Value int64, int32Value int32, int16Value int16) (r *SayHelloResponse, err error) {
+  if err = p.sendSayHello(values, yourName, int64Value, boolValue, float64Value, uint64Value, int32Value, int16Value); err != nil { return }
   return p.recvSayHello()
 }
 
-func (p *TestServiceClient) sendSayHello(yourName string)(err error) {
+func (p *TestServiceClient) sendSayHello(values *CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64, uint64Value int64, int32Value int32, int16Value int16)(err error) {
   oprot := p.OutputProtocol
   if oprot == nil {
     oprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -149,7 +164,14 @@ func (p *TestServiceClient) sendSayHello(yourName string)(err error) {
       return
   }
   args := TestServiceSayHelloArgs{
+  Values : values,
   YourName : yourName,
+  Int64Value : int64Value,
+  BoolValue : boolValue,
+  Float64Value : float64Value,
+  Uint64Value : uint64Value,
+  Int32Value : int32Value,
+  Int16Value : int16Value,
   }
   if err = args.Write(oprot); err != nil {
       return
@@ -270,7 +292,7 @@ func (p *testServiceProcessorSayHello) Process(seqId int32, iprot, oprot thrift.
   result := TestServiceSayHelloResult{}
 var retval *SayHelloResponse
   var err2 error
-  if retval, err2 = p.handler.SayHello(args.YourName); err2 != nil {
+  if retval, err2 = p.handler.SayHello(args.Values, args.YourName, args.Int64Value, args.BoolValue, args.Float64Value, args.Uint64Value, args.Int32Value, args.Int16Value); err2 != nil {
     x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing sayHello: " + err2.Error())
     oprot.WriteMessageBegin("sayHello", thrift.EXCEPTION, seqId)
     x.Write(oprot)
@@ -302,19 +324,68 @@ var retval *SayHelloResponse
 // HELPER FUNCTIONS AND STRUCTURES
 
 // Attributes:
+//  - Values
 //  - YourName
+//  - Int64Value
+//  - BoolValue
+//  - Float64Value
+//  - Uint64Value
+//  - Int32Value
+//  - Int16Value
 type TestServiceSayHelloArgs struct {
-  YourName string `thrift:"yourName,1" db:"yourName" json:"yourName"`
+  Values *CommonValues `thrift:"values,1" db:"values" json:"values"`
+  YourName string `thrift:"yourName,2" db:"yourName" json:"yourName"`
+  Int64Value int64 `thrift:"int64Value,3" db:"int64Value" json:"int64Value"`
+  BoolValue bool `thrift:"boolValue,4" db:"boolValue" json:"boolValue"`
+  Float64Value float64 `thrift:"float64Value,5" db:"float64Value" json:"float64Value"`
+  Uint64Value int64 `thrift:"uint64Value,6" db:"uint64Value" json:"uint64Value"`
+  Int32Value int32 `thrift:"int32Value,7" db:"int32Value" json:"int32Value"`
+  Int16Value int16 `thrift:"int16Value,8" db:"int16Value" json:"int16Value"`
 }
 
 func NewTestServiceSayHelloArgs() *TestServiceSayHelloArgs {
   return &TestServiceSayHelloArgs{}
 }
 
+var TestServiceSayHelloArgs_Values_DEFAULT *CommonValues
+func (p *TestServiceSayHelloArgs) GetValues() *CommonValues {
+  if !p.IsSetValues() {
+    return TestServiceSayHelloArgs_Values_DEFAULT
+  }
+return p.Values
+}
 
 func (p *TestServiceSayHelloArgs) GetYourName() string {
   return p.YourName
 }
+
+func (p *TestServiceSayHelloArgs) GetInt64Value() int64 {
+  return p.Int64Value
+}
+
+func (p *TestServiceSayHelloArgs) GetBoolValue() bool {
+  return p.BoolValue
+}
+
+func (p *TestServiceSayHelloArgs) GetFloat64Value() float64 {
+  return p.Float64Value
+}
+
+func (p *TestServiceSayHelloArgs) GetUint64Value() int64 {
+  return p.Uint64Value
+}
+
+func (p *TestServiceSayHelloArgs) GetInt32Value() int32 {
+  return p.Int32Value
+}
+
+func (p *TestServiceSayHelloArgs) GetInt16Value() int16 {
+  return p.Int16Value
+}
+func (p *TestServiceSayHelloArgs) IsSetValues() bool {
+  return p.Values != nil
+}
+
 func (p *TestServiceSayHelloArgs) Read(iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
@@ -330,6 +401,34 @@ func (p *TestServiceSayHelloArgs) Read(iprot thrift.TProtocol) error {
     switch fieldId {
     case 1:
       if err := p.ReadField1(iprot); err != nil {
+        return err
+      }
+    case 2:
+      if err := p.ReadField2(iprot); err != nil {
+        return err
+      }
+    case 3:
+      if err := p.ReadField3(iprot); err != nil {
+        return err
+      }
+    case 4:
+      if err := p.ReadField4(iprot); err != nil {
+        return err
+      }
+    case 5:
+      if err := p.ReadField5(iprot); err != nil {
+        return err
+      }
+    case 6:
+      if err := p.ReadField6(iprot); err != nil {
+        return err
+      }
+    case 7:
+      if err := p.ReadField7(iprot); err != nil {
+        return err
+      }
+    case 8:
+      if err := p.ReadField8(iprot); err != nil {
         return err
       }
     default:
@@ -348,10 +447,72 @@ func (p *TestServiceSayHelloArgs) Read(iprot thrift.TProtocol) error {
 }
 
 func (p *TestServiceSayHelloArgs)  ReadField1(iprot thrift.TProtocol) error {
+  p.Values = &CommonValues{}
+  if err := p.Values.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Values), err)
+  }
+  return nil
+}
+
+func (p *TestServiceSayHelloArgs)  ReadField2(iprot thrift.TProtocol) error {
   if v, err := iprot.ReadString(); err != nil {
-  return thrift.PrependError("error reading field 1: ", err)
+  return thrift.PrependError("error reading field 2: ", err)
 } else {
   p.YourName = v
+}
+  return nil
+}
+
+func (p *TestServiceSayHelloArgs)  ReadField3(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 3: ", err)
+} else {
+  p.Int64Value = v
+}
+  return nil
+}
+
+func (p *TestServiceSayHelloArgs)  ReadField4(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBool(); err != nil {
+  return thrift.PrependError("error reading field 4: ", err)
+} else {
+  p.BoolValue = v
+}
+  return nil
+}
+
+func (p *TestServiceSayHelloArgs)  ReadField5(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadDouble(); err != nil {
+  return thrift.PrependError("error reading field 5: ", err)
+} else {
+  p.Float64Value = v
+}
+  return nil
+}
+
+func (p *TestServiceSayHelloArgs)  ReadField6(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 6: ", err)
+} else {
+  p.Uint64Value = v
+}
+  return nil
+}
+
+func (p *TestServiceSayHelloArgs)  ReadField7(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 7: ", err)
+} else {
+  p.Int32Value = v
+}
+  return nil
+}
+
+func (p *TestServiceSayHelloArgs)  ReadField8(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI16(); err != nil {
+  return thrift.PrependError("error reading field 8: ", err)
+} else {
+  p.Int16Value = v
 }
   return nil
 }
@@ -361,6 +522,13 @@ func (p *TestServiceSayHelloArgs) Write(oprot thrift.TProtocol) error {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
     if err := p.writeField1(oprot); err != nil { return err }
+    if err := p.writeField2(oprot); err != nil { return err }
+    if err := p.writeField3(oprot); err != nil { return err }
+    if err := p.writeField4(oprot); err != nil { return err }
+    if err := p.writeField5(oprot); err != nil { return err }
+    if err := p.writeField6(oprot); err != nil { return err }
+    if err := p.writeField7(oprot); err != nil { return err }
+    if err := p.writeField8(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -370,12 +538,83 @@ func (p *TestServiceSayHelloArgs) Write(oprot thrift.TProtocol) error {
 }
 
 func (p *TestServiceSayHelloArgs) writeField1(oprot thrift.TProtocol) (err error) {
-  if err := oprot.WriteFieldBegin("yourName", thrift.STRING, 1); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:yourName: ", p), err) }
-  if err := oprot.WriteString(string(p.YourName)); err != nil {
-  return thrift.PrependError(fmt.Sprintf("%T.yourName (1) field write error: ", p), err) }
+  if err := oprot.WriteFieldBegin("values", thrift.STRUCT, 1); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:values: ", p), err) }
+  if err := p.Values.Write(oprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Values), err)
+  }
   if err := oprot.WriteFieldEnd(); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T write field end error 1:yourName: ", p), err) }
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 1:values: ", p), err) }
+  return err
+}
+
+func (p *TestServiceSayHelloArgs) writeField2(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("yourName", thrift.STRING, 2); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:yourName: ", p), err) }
+  if err := oprot.WriteString(string(p.YourName)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.yourName (2) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 2:yourName: ", p), err) }
+  return err
+}
+
+func (p *TestServiceSayHelloArgs) writeField3(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("int64Value", thrift.I64, 3); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:int64Value: ", p), err) }
+  if err := oprot.WriteI64(int64(p.Int64Value)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.int64Value (3) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 3:int64Value: ", p), err) }
+  return err
+}
+
+func (p *TestServiceSayHelloArgs) writeField4(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("boolValue", thrift.BOOL, 4); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:boolValue: ", p), err) }
+  if err := oprot.WriteBool(bool(p.BoolValue)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.boolValue (4) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 4:boolValue: ", p), err) }
+  return err
+}
+
+func (p *TestServiceSayHelloArgs) writeField5(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("float64Value", thrift.DOUBLE, 5); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:float64Value: ", p), err) }
+  if err := oprot.WriteDouble(float64(p.Float64Value)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.float64Value (5) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 5:float64Value: ", p), err) }
+  return err
+}
+
+func (p *TestServiceSayHelloArgs) writeField6(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("uint64Value", thrift.I64, 6); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:uint64Value: ", p), err) }
+  if err := oprot.WriteI64(int64(p.Uint64Value)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.uint64Value (6) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 6:uint64Value: ", p), err) }
+  return err
+}
+
+func (p *TestServiceSayHelloArgs) writeField7(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("int32Value", thrift.I32, 7); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:int32Value: ", p), err) }
+  if err := oprot.WriteI32(int32(p.Int32Value)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.int32Value (7) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 7:int32Value: ", p), err) }
+  return err
+}
+
+func (p *TestServiceSayHelloArgs) writeField8(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("int16Value", thrift.I16, 8); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:int16Value: ", p), err) }
+  if err := oprot.WriteI16(int16(p.Int16Value)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.int16Value (8) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 8:int16Value: ", p), err) }
   return err
 }
 

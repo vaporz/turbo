@@ -239,6 +239,7 @@ func initPkgPath(pkgPath string) {
 }
 
 func loadServiceConfig() {
+	viper.Reset()
 	viper.SetConfigName(ConfigFileName)
 	viper.AddConfigPath(ServiceRootPath)
 	err := viper.ReadInConfig()

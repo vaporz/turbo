@@ -14,7 +14,7 @@ this is a generated file, DO NOT EDIT!
 var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
 	switch methodName { 
 	case "SayHello":
-		request := &g.SayHelloRequest{  }
+		request := &g.SayHelloRequest{ Values: &g.CommonValues{}, }
 		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
 		if err != nil {
 			return nil, err

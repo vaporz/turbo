@@ -43,20 +43,23 @@ func ToSnakeCase(str string) string {
 // 3, merge route variables, route variables will come at the first place
 func ParseRequestForm(req *http.Request) {
 	req.ParseForm()
+	// TODO should param keys be case-sensitive?
+	// How would other frameworks behave?
 	mergeUpperCaseKeysToLowerCase(req)
 	mergeMuxVars(req)
 }
 
 func mergeUpperCaseKeysToLowerCase(req *http.Request) {
 	for k, vArr := range req.Form {
-		if k == strings.ToLower(k) {
+		lowerCased := strings.ToLower(k)
+		if k == lowerCased {
 			continue
 		}
 		list := []string{}
-		if lowerArr, ok := req.Form[strings.ToLower(k)]; ok {
+		if lowerArr, ok := req.Form[lowerCased]; ok {
 			list = lowerArr
 		}
-		req.Form[strings.ToLower(k)] = append(list, vArr...)
+		req.Form[lowerCased] = append(list, vArr...)
 		delete(req.Form, k)
 	}
 }

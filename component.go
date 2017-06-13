@@ -163,6 +163,7 @@ type convertor func(r *http.Request) reflect.Value
 var convertorMap map[reflect.Type]convertor = make(map[reflect.Type]convertor)
 
 // RegisterMessageFieldConvertor registers a convertor on a type
+// usage: RegisterMessageFieldConvertor(new(SomeInterface), convertorFunc)
 func RegisterMessageFieldConvertor(field interface{}, convertorFunc convertor) {
 	convertorMap[reflect.TypeOf(field).Elem()] = convertorFunc
 }

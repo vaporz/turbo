@@ -1,0 +1,6 @@
+syntax = "proto3";
+package proto;
+
+message CommonValues {
+    int64 someId = 1;
+}
