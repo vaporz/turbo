@@ -14,24 +14,6 @@ import (
 	"time"
 )
 
-//var grpcService GrpcService
-
-type GrpcInstance struct {
-	grpcService interface{}
-}
-
-func (g *GrpcInstance) init() {
-}
-
-//type chans struct {
-//	serviceStarted chan bool
-//	httpServerQuit chan bool
-//	serviceQuit    chan bool
-//	reloadConfig chan bool
-//	stopHttp     chan string
-//	stopService  chan string
-//}
-
 var serviceStarted = make(chan bool, 1)
 
 var httpServerQuit = make(chan bool)
