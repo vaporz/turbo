@@ -1,10 +1,12 @@
 package test
 
 import (
-	"testing"
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/vaporz/turbo"
-	"github.com/vaporz/turbo/turbo/cmd"
 	"github.com/vaporz/turbo/test/testservice/gen"
 	"github.com/vaporz/turbo/test/testservice/gen/proto"
 	tgen "github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/gen"
@@ -12,14 +14,14 @@ import (
 	gimpl "github.com/vaporz/turbo/test/testservice/grpcservice/impl"
 	tcompoent "github.com/vaporz/turbo/test/testservice/thriftapi/component"
 	timpl "github.com/vaporz/turbo/test/testservice/thriftservice/impl"
-	"os"
+	"github.com/vaporz/turbo/turbo/cmd"
+	"io"
 	"net/http"
-	"time"
-	"fmt"
-	"errors"
-	"context"
+	"os"
 	"reflect"
-	"bytes"
+	"testing"
+	"text/template"
+	"time"
 )
 
 func TestMain(m *testing.M) {
@@ -31,7 +33,7 @@ func TestMain(m *testing.M) {
 func TestCreateGrpcService(t *testing.T) {
 	create(t, "grpc")
 	generate(t, "grpc")
-	writeProto()
+	overwriteProto()
 	os.RemoveAll(turbo.GOPATH + "/src/github.com/vaporz/turbo/test/testcreateservice/gen")
 	generate(t, "grpc")
 }
@@ -39,14 +41,14 @@ func TestCreateGrpcService(t *testing.T) {
 func TestCreateThriftService(t *testing.T) {
 	create(t, "thrift")
 	generate(t, "thrift")
-	writeThrift()
+	overwriteThrift()
 	os.RemoveAll(turbo.GOPATH + "/src/github.com/vaporz/turbo/test/testcreateservice/gen")
 	generate(t, "thrift")
 }
 
 func TestGrpcService(t *testing.T) {
 	httpPort := "8081"
-	OverrideServiceYaml("8081", "50051", "development")
+	overwriteServiceYaml("8081", "50051", "development")
 	turbo.ResetChans()
 
 	go turbo.StartGRPC("github.com/vaporz/turbo/test/testservice", "service",
@@ -58,7 +60,7 @@ func TestGrpcService(t *testing.T) {
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", ContextValueInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"test1_intercepted:{\"message\":\"{\\\"values\\\":{},\\\"yourName\\\":\\\"testtest\\\",\\\"int64Value\\\":1234567,\\\"boolValue\\\":true,\\\"float64Value\\\":1.23}\"}")
-	ResetComponents()
+	resetComponents()
 
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?int64_value=64&bool_value=true&float64_value=0.123&uint64_value=123",
 		"{\"message\":\"{\\\"values\\\":{},\\\"yourName\\\":\\\"testtest\\\",\\\"int64Value\\\":64,\\\"boolValue\\\":true,\\\"float64Value\\\":0.123,\\\"uint64Value\\\":123}\"}")
@@ -67,12 +69,11 @@ func TestGrpcService(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?bool_value=true",
 		"{\"message\":\"{\\\"values\\\":{\\\"someId\\\":1111111},\\\"yourName\\\":\\\"testtest\\\",\\\"boolValue\\\":true}\"}")
 	turbo.Stop()
-	turbo.ResetGrpcClient()
 }
 
 func TestThriftService(t *testing.T) {
 	httpPort := "8082"
-	OverrideServiceYaml(httpPort, "50052", "production")
+	overwriteServiceYaml(httpPort, "50052", "production")
 	turbo.ResetChans()
 
 	go turbo.StartTHRIFT("github.com/vaporz/turbo/test/testservice", "service",
@@ -85,7 +86,7 @@ func TestThriftService(t *testing.T) {
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", ContextValueInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"test1_intercepted:{\"message\":\"[thrift server]values.TransactionId=0, yourName=testtest,int64Value=1234567, boolValue=true, float64Value=1.230000, uint64Value=0, int32Value=0, int16Value=0\"}")
-	ResetComponents()
+	resetComponents()
 
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?transaction_id=111&int64_value=64&bool_value=true&float64_value=0.123&uint64_value=123&int32_value=32&int16_value=16",
 		"{\"message\":\"[thrift server]values.TransactionId=111, yourName=testtest,int64Value=64, boolValue=true, float64Value=0.123000, uint64Value=123, int32Value=32, int16Value=16\"}")
@@ -94,13 +95,12 @@ func TestThriftService(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?bool_value=true",
 		"{\"message\":\"[thrift server]values.TransactionId=222222, yourName=testtest,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0\"}")
 	turbo.Stop()
-	turbo.ResetThriftClient()
 }
 
 func TestHTTPGrpcService(t *testing.T) {
 	httpPort := "8083"
 	turbo.ResetChans()
-	OverrideServiceYaml(httpPort, "50053", "development")
+	overwriteServiceYaml(httpPort, "50053", "development")
 	go turbo.StartGrpcService(50053, "github.com/vaporz/turbo/test/testservice",
 		"service", gimpl.RegisterServer)
 	time.Sleep(time.Second * 1)
@@ -112,14 +112,12 @@ func TestHTTPGrpcService(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", "{\"message\":\"[grpc server]Hello, testtest\"}")
 
 	turbo.Stop()
-	time.Sleep(time.Second)
-	turbo.ResetGrpcClient()
 }
 
 func TestHTTPThriftService(t *testing.T) {
 	httpPort := "8084"
 	turbo.ResetChans()
-	OverrideServiceYaml(httpPort, "50054", "development")
+	overwriteServiceYaml(httpPort, "50054", "development")
 	go turbo.StartThriftService(50054, "github.com/vaporz/turbo/test/testservice",
 		"service", timpl.TProcessor)
 	time.Sleep(time.Second * 1)
@@ -131,11 +129,9 @@ func TestHTTPThriftService(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", "{\"message\":\"[thrift server]Hello, testtest\"}")
 
 	turbo.Stop()
-	time.Sleep(time.Second)
-	turbo.ResetThriftClient()
 }
 
-func writeProto() {
+func overwriteProto() {
 	writeFileWithTemplate(
 		turbo.GOPATH+"/src/github.com/vaporz/turbo/test/testcreateservice/testcreateservice.proto",
 		`syntax = "proto3";
@@ -174,7 +170,7 @@ message CommonValues {
 	)
 }
 
-func writeThrift() {
+func overwriteThrift() {
 	writeFileWithTemplate(
 		turbo.GOPATH+"/src/github.com/vaporz/turbo/test/testcreateservice/shared.thrift",
 		`namespace go gen
@@ -242,7 +238,7 @@ func generate(t *testing.T, rpc string) {
 	}
 
 	cmd.RootCmd.SetArgs([]string{"generate", "github.com/vaporz/turbo/test/testcreateservice", "-r", rpc,
-								 "-I", turbo.TurboRootPath + "/test/testcreateservice"})
+		"-I", turbo.TurboRootPath + "/test/testcreateservice"})
 	err = cmd.Execute()
 	assert.Nil(t, err)
 
@@ -265,32 +261,32 @@ func runCommonTests(t *testing.T, httpPort, rpcType string) {
 	// TODO test errorHandler
 	turbo.WithErrorHandler(errorHandler)
 
-	ResetComponents()
+	resetComponents()
 	turbo.Intercept([]string{"GET"}, "/", TestInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?yourName=testname",
 		"intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
-	ResetComponents()
+	resetComponents()
 	turbo.Intercept([]string{"GET"}, "/", TestInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
-	ResetComponents()
+	resetComponents()
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", BeforeErrorInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"interceptor_error:")
 
-	ResetComponents()
+	resetComponents()
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", turbo.BaseInterceptor{}, BeforeErrorInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"interceptor_error:")
 
-	ResetComponents()
+	resetComponents()
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", TestInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
-	ResetComponents()
+	resetComponents()
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", TestInterceptor{}, Test1Interceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:test1_intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
@@ -299,18 +295,18 @@ func runCommonTests(t *testing.T, httpPort, rpcType string) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:test1_intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
-	ResetComponents()
+	resetComponents()
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", TestInterceptor{}, BeforeErrorInterceptor{}, Test1Interceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:interceptor_error:")
 
-	ResetComponents()
+	resetComponents()
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", TestInterceptor{})
 	turbo.SetPreprocessor("/hello/{your_name:[a-zA-Z0-9]+}", errorPreProcessor)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:error_preprocessor:")
 
-	ResetComponents()
+	resetComponents()
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", TestInterceptor{})
 	turbo.SetPreprocessor("/hello/{your_name:[a-zA-Z0-9]+}", preProcessor)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
@@ -327,7 +323,7 @@ func runCommonTests(t *testing.T, httpPort, rpcType string) {
 	turbo.SetHijacker("/hello/{your_name:[a-zA-Z0-9]+}", hijacker)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:hijacker")
-	ResetComponents()
+	resetComponents()
 }
 
 func testPost(t *testing.T, url, expected string) {
@@ -449,4 +445,64 @@ func convertThriftCommonValues(req *http.Request) reflect.Value {
 	result := &tgen.CommonValues{}
 	result.TransactionId = 222222
 	return reflect.ValueOf(result)
+}
+func resetComponents() {
+	turbo.ResetConvertor()
+	turbo.ResetHijacker()
+	turbo.ResetInterceptor()
+	turbo.ResetPostprocessor()
+	turbo.ResetPreprocessor()
+	turbo.ResetErrorHandler()
+}
+
+func overwriteServiceYaml(httpPort, servicePort, env string) {
+	writeFileWithTemplate(
+		turbo.GOPATH+"/src/github.com/vaporz/turbo/test/testservice/service.yaml",
+		serviceYamlFile,
+		serviceYamlValues{
+			HttpPort:    httpPort,
+			ServiceName: "TestService",
+			ServicePort: servicePort,
+			Env:         env,
+		},
+	)
+}
+
+type serviceYamlValues struct {
+	HttpPort    string
+	ServiceName string
+	ServicePort string
+	Env         string
+}
+
+var serviceYamlFile string = `config:
+  http_port: {{.HttpPort}}
+  environment: {{.Env}}
+  turbo_log_path: log
+  grpc_service_name: {{.ServiceName}}
+  grpc_service_address: 127.0.0.1:{{.ServicePort}}
+  thrift_service_name: {{.ServiceName}}
+  thrift_service_address: 127.0.0.1:{{.ServicePort}}
+
+urlmapping:
+  - GET /hello/{your_name:[a-zA-Z0-9]+} SayHello
+`
+
+func writeWithTemplate(wr io.Writer, text string, data interface{}) {
+	tmpl, err := template.New("").Parse(text)
+	if err != nil {
+		panic(err)
+	}
+	err = tmpl.Execute(wr, data)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func writeFileWithTemplate(filePath, text string, data interface{}) {
+	f, err := os.Create(filePath)
+	if err != nil {
+		panic("fail to create file:" + filePath)
+	}
+	writeWithTemplate(f, text, data)
 }

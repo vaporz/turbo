@@ -4,13 +4,29 @@ import (
 	"google.golang.org/grpc"
 )
 
-var (
-	gClient     = new(grpcClient)
-	grpcService interface{}
-)
+var gClient *grpcClient
 
 type grpcClient struct {
-	conn *grpc.ClientConn
+	grpcService interface{}
+	conn        *grpc.ClientConn
+}
+
+func (g *grpcClient) init(clientCreator func(conn *grpc.ClientConn) interface{}) error {
+	// ???? support multiple grpc clients
+	// ???? support grpcservice discovery
+	if g.grpcService != nil {
+		return nil
+	}
+	addr := Config.GrpcServiceAddress()
+	if len(addr) == 0 {
+		log.Panic("Error: missing [grpc_service_address] in config")
+	}
+	log.Info("[grpc]connecting addr:", addr)
+	err := g.dial(addr)
+	if err == nil {
+		g.grpcService = clientCreator(g.conn)
+	}
+	return err
 }
 
 func (g *grpcClient) dial(address string) (err error) {
@@ -27,39 +43,11 @@ func (g *grpcClient) close() error {
 	return g.conn.Close()
 }
 
-func initGrpcService(clientCreator func(conn *grpc.ClientConn) interface{}) error {
-	// ???? support multiple grpc clients
-	// ???? support grpcservice discovery
-	if grpcService != nil {
-		return nil
-	}
-	addr := Config.GrpcServiceAddress()
-	if len(addr) == 0 {
-		log.Panic("Error: missing [grpc_service_address] in config")
-	}
-	log.Info("[grpc]connecting addr:", addr)
-	err := gClient.dial(addr)
-	if err == nil {
-		grpcService = clientCreator(gClient.conn)
-	}
-	return err
-}
-
-func closeGrpcService() error {
-	return gClient.close()
-}
-
 // GrpcService returns a grpc client instance,
 // example: client := turbo.GrpcService().(proto.YourServiceClient)
 func GrpcService() interface{} {
-	if grpcService == nil {
+	if gClient.grpcService == nil {
 		log.Fatalln("grpc connection not initiated!")
 	}
-	return grpcService
-}
-
-// TODO refactor and remove all such Reset Funcs
-func ResetGrpcClient(){
-	gClient     = new(grpcClient)
-	grpcService = nil
+	return gClient.grpcService
 }

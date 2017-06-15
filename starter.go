@@ -14,6 +14,24 @@ import (
 	"time"
 )
 
+//var grpcService GrpcService
+
+type GrpcInstance struct {
+	grpcService interface{}
+}
+
+func (g *GrpcInstance) init() {
+}
+
+//type chans struct {
+//	serviceStarted chan bool
+//	httpServerQuit chan bool
+//	serviceQuit    chan bool
+//	reloadConfig chan bool
+//	stopHttp     chan string
+//	stopService  chan string
+//}
+
 var serviceStarted = make(chan bool, 1)
 
 var httpServerQuit = make(chan bool)
@@ -68,11 +86,12 @@ func StartGrpcHTTPServer(pkgPath, configFileName string, clientCreator grpcClien
 func startGrpcHTTPServerInternal(clientCreator grpcClientCreator, s switcher) {
 	log.Info("Starting HTTP Server...")
 	switcherFunc = s
-	err := initGrpcService(clientCreator)
+	gClient = new(grpcClient)
+	err := gClient.init(clientCreator)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	defer closeGrpcService()
+	defer gClient.close()
 	startHTTPServer(Config.HTTPPortStr(), router())
 }
 
@@ -85,7 +104,7 @@ func StartTHRIFT(pkgPath, configFileName string, port int, clientCreator thriftC
 	log.Info("Starting Turbo...")
 	go startThriftServiceInternal(port, registerTProcessor, false)
 	<-serviceStarted
-	time.Sleep(time.Second*1)
+	time.Sleep(time.Second * 1)
 	go startThriftHTTPServerInternal(clientCreator, s)
 	waitForQuit()
 	log.Info("Turbo exit, bye!")
@@ -100,11 +119,12 @@ func StartThriftHTTPServer(pkgPath, configFileName string, clientCreator thriftC
 func startThriftHTTPServerInternal(clientCreator thriftClientCreator, s switcher) {
 	log.Info("Starting HTTP Server...")
 	switcherFunc = s
-	err := initThriftService(clientCreator)
+	tClient = new(thriftClient)
+	err := tClient.init(clientCreator)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	defer closeThriftService()
+	defer tClient.close()
 	startHTTPServer(Config.HTTPPortStr(), router())
 }
 
@@ -184,11 +204,11 @@ func startGrpcServiceInternal(port int, registerServer func(s *grpc.Server), alo
 			if v != "service" {
 				goto doSelect
 			}
-			grpcServer.Stop()
+			grpcServer.GracefulStop()
 			log.Info("GRPC Service stop")
 		case <-exit:
 			log.Info("Received CTRL-C, GRPC Service is stopping...")
-			grpcServer.Stop()
+			grpcServer.GracefulStop()
 			log.Info("GRPC Service stop")
 		}
 		close(serviceQuit)
@@ -197,7 +217,7 @@ func startGrpcServiceInternal(port int, registerServer func(s *grpc.Server), alo
 		<-stopService
 		<-httpServerQuit // wait for http server quit
 		log.Info("Stopping GRPC Service...")
-		grpcServer.Stop()
+		grpcServer.GracefulStop()
 		log.Info("GRPC Service stop")
 		close(serviceQuit)
 	}

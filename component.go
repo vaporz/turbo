@@ -71,7 +71,7 @@ func Interceptors(req *http.Request) interceptors {
 	return []Interceptor{}
 }
 
-func ResetInterceptor(){
+func ResetInterceptor() {
 	commonInterceptors = []Interceptor{}
 	interceptorMap = mux.NewRouter()
 }
@@ -99,7 +99,7 @@ func Preprocessor(req *http.Request) preprocessor {
 	return nil
 }
 
-func ResetPreprocessor(){
+func ResetPreprocessor() {
 	preprocessorMap = mux.NewRouter()
 }
 
@@ -126,7 +126,7 @@ func Postprocessor(req *http.Request) postprocessor {
 	return nil
 }
 
-func ResetPostprocessor(){
+func ResetPostprocessor() {
 	postprocessorMap = mux.NewRouter()
 }
 
@@ -153,7 +153,7 @@ func Hijacker(req *http.Request) hijacker {
 	return nil
 }
 
-func ResetHijacker(){
+func ResetHijacker() {
 	hijackerMap = mux.NewRouter()
 }
 
@@ -173,6 +173,6 @@ func MessageFieldConvertor(theType reflect.Type) convertor {
 	return convertorMap[theType]
 }
 
-func ResetConvertor(){
+func ResetConvertor() {
 	convertorMap = make(map[reflect.Type]convertor)
 }

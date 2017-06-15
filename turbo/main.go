@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/vaporz/turbo/turbo/cmd"
 	"fmt"
+	"github.com/vaporz/turbo/turbo/cmd"
 	"os"
 )
 
