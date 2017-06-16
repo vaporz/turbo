@@ -60,7 +60,7 @@ func TestGrpcService(t *testing.T) {
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", ContextValueInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"test1_intercepted:{\"message\":\"{\\\"values\\\":{},\\\"yourName\\\":\\\"testtest\\\",\\\"int64Value\\\":1234567,\\\"boolValue\\\":true,\\\"float64Value\\\":1.23}\"}")
-	resetComponents()
+	turbo.ResetComponents()
 
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?int64_value=64&bool_value=true&float64_value=0.123&uint64_value=123",
 		"{\"message\":\"{\\\"values\\\":{},\\\"yourName\\\":\\\"testtest\\\",\\\"int64Value\\\":64,\\\"boolValue\\\":true,\\\"float64Value\\\":0.123,\\\"uint64Value\\\":123}\"}")
@@ -86,7 +86,7 @@ func TestThriftService(t *testing.T) {
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", ContextValueInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"test1_intercepted:{\"message\":\"[thrift server]values.TransactionId=0, yourName=testtest,int64Value=1234567, boolValue=true, float64Value=1.230000, uint64Value=0, int32Value=0, int16Value=0\"}")
-	resetComponents()
+	turbo.ResetComponents()
 
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?transaction_id=111&int64_value=64&bool_value=true&float64_value=0.123&uint64_value=123&int32_value=32&int16_value=16",
 		"{\"message\":\"[thrift server]values.TransactionId=111, yourName=testtest,int64Value=64, boolValue=true, float64Value=0.123000, uint64Value=123, int32Value=32, int16Value=16\"}")
@@ -261,32 +261,32 @@ func runCommonTests(t *testing.T, httpPort, rpcType string) {
 	// TODO test errorHandler
 	turbo.WithErrorHandler(errorHandler)
 
-	resetComponents()
+	turbo.ResetComponents()
 	turbo.Intercept([]string{"GET"}, "/", TestInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?yourName=testname",
 		"intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
-	resetComponents()
+	turbo.ResetComponents()
 	turbo.Intercept([]string{"GET"}, "/", TestInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
-	resetComponents()
+	turbo.ResetComponents()
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", BeforeErrorInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"interceptor_error:")
 
-	resetComponents()
+	turbo.ResetComponents()
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", turbo.BaseInterceptor{}, BeforeErrorInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"interceptor_error:")
 
-	resetComponents()
+	turbo.ResetComponents()
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", TestInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
-	resetComponents()
+	turbo.ResetComponents()
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", TestInterceptor{}, Test1Interceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:test1_intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
@@ -295,18 +295,18 @@ func runCommonTests(t *testing.T, httpPort, rpcType string) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:test1_intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
-	resetComponents()
+	turbo.ResetComponents()
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", TestInterceptor{}, BeforeErrorInterceptor{}, Test1Interceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:interceptor_error:")
 
-	resetComponents()
+	turbo.ResetComponents()
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", TestInterceptor{})
 	turbo.SetPreprocessor("/hello/{your_name:[a-zA-Z0-9]+}", errorPreProcessor)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"intercepted:error_preprocessor:")
+		"intercepted:error_preprocessor:error in preprocessor\n")
 
-	resetComponents()
+	turbo.ResetComponents()
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", TestInterceptor{})
 	turbo.SetPreprocessor("/hello/{your_name:[a-zA-Z0-9]+}", preProcessor)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
@@ -323,7 +323,7 @@ func runCommonTests(t *testing.T, httpPort, rpcType string) {
 	turbo.SetHijacker("/hello/{your_name:[a-zA-Z0-9]+}", hijacker)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:hijacker")
-	resetComponents()
+	turbo.ResetComponents()
 }
 
 func testPost(t *testing.T, url, expected string) {
@@ -445,14 +445,6 @@ func convertThriftCommonValues(req *http.Request) reflect.Value {
 	result := &tgen.CommonValues{}
 	result.TransactionId = 222222
 	return reflect.ValueOf(result)
-}
-func resetComponents() {
-	turbo.ResetConvertor()
-	turbo.ResetHijacker()
-	turbo.ResetInterceptor()
-	turbo.ResetPostprocessor()
-	turbo.ResetPreprocessor()
-	turbo.ResetErrorHandler()
 }
 
 func overwriteServiceYaml(httpPort, servicePort, env string) {

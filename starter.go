@@ -68,6 +68,7 @@ func StartGrpcHTTPServer(pkgPath, configFileName string, clientCreator grpcClien
 func startGrpcHTTPServerInternal(clientCreator grpcClientCreator, s switcher) {
 	log.Info("Starting HTTP Server...")
 	switcherFunc = s
+	components = new(Components)
 	gClient = new(grpcClient)
 	err := gClient.init(clientCreator)
 	if err != nil {
@@ -101,6 +102,7 @@ func StartThriftHTTPServer(pkgPath, configFileName string, clientCreator thriftC
 func startThriftHTTPServerInternal(clientCreator thriftClientCreator, s switcher) {
 	log.Info("Starting HTTP Server...")
 	switcherFunc = s
+	components = new(Components)
 	tClient = new(thriftClient)
 	err := tClient.init(clientCreator)
 	if err != nil {

@@ -7,6 +7,18 @@ import (
 	"strings"
 )
 
+var components *Components
+
+type Components struct {
+	commonInterceptors []Interceptor
+	interceptorMap     *mux.Router
+	preprocessorMap    *mux.Router
+	postprocessorMap   *mux.Router
+	hijackerMap        *mux.Router
+	convertorMap       map[reflect.Type]convertor
+	errorHandler       errorHandlerFunc
+}
+
 // TODO setup component mappings via service.yaml
 // TODO reload mappings on config change
 // Interceptor -----------------
@@ -30,149 +42,208 @@ func (i BaseInterceptor) After(resp http.ResponseWriter, req *http.Request) (*ht
 	return req, nil
 }
 
-var commonInterceptors []Interceptor = []Interceptor{}
-
-// SetCommonInterceptor assigns interceptors to all URLs, if the URL has no other interceptors assigned
-func SetCommonInterceptor(interceptors ...Interceptor) {
-	commonInterceptors = interceptors
+func (c *Components) setCommonInterceptor(interceptors ...Interceptor) {
+	c.commonInterceptors = interceptors
 }
 
-// CommonInterceptors returns a list of interceptors which are default
-func CommonInterceptors() []Interceptor {
-	return commonInterceptors
+func (c *Components) commonInterceptor() []Interceptor {
+	if c.commonInterceptors != nil {
+		return c.commonInterceptors
+	}
+	return []Interceptor{}
 }
-
-var interceptorMap *mux.Router = mux.NewRouter()
 
 type interceptors []Interceptor
 
 // ServeHTTP is an empty func, only for implementing http.Handler
 func (i interceptors) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
-// Intercept registers a list of interceptors to an URL pattern at given HTTP methods
-func Intercept(methods []string, urlPattern string, list ...Interceptor) {
+func (c *Components) intercept(methods []string, urlPattern string, list ...Interceptor) {
+	if c.interceptorMap == nil {
+		c.interceptorMap = mux.NewRouter()
+	}
 	var route *mux.Route
 	if strings.HasSuffix(urlPattern, "/") {
-		route = interceptorMap.PathPrefix(urlPattern).Handler(interceptors(list))
+		route = c.interceptorMap.PathPrefix(urlPattern).Handler(interceptors(list))
 	} else {
-		route = interceptorMap.Handle(urlPattern, interceptors(list))
+		route = c.interceptorMap.Handle(urlPattern, interceptors(list))
 	}
 	if len(methods) > 0 {
 		route.Methods(methods...)
 	}
 }
 
-// Interceptors returns a list of interceptors for this request
-func Interceptors(req *http.Request) interceptors {
+func (c *Components) interceptors(req *http.Request) interceptors {
 	var m mux.RouteMatch
-	if interceptorMap.Match(req, &m) {
+	if c.interceptorMap != nil && c.interceptorMap.Match(req, &m) {
 		return m.Handler.(interceptors)
 	}
 	return []Interceptor{}
 }
 
-func ResetInterceptor() {
-	commonInterceptors = []Interceptor{}
-	interceptorMap = mux.NewRouter()
-}
-
 // PreProcessor-------------
-var preprocessorMap *mux.Router = mux.NewRouter()
-
 type preprocessor func(http.ResponseWriter, *http.Request) error
 
 // ServeHTTP is an empty func, only for implementing http.Handler
 func (p preprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
-// SetPreprocessor registers a preprocessor to an URL pattern
-func SetPreprocessor(urlPattern string, pre preprocessor) {
+func (c *Components) setPreprocessor(urlPattern string, pre preprocessor) {
 	// TODO support http methods
-	preprocessorMap.Handle(urlPattern, pre)
+	if c.preprocessorMap == nil {
+		c.preprocessorMap = mux.NewRouter()
+	}
+	c.preprocessorMap.Handle(urlPattern, pre)
 }
 
-// Preprocessor returns a preprocessor for this request
-func Preprocessor(req *http.Request) preprocessor {
+func (c *Components) preprocessor(req *http.Request) preprocessor {
 	var m mux.RouteMatch
-	if preprocessorMap.Match(req, &m) {
+	if c.preprocessorMap != nil && c.preprocessorMap.Match(req, &m) {
 		return m.Handler.(preprocessor)
 	}
 	return nil
 }
 
-func ResetPreprocessor() {
-	preprocessorMap = mux.NewRouter()
-}
-
 // PostProcessor--------------
-var postprocessorMap *mux.Router = mux.NewRouter()
-
 type postprocessor func(http.ResponseWriter, *http.Request, interface{}, error)
 
 // ServeHTTP is an empty func, only for implementing http.Handler
 func (p postprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
-// SetPostprocessor registers a postprocessor to an URL pattern
-func SetPostprocessor(urlPattern string, post postprocessor) {
+func (c *Components) setPostprocessor(urlPattern string, post postprocessor) {
 	// TODO support http methods
-	postprocessorMap.Handle(urlPattern, post)
+	if c.postprocessorMap == nil {
+		c.postprocessorMap = mux.NewRouter()
+	}
+	c.postprocessorMap.Handle(urlPattern, post)
 }
 
-// Postprocessor returns a postprocessor for this request
-func Postprocessor(req *http.Request) postprocessor {
+func (c *Components) postprocessor(req *http.Request) postprocessor {
 	var m mux.RouteMatch
-	if postprocessorMap.Match(req, &m) {
+	if c.postprocessorMap != nil && c.postprocessorMap.Match(req, &m) {
 		return m.Handler.(postprocessor)
 	}
 	return nil
 }
 
-func ResetPostprocessor() {
-	postprocessorMap = mux.NewRouter()
-}
-
 // Hijacker-----------------
-var hijackerMap *mux.Router = mux.NewRouter()
-
 type hijacker func(http.ResponseWriter, *http.Request)
 
 // ServeHTTP is an empty func, only for implementing http.Handler
 func (h hijacker) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
-// SetHijacker registers a hijacker to an URL pattern
-func SetHijacker(urlPattern string, h hijacker) {
+func (c *Components) setHijacker(urlPattern string, h hijacker) {
 	// TODO support http methods
-	hijackerMap.Handle(urlPattern, h)
+	if c.hijackerMap == nil {
+		c.hijackerMap = mux.NewRouter()
+	}
+	c.hijackerMap.Handle(urlPattern, h)
 }
 
-// Hijacker returns a hijacker for this request
-func Hijacker(req *http.Request) hijacker {
+func (c *Components) hijacker(req *http.Request) hijacker {
 	var m mux.RouteMatch
-	if hijackerMap.Match(req, &m) {
+	if c.hijackerMap != nil && c.hijackerMap.Match(req, &m) {
 		return m.Handler.(hijacker)
 	}
 	return nil
 }
 
-func ResetHijacker() {
-	hijackerMap = mux.NewRouter()
-}
-
 // Convertor--------------
 type convertor func(r *http.Request) reflect.Value
 
-var convertorMap map[reflect.Type]convertor = make(map[reflect.Type]convertor)
+func (c *Components) registerMessageFieldConvertor(field interface{}, convertorFunc convertor) {
+	if c.convertorMap == nil {
+		c.convertorMap = make(map[reflect.Type]convertor)
+	}
+	c.convertorMap[reflect.TypeOf(field).Elem()] = convertorFunc
+}
+
+func (c *Components) messageFieldConvertor(theType reflect.Type) convertor {
+	if c.convertorMap == nil {
+		return nil
+	}
+	return c.convertorMap[theType]
+}
+
+// ErrorHandler----------
+type errorHandlerFunc func(http.ResponseWriter, *http.Request, error)
+
+func defaultErrorHandler(resp http.ResponseWriter, req *http.Request, err error) {
+	http.Error(resp, err.Error(), http.StatusInternalServerError)
+}
+
+func (c *Components) errorHandlerFunc() errorHandlerFunc {
+	if c.errorHandler == nil {
+		return defaultErrorHandler
+	}
+	return c.errorHandler
+}
+
+// WithErrorHandler registers an errorHandler to handle errors
+func WithErrorHandler(e errorHandlerFunc) {
+	components.errorHandler = e
+}
+
+// SetCommonInterceptor assigns interceptors to all URLs, if the URL has no other interceptors assigned
+func SetCommonInterceptor(interceptors ...Interceptor) {
+	components.setCommonInterceptor(interceptors...)
+}
+
+// CommonInterceptors returns a list of interceptors which are default
+func CommonInterceptors() []Interceptor {
+	return components.commonInterceptor()
+}
+
+// Intercept registers a list of interceptors to an URL pattern at given HTTP methods
+func Intercept(methods []string, urlPattern string, list ...Interceptor) {
+	components.intercept(methods, urlPattern, list...)
+}
+
+// Interceptors returns a list of interceptors for this request
+func Interceptors(req *http.Request) interceptors {
+	return components.interceptors(req)
+}
+
+// SetPreprocessor registers a preprocessor to an URL pattern
+func SetPreprocessor(urlPattern string, pre preprocessor) {
+	components.setPreprocessor(urlPattern, pre)
+}
+
+// Preprocessor returns a preprocessor for this request
+func Preprocessor(req *http.Request) preprocessor {
+	return components.preprocessor(req)
+}
+
+// SetPostprocessor registers a postprocessor to an URL pattern
+func SetPostprocessor(urlPattern string, post postprocessor) {
+	components.setPostprocessor(urlPattern, post)
+}
+
+// Postprocessor returns a postprocessor for this request
+func Postprocessor(req *http.Request) postprocessor {
+	return components.postprocessor(req)
+}
+
+// SetHijacker registers a hijacker to an URL pattern
+func SetHijacker(urlPattern string, h hijacker) {
+	components.setHijacker(urlPattern, h)
+}
+
+// Hijacker returns a hijacker for this request
+func Hijacker(req *http.Request) hijacker {
+	return components.hijacker(req)
+}
 
 // RegisterMessageFieldConvertor registers a convertor on a type
 // usage: RegisterMessageFieldConvertor(new(SomeInterface), convertorFunc)
 func RegisterMessageFieldConvertor(field interface{}, convertorFunc convertor) {
-	convertorMap[reflect.TypeOf(field).Elem()] = convertorFunc
+	components.registerMessageFieldConvertor(field, convertorFunc)
 }
 
 // MessageFieldConvertor returns the convertor for this type
 func MessageFieldConvertor(theType reflect.Type) convertor {
-	return convertorMap[theType]
+	return components.messageFieldConvertor(theType)
 }
 
-func ResetConvertor() {
-	convertorMap = make(map[reflect.Type]convertor)
+func ResetComponents() {
+	components = &Components{}
 }

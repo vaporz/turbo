@@ -14,10 +14,6 @@ type switcher func(methodName string, resp http.ResponseWriter, req *http.Reques
 
 var switcherFunc switcher
 
-type errorHandlerFunc func(http.ResponseWriter, *http.Request, error)
-
-var errorHandler errorHandlerFunc = defaultErrorHandler
-
 func router() *mux.Router {
 	r := mux.NewRouter()
 	for _, v := range Config.urlServiceMaps {
@@ -66,15 +62,17 @@ func doRequest(methodName string, resp http.ResponseWriter, req *http.Request) {
 		hijack(resp, req)
 		return
 	}
-	if err := doPreprocessor(resp, req); err != nil {
+	err := doPreprocessor(resp, req)
+	if err != nil {
+		components.errorHandlerFunc()(resp, req, err)
 		return
 	}
 	serviceResp, err := switcherFunc(methodName, resp, req)
 	if err != nil {
-		errorHandler(resp, req, err)
-	} else {
-		doPostprocessor(resp, req, serviceResp, err)
+		components.errorHandlerFunc()(resp, req, err)
+		return
 	}
+	doPostprocessor(resp, req, serviceResp, err)
 }
 
 func doPreprocessor(resp http.ResponseWriter, req *http.Request) error {
@@ -85,19 +83,6 @@ func doPreprocessor(resp http.ResponseWriter, req *http.Request) error {
 		}
 	}
 	return nil
-}
-
-func defaultErrorHandler(resp http.ResponseWriter, req *http.Request, err error) {
-	http.Error(resp, err.Error(), http.StatusInternalServerError)
-}
-
-// WithErrorHandler registers an errorHandler to handle errors
-func WithErrorHandler(e errorHandlerFunc) {
-	errorHandler = e
-}
-
-func ResetErrorHandler() {
-	errorHandler = defaultErrorHandler
 }
 
 func doPostprocessor(resp http.ResponseWriter, req *http.Request, serviceResponse interface{}, err error) {
