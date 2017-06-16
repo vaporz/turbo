@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-var components *Components
-
 type Components struct {
 	commonInterceptors []Interceptor
 	interceptorMap     *mux.Router
@@ -180,70 +178,70 @@ func (c *Components) errorHandlerFunc() errorHandlerFunc {
 
 // WithErrorHandler registers an errorHandler to handle errors
 func WithErrorHandler(e errorHandlerFunc) {
-	components.errorHandler = e
+	client.components.errorHandler = e
 }
 
 // SetCommonInterceptor assigns interceptors to all URLs, if the URL has no other interceptors assigned
 func SetCommonInterceptor(interceptors ...Interceptor) {
-	components.setCommonInterceptor(interceptors...)
+	client.components.setCommonInterceptor(interceptors...)
 }
 
 // CommonInterceptors returns a list of interceptors which are default
 func CommonInterceptors() []Interceptor {
-	return components.commonInterceptor()
+	return client.components.commonInterceptor()
 }
 
 // Intercept registers a list of interceptors to an URL pattern at given HTTP methods
 func Intercept(methods []string, urlPattern string, list ...Interceptor) {
-	components.intercept(methods, urlPattern, list...)
+	client.components.intercept(methods, urlPattern, list...)
 }
 
 // Interceptors returns a list of interceptors for this request
 func Interceptors(req *http.Request) interceptors {
-	return components.interceptors(req)
+	return client.components.interceptors(req)
 }
 
 // SetPreprocessor registers a preprocessor to an URL pattern
 func SetPreprocessor(urlPattern string, pre preprocessor) {
-	components.setPreprocessor(urlPattern, pre)
+	client.components.setPreprocessor(urlPattern, pre)
 }
 
 // Preprocessor returns a preprocessor for this request
 func Preprocessor(req *http.Request) preprocessor {
-	return components.preprocessor(req)
+	return client.components.preprocessor(req)
 }
 
 // SetPostprocessor registers a postprocessor to an URL pattern
 func SetPostprocessor(urlPattern string, post postprocessor) {
-	components.setPostprocessor(urlPattern, post)
+	client.components.setPostprocessor(urlPattern, post)
 }
 
 // Postprocessor returns a postprocessor for this request
 func Postprocessor(req *http.Request) postprocessor {
-	return components.postprocessor(req)
+	return client.components.postprocessor(req)
 }
 
 // SetHijacker registers a hijacker to an URL pattern
 func SetHijacker(urlPattern string, h hijacker) {
-	components.setHijacker(urlPattern, h)
+	client.components.setHijacker(urlPattern, h)
 }
 
 // Hijacker returns a hijacker for this request
 func Hijacker(req *http.Request) hijacker {
-	return components.hijacker(req)
+	return client.components.hijacker(req)
 }
 
 // RegisterMessageFieldConvertor registers a convertor on a type
 // usage: RegisterMessageFieldConvertor(new(SomeInterface), convertorFunc)
 func RegisterMessageFieldConvertor(field interface{}, convertorFunc convertor) {
-	components.registerMessageFieldConvertor(field, convertorFunc)
+	client.components.registerMessageFieldConvertor(field, convertorFunc)
 }
 
 // MessageFieldConvertor returns the convertor for this type
 func MessageFieldConvertor(theType reflect.Type) convertor {
-	return components.messageFieldConvertor(theType)
+	return client.components.messageFieldConvertor(theType)
 }
 
 func ResetComponents() {
-	components = &Components{}
+	client.components = new(Components)
 }

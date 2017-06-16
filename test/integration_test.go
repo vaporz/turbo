@@ -22,6 +22,7 @@ import (
 	"testing"
 	"text/template"
 	"time"
+	"github.com/spf13/viper"
 )
 
 func TestMain(m *testing.M) {
@@ -47,6 +48,7 @@ func TestCreateThriftService(t *testing.T) {
 }
 
 func TestGrpcService(t *testing.T) {
+	viper.Reset()
 	httpPort := "8081"
 	overwriteServiceYaml("8081", "50051", "development")
 	turbo.ResetChans()
@@ -72,6 +74,7 @@ func TestGrpcService(t *testing.T) {
 }
 
 func TestThriftService(t *testing.T) {
+	viper.Reset()
 	httpPort := "8082"
 	overwriteServiceYaml(httpPort, "50052", "production")
 	turbo.ResetChans()
@@ -98,6 +101,7 @@ func TestThriftService(t *testing.T) {
 }
 
 func TestHTTPGrpcService(t *testing.T) {
+	viper.Reset()
 	httpPort := "8083"
 	turbo.ResetChans()
 	overwriteServiceYaml(httpPort, "50053", "development")
@@ -115,6 +119,7 @@ func TestHTTPGrpcService(t *testing.T) {
 }
 
 func TestHTTPThriftService(t *testing.T) {
+	viper.Reset()
 	httpPort := "8084"
 	turbo.ResetChans()
 	overwriteServiceYaml(httpPort, "50054", "development")
@@ -250,6 +255,8 @@ func runCommonTests(t *testing.T, httpPort, rpcType string) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/vaporz?yourName=turbo&yourname=xxx",
 		"{\"message\":\"["+rpcType+" server]Hello, vaporz\"}")
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
+		"{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
+	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?your_name=aaa",
 		"{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 	testPost(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"404 page not found\n")

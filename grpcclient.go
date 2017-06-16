@@ -4,8 +4,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-var gClient *grpcClient
-
 type grpcClient struct {
 	grpcService interface{}
 	conn        *grpc.ClientConn
@@ -46,8 +44,8 @@ func (g *grpcClient) close() error {
 // GrpcService returns a grpc client instance,
 // example: client := turbo.GrpcService().(proto.YourServiceClient)
 func GrpcService() interface{} {
-	if gClient.grpcService == nil {
+	if client.gClient.grpcService == nil {
 		log.Fatalln("grpc connection not initiated!")
 	}
-	return gClient.grpcService
+	return client.gClient.grpcService
 }

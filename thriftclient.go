@@ -4,8 +4,6 @@ import (
 	"git.apache.org/thrift.git/lib/go/thrift"
 )
 
-var tClient *thriftClient
-
 type thriftClient struct {
 	thriftService interface{}
 	transport     thrift.TTransport
@@ -54,8 +52,8 @@ func (t *thriftClient) close() error {
 // ThriftService returns a Thrift client instance,
 // example: client := turbo.ThriftService().(proto.YourServiceClient)
 func ThriftService() interface{} {
-	if tClient.thriftService == nil {
+	if client.tClient.thriftService == nil {
 		log.Fatalln("thrift connection not initiated!")
 	}
-	return tClient.thriftService
+	return client.tClient.thriftService
 }

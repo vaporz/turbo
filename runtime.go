@@ -12,8 +12,6 @@ import (
 
 type switcher func(methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
 
-var switcherFunc switcher
-
 func router() *mux.Router {
 	r := mux.NewRouter()
 	for _, v := range Config.urlServiceMaps {
@@ -64,12 +62,12 @@ func doRequest(methodName string, resp http.ResponseWriter, req *http.Request) {
 	}
 	err := doPreprocessor(resp, req)
 	if err != nil {
-		components.errorHandlerFunc()(resp, req, err)
+		client.components.errorHandlerFunc()(resp, req, err)
 		return
 	}
-	serviceResp, err := switcherFunc(methodName, resp, req)
+	serviceResp, err := client.switcherFunc(methodName, resp, req)
 	if err != nil {
-		components.errorHandlerFunc()(resp, req, err)
+		client.components.errorHandlerFunc()(resp, req, err)
 		return
 	}
 	doPostprocessor(resp, req, serviceResp, err)

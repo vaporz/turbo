@@ -14,6 +14,15 @@ import (
 	"time"
 )
 
+var client *Client
+
+type Client struct {
+	components   *Components
+	gClient      *grpcClient
+	tClient      *thriftClient
+	switcherFunc switcher
+}
+
 var serviceStarted = make(chan bool, 1)
 
 var httpServerQuit = make(chan bool)
@@ -67,14 +76,15 @@ func StartGrpcHTTPServer(pkgPath, configFileName string, clientCreator grpcClien
 
 func startGrpcHTTPServerInternal(clientCreator grpcClientCreator, s switcher) {
 	log.Info("Starting HTTP Server...")
-	switcherFunc = s
-	components = new(Components)
-	gClient = new(grpcClient)
-	err := gClient.init(clientCreator)
+	client = &Client{
+		components:   new(Components),
+		gClient:      new(grpcClient),
+		switcherFunc: s}
+	err := client.gClient.init(clientCreator)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	defer gClient.close()
+	defer client.gClient.close()
 	startHTTPServer(Config.HTTPPortStr(), router())
 }
 
@@ -101,14 +111,15 @@ func StartThriftHTTPServer(pkgPath, configFileName string, clientCreator thriftC
 
 func startThriftHTTPServerInternal(clientCreator thriftClientCreator, s switcher) {
 	log.Info("Starting HTTP Server...")
-	switcherFunc = s
-	components = new(Components)
-	tClient = new(thriftClient)
-	err := tClient.init(clientCreator)
+	client = &Client{
+		components:   new(Components),
+		tClient:      new(thriftClient),
+		switcherFunc: s}
+	err := client.tClient.init(clientCreator)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	defer tClient.close()
+	defer client.tClient.close()
 	startHTTPServer(Config.HTTPPortStr(), router())
 }
 
