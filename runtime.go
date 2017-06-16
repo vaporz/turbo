@@ -33,39 +33,12 @@ func handler(methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		ParseRequestForm(req)
 		interceptors := getInterceptors(req)
-		// TODO refactor this, 'skipSwitch' is wired
-		skipSwitch := false
 		req, err := doBefore(&interceptors, resp, req)
-		if err != nil {
-			log.Println(err.Error())
-			skipSwitch = true
-		}
-		if !skipSwitch {
-			skipSwitch = doHijackerPreprocessor(resp, req)
-		}
-		if !skipSwitch {
-			serviceResp, err := switcherFunc(methodName, resp, req)
-			if err != nil {
-				errorHandler(resp, req, err)
-			} else {
-				doPostprocessor(resp, req, serviceResp, err)
-			}
+		if err == nil {
+			doRequest(methodName, resp, req)
 		}
 		doAfter(interceptors, resp, req)
 	}
-}
-
-func defaultErrorHandler(resp http.ResponseWriter, req *http.Request, err error) {
-	http.Error(resp, err.Error(), http.StatusInternalServerError)
-}
-
-// WithErrorHandler registers an errorHandler to handle errors
-func WithErrorHandler(e errorHandlerFunc) {
-	errorHandler = e
-}
-
-func ResetErrorHandler() {
-	errorHandler = defaultErrorHandler
 }
 
 func getInterceptors(req *http.Request) []Interceptor {
@@ -88,18 +61,43 @@ func doBefore(interceptors *[]Interceptor, resp http.ResponseWriter, req *http.R
 	return req, nil
 }
 
-func doHijackerPreprocessor(resp http.ResponseWriter, req *http.Request) bool {
+func doRequest(methodName string, resp http.ResponseWriter, req *http.Request) {
 	if hijack := Hijacker(req); hijack != nil {
 		hijack(resp, req)
-		return true
+		return
 	}
+	if err := doPreprocessor(resp, req); err != nil {
+		return
+	}
+	serviceResp, err := switcherFunc(methodName, resp, req)
+	if err != nil {
+		errorHandler(resp, req, err)
+	} else {
+		doPostprocessor(resp, req, serviceResp, err)
+	}
+}
+
+func doPreprocessor(resp http.ResponseWriter, req *http.Request) error {
 	if pre := Preprocessor(req); pre != nil {
 		if err := pre(resp, req); err != nil {
 			log.Println(err.Error())
-			return true
+			return err
 		}
 	}
-	return false
+	return nil
+}
+
+func defaultErrorHandler(resp http.ResponseWriter, req *http.Request, err error) {
+	http.Error(resp, err.Error(), http.StatusInternalServerError)
+}
+
+// WithErrorHandler registers an errorHandler to handle errors
+func WithErrorHandler(e errorHandlerFunc) {
+	errorHandler = e
+}
+
+func ResetErrorHandler() {
+	errorHandler = defaultErrorHandler
 }
 
 func doPostprocessor(resp http.ResponseWriter, req *http.Request, serviceResponse interface{}, err error) {
