@@ -9,3 +9,4 @@ config:
 
 urlmapping:
   - GET /hello/{your_name:[a-zA-Z0-9]+} SayHello
+  - GET /hello SayHello

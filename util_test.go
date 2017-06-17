@@ -15,6 +15,7 @@ func TestMain(m *testing.M) {
 	initConfigFileName("service_test")
 	initPkgPath("github.com/vaporz/turbo/test")
 	loadServiceConfig()
+	initLogger()
 	os.Exit(m.Run())
 }
 
@@ -47,10 +48,22 @@ func (t *testPrimitives) String() string { return "" }
 func (t *testPrimitives) ProtoMessage()  {}
 
 func TestPrimitives(t *testing.T) {
-	ts := &testPrimitives{Int64Value: 111, Float32Value: 1, BoolValue: true}
+	ts := &testPrimitives{Int64Value: 111, Int32Value: 0, Float32Value: 1, BoolValue: true}
 	buf, _ := JSON(ts)
 	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Float64Value\":0,"+
 		"\"Int32Value\":0,\"Int64Value\":111,\"Uint32Value\":0,\"Uint64Value\":0}", string(buf))
+
+	ts = &testPrimitives{Int64Value: 0, Int32Value: 0, Float32Value: 1, BoolValue: true}
+	buf, _ = JSON(ts)
+	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Float64Value\":0,"+
+		"\"Int32Value\":0,\"Int64Value\":0,\"Uint32Value\":0,\"Uint64Value\":0}", string(buf))
+
+	Config.SetFilterProtoJsonInt64AsNumber(false)
+	ts = &testPrimitives{Int64Value: 0, Int32Value: 0, Float32Value: 1, BoolValue: true}
+	buf, _ = JSON(ts)
+	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Float64Value\":0,"+
+		"\"Int32Value\":0,\"Int64Value\":\"0\",\"Uint32Value\":0,\"Uint64Value\":0}", string(buf))
+	Config.SetFilterProtoJsonInt64AsNumber(true)
 }
 
 func TestPrimitives_Int64_As_Number_False(t *testing.T) {
@@ -254,7 +267,7 @@ func TestFilterNestedStruct_Empty_Field(t *testing.T) {
 
 type testTag struct {
 	Value          int `protobuf:"varint,1,opt,name=test_name_proto,json=json_proto" json:"id,omitempty"`
-	Value1         int `protobuf:"varint,1,opt" json:"test_name_json,omitempty"`
+	Value1         int `protobuf:"varint,1,opt" json:"-"`
 	CamelCaseValue int `protobuf:"varint,1,opt,name=CamelCaseValue" json:"camel_case_value,omitempty"`
 }
 
@@ -274,9 +287,29 @@ func TestLookupJSONNameInProtoTag(t *testing.T) {
 
 func TestLookupNameInJsonTag(t *testing.T) {
 	var v testTag
-	sf := reflect.TypeOf(v).Field(1)
+	sf := reflect.TypeOf(v).Field(2)
 	name, _ := lookupNameInJsonTag(sf)
-	assert.Equal(t, "test_name_json", name)
+	assert.Equal(t, "camel_case_value", name)
+}
+
+func TestTag(t *testing.T) {
+	v := &testTag{Value: 1}
+	json, _ := sjson.NewJson([]byte("{\"json_proto\": 1}"))
+	filterStruct(json, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem())
+	jsonBytes, _ := json.MarshalJSON()
+	assert.Equal(t, "{\"CamelCaseValue\":0,\"Value1\":0,\"json_proto\":1}", string(jsonBytes))
+
+	v = &testTag{Value: 1}
+	json, _ = sjson.NewJson([]byte("{\"id\": 1}"))
+	filterStruct(json, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem())
+	jsonBytes, _ = json.MarshalJSON()
+	assert.Equal(t, "{\"CamelCaseValue\":0,\"Value1\":0,\"id\":1}", string(jsonBytes))
+
+	v = &testTag{Value1: 1}
+	json, _ = sjson.NewJson([]byte("{}"))
+	filterStruct(json, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem())
+	jsonBytes, _ = json.MarshalJSON()
+	assert.Equal(t, "{\"CamelCaseValue\":0,\"Value1\":1,\"test_name_proto\":0}", string(jsonBytes))
 }
 
 type someArgs struct {

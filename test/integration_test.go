@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/vaporz/turbo"
 	"github.com/vaporz/turbo/test/testservice/gen"
@@ -22,7 +23,6 @@ import (
 	"testing"
 	"text/template"
 	"time"
-	"github.com/spf13/viper"
 )
 
 func TestMain(m *testing.M) {
@@ -59,6 +59,14 @@ func TestGrpcService(t *testing.T) {
 
 	runCommonTests(t, httpPort, "grpc")
 
+	testGet(t, "http://localhost:"+httpPort+"/hello/error",
+		"rpc error: code = Unknown desc = grpc error\n")
+
+	turbo.WithErrorHandler(errorHandler)
+	testGet(t, "http://localhost:"+httpPort+"/hello/error",
+		"from errorHandler:rpc error: code = Unknown desc = grpc error")
+	turbo.ResetComponents()
+
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", ContextValueInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"test1_intercepted:{\"message\":\"{\\\"values\\\":{},\\\"yourName\\\":\\\"testtest\\\",\\\"int64Value\\\":1234567,\\\"boolValue\\\":true,\\\"float64Value\\\":1.23}\"}")
@@ -85,6 +93,14 @@ func TestThriftService(t *testing.T) {
 	turbo.SetOutput(os.Stdout)
 
 	runCommonTests(t, httpPort, "thrift")
+
+	testGet(t, "http://localhost:"+httpPort+"/hello/error",
+		"Internal error processing sayHello: thrift error\n")
+
+	turbo.WithErrorHandler(errorHandler)
+	testGet(t, "http://localhost:"+httpPort+"/hello/error",
+		"from errorHandler:Internal error processing sayHello: thrift error")
+	turbo.ResetComponents()
 
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", ContextValueInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
@@ -252,6 +268,10 @@ func generate(t *testing.T, rpc string) {
 }
 
 func runCommonTests(t *testing.T, httpPort, rpcType string) {
+	testGet(t, "http://localhost:"+httpPort+"/hello",
+		"{\"message\":\"["+rpcType+" server]Hello, \"}")
+	testGet(t, "http://localhost:"+httpPort+"/hello?your_name=turbo&yourname=xxx",
+		"{\"message\":\"["+rpcType+" server]Hello, turbo\"}")
 	testGet(t, "http://localhost:"+httpPort+"/hello/vaporz?yourName=turbo&yourname=xxx",
 		"{\"message\":\"["+rpcType+" server]Hello, vaporz\"}")
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
@@ -264,9 +284,6 @@ func runCommonTests(t *testing.T, httpPort, rpcType string) {
 	turbo.SetCommonInterceptor(Test1Interceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"test1_intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
-
-	// TODO test errorHandler
-	turbo.WithErrorHandler(errorHandler)
 
 	turbo.ResetComponents()
 	turbo.Intercept([]string{"GET"}, "/", TestInterceptor{})
@@ -485,6 +502,7 @@ var serviceYamlFile string = `config:
 
 urlmapping:
   - GET /hello/{your_name:[a-zA-Z0-9]+} SayHello
+  - GET /hello SayHello
 `
 
 func writeWithTemplate(wr io.Writer, text string, data interface{}) {

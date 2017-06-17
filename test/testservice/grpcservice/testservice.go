@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/vaporz/turbo/test/testservice/grpcservice/impl"
 	"github.com/vaporz/turbo"
+	"github.com/vaporz/turbo/test/testservice/grpcservice/impl"
 )
 
 func main() {

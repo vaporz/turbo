@@ -1,6 +1,7 @@
 package turbo
 
 import (
+	"errors"
 	"git.apache.org/thrift.git/lib/go/thrift"
 )
 
@@ -16,7 +17,7 @@ func (t *thriftClient) init(clientCreator func(trans thrift.TTransport, f thrift
 	}
 	addr := Config.ThriftServiceAddress()
 	if len(addr) == 0 {
-		log.Panic("Error: missing [thrift_service_address] in config")
+		return errors.New("Error: missing [thrift_service_address] in config")
 	}
 	log.Debugf("connecting thrift addr: %s", addr)
 	err := t.connect(addr)
@@ -52,8 +53,8 @@ func (t *thriftClient) close() error {
 // ThriftService returns a Thrift client instance,
 // example: client := turbo.ThriftService().(proto.YourServiceClient)
 func ThriftService() interface{} {
-	if client.tClient.thriftService == nil {
-		log.Fatalln("thrift connection not initiated!")
+	if client == nil || client.tClient == nil || client.tClient.thriftService == nil {
+		log.Panic("thrift connection not initiated!")
 	}
 	return client.tClient.thriftService
 }

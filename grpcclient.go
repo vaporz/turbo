@@ -1,6 +1,7 @@
 package turbo
 
 import (
+	"errors"
 	"google.golang.org/grpc"
 )
 
@@ -17,7 +18,7 @@ func (g *grpcClient) init(clientCreator func(conn *grpc.ClientConn) interface{})
 	}
 	addr := Config.GrpcServiceAddress()
 	if len(addr) == 0 {
-		log.Panic("Error: missing [grpc_service_address] in config")
+		return errors.New("Error: missing [grpc_service_address] in config")
 	}
 	log.Info("[grpc]connecting addr:", addr)
 	err := g.dial(addr)
@@ -28,9 +29,7 @@ func (g *grpcClient) init(clientCreator func(conn *grpc.ClientConn) interface{})
 }
 
 func (g *grpcClient) dial(address string) (err error) {
-	if g.conn, err = grpc.Dial(address, grpc.WithInsecure()); err != nil {
-		log.Fatalln("connect error:" + err.Error())
-	}
+	g.conn, err = grpc.Dial(address, grpc.WithInsecure())
 	return err
 }
 
@@ -44,8 +43,8 @@ func (g *grpcClient) close() error {
 // GrpcService returns a grpc client instance,
 // example: client := turbo.GrpcService().(proto.YourServiceClient)
 func GrpcService() interface{} {
-	if client.gClient.grpcService == nil {
-		log.Fatalln("grpc connection not initiated!")
+	if client == nil || client.gClient == nil || client.gClient.grpcService == nil {
+		log.Panic("grpc connection not initiated!")
 	}
 	return client.gClient.grpcService
 }
