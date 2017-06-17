@@ -15,7 +15,10 @@ func TestMain(m *testing.M) {
 	initConfigFileName("service_test")
 	initPkgPath("github.com/vaporz/turbo/test")
 	loadServiceConfig()
+	p := Config.configs[turboLogPath]
+	Config.configs[turboLogPath] = ""
 	initLogger()
+	Config.configs[turboLogPath] = p
 	os.Exit(m.Run())
 }
 

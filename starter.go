@@ -82,7 +82,7 @@ func startGrpcHTTPServerInternal(clientCreator grpcClientCreator, s switcher) {
 		switcherFunc: s}
 	err := client.gClient.init(clientCreator)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Panic(err.Error())
 	}
 	defer client.gClient.close()
 	startHTTPServer(Config.HTTPPortStr(), router())
@@ -117,7 +117,7 @@ func startThriftHTTPServerInternal(clientCreator thriftClientCreator, s switcher
 		switcherFunc: s}
 	err := client.tClient.init(clientCreator)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Panic(err.Error())
 	}
 	defer client.tClient.close()
 	startHTTPServer(Config.HTTPPortStr(), router())
@@ -229,7 +229,7 @@ func startThriftServiceInternal(port int, registerTProcessor func() thrift.TProc
 	portStr := fmt.Sprintf(":%d", port)
 	transport, err := thrift.NewTServerSocket(portStr)
 	if err != nil {
-		log.Fatal("socket error")
+		log.Panic("socket error")
 	}
 	server := thrift.NewTSimpleServer4(registerTProcessor(), transport,
 		thrift.NewTTransportFactory(), thrift.NewTBinaryProtocolFactoryDefault())

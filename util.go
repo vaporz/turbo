@@ -196,11 +196,7 @@ func int64FieldFilter(structJson *sjson.Json, field reflect.StructField, v refle
 		structJson.Set(jsonFieldName, v.Int())
 	} else {
 		if v.Int() == 0 && Config.FilterProtoJsonEmitZeroValues() {
-			if Config.FilterProtoJsonInt64AsNumber() {
-				structJson.Set(jsonFieldName, 0)
-			} else {
-				structJson.Set(jsonFieldName, "0")
-			}
+			structJson.Set(jsonFieldName, "0")
 		} else if v.Int() != 0 {
 			if Config.FilterProtoJsonInt64AsNumber() {
 				structJson.Set(jsonFieldName, v.Int())

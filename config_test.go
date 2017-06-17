@@ -63,3 +63,45 @@ func TestConfig(t *testing.T) {
 	loadFieldMapping()
 	assert.Equal(t, "CommonValues values", Config.fieldMappings["SayHelloRequest"][0])
 }
+
+func TestGrpcServiceAddressPanic(t *testing.T) {
+	addr := Config.GrpcServiceAddress()
+	defer func() {
+		Config.SetGrpcServiceAddress(addr)
+		if err := recover(); err != nil {
+			assert.Equal(t, "invalid grpc_service_address", err)
+		} else {
+			t.Errorf("The code did not panic")
+		}
+	}()
+	Config.SetGrpcServiceAddress("")
+	Config.GrpcServicePortStr()
+}
+
+func TestThriftServiceAddressPanic(t *testing.T) {
+	addr := Config.ThriftServiceAddress()
+	defer func() {
+		Config.SetThriftServiceAddress(addr)
+		if err := recover(); err != nil {
+			assert.Equal(t, "invalid thrift_service_address", err)
+		} else {
+			t.Errorf("The code did not panic")
+		}
+	}()
+	Config.SetThriftServiceAddress("")
+	Config.ThriftServicePortStr()
+}
+
+func TestHttpPortPanic(t *testing.T) {
+	p := Config.HTTPPort()
+	defer func() {
+		Config.SetHTTPPort(p)
+		if err := recover(); err != nil {
+			assert.Equal(t, "[http_port] is required!", err)
+		} else {
+			t.Errorf("The code did not panic")
+		}
+	}()
+	Config.configs[httpPort] = ""
+	Config.HTTPPort()
+}

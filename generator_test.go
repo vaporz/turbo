@@ -2,10 +2,10 @@ package turbo
 
 import (
 	"github.com/stretchr/testify/assert"
-	"testing"
 	"io"
-	"strings"
 	"os"
+	"strings"
+	"testing"
 )
 
 func TestUnknownType(t *testing.T) {

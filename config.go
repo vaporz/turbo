@@ -143,10 +143,10 @@ func (c *config) SetThriftServiceAddress(address string) {
 
 func (c *config) HTTPPort() int64 {
 	p, ok := c.configs[httpPort]
-	if !ok {
-		panic("Error: [http_port] is required!")
+	if !ok || len(strings.TrimSpace(p)) == 0 {
+		panic("[http_port] is required!")
 	}
-	i, err := strconv.ParseInt(p, 10, 32)
+	i, err := strconv.ParseInt(p, 10, 64)
 	if err != nil {
 		log.Error(err.Error())
 	}
@@ -270,7 +270,7 @@ func loadConfigs() {
 }
 
 var matchKey = regexp.MustCompile("^(.*)\\[")
-var matchSlice = regexp.MustCompile("\\[(.*)\\]")
+var matchSlice = regexp.MustCompile("\\[(.+)\\]")
 
 func loadFieldMapping() {
 	v := viper.New()

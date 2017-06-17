@@ -1,8 +1,8 @@
 package turbo
 
 import (
-	logger "github.com/sirupsen/logrus"
 	"git.apache.org/thrift.git/lib/go/thrift"
+	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

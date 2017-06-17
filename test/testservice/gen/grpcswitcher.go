@@ -1,20 +1,20 @@
 package gen
 
 import (
-	g "github.com/vaporz/turbo/test/testservice/gen/proto"
-	"github.com/vaporz/turbo"
-	"reflect"
-	"net/http"
 	"errors"
+	"github.com/vaporz/turbo"
+	g "github.com/vaporz/turbo/test/testservice/gen/proto"
+	"net/http"
+	"reflect"
 )
 
 /*
 this is a generated file, DO NOT EDIT!
- */
+*/
 var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
-	switch methodName { 
+	switch methodName {
 	case "SayHello":
-		request := &g.SayHelloRequest{ Values: &g.CommonValues{}, }
+		request := &g.SayHelloRequest{Values: &g.CommonValues{}}
 		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
 		if err != nil {
 			return nil, err

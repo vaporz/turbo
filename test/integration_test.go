@@ -259,7 +259,7 @@ func generate(t *testing.T, rpc string) {
 	}
 
 	cmd.RootCmd.SetArgs([]string{"generate", "github.com/vaporz/turbo/test/testcreateservice", "-r", rpc,
-		"-I", turbo.TurboRootPath + "/test/testcreateservice"})
+								 "-I", turbo.TurboRootPath + "/test/testcreateservice"})
 	err = cmd.Execute()
 	assert.Nil(t, err)
 
@@ -352,6 +352,9 @@ func runCommonTests(t *testing.T, httpPort, rpcType string) {
 
 func testPost(t *testing.T, url, expected string) {
 	resp, err := http.Post(url, "", nil)
+	if err != nil {
+		t.Fail()
+	}
 	defer resp.Body.Close()
 	assert.Nil(t, err)
 	assert.Equal(t, expected, readResp(resp))
@@ -365,6 +368,9 @@ func readResp(resp *http.Response) string {
 
 func testGet(t *testing.T, url, expected string) {
 	resp, err := http.Get(url)
+	if err != nil {
+		t.Fail()
+	}
 	defer resp.Body.Close()
 	assert.Nil(t, err)
 	assert.Equal(t, expected, readResp(resp))
