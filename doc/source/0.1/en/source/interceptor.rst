@@ -16,7 +16,7 @@ The more precise it is, the higher priority it has.
 
 If interceptor A is assigned to URL '/abc' on HTTP method "GET", and interceptor B is assigned to all URLs, then A is executed when "GET /abc", and B is executed when "POST /abc".
 
-Now, let's create an interceptor for URL "/eat_apple/{num:[0-9]+}" to log some info before and after a request.
+Now, let's create an interceptor for URL "/hello" to log some info before and after a request.
 
 Edit "yourservice/interceptor/log.go":
 

@@ -28,6 +28,7 @@ func handler(methodName string) func(http.ResponseWriter, *http.Request) {
 		ParseRequestForm(req)
 		interceptors := getInterceptors(req)
 		req, err := doBefore(&interceptors, resp, req)
+		// TODO handle this err with errorHandler?
 		if err == nil {
 			doRequest(methodName, resp, req)
 		}

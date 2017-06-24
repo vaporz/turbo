@@ -6,7 +6,7 @@ Create a service on the fly
 0, Before the start
 -------------------
 
-Obviously, you have to install :ref:`Golang <https://golang.org>` and :ref:`Protocol buffers <https://developers.google.com/protocol-buffers/>` first.
+Obviously, you have to install :ref:`Golang <https://golang.org>` and :ref:`Protocol buffers(v3) <https://developers.google.com/protocol-buffers/>` first.
 
 Download turbo repo with:
 
