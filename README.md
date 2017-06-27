@@ -55,10 +55,8 @@ go get github.com/bitly/go-simplejson
 
 ### 1, Install Turbo command line tools
 ```sh
-cd github.com/vaporz/turbo/protoc-gen-buildfields
-go install
-cd github.com/vaporz/turbo/turbo
-go install
+cd github.com/vaporz/turbo
+make
 ```
 
 ### 2, Create your service
