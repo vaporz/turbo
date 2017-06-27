@@ -3,3 +3,4 @@ vendor/
 log/
 .glide.yaml.swp
 test/testcreateservice/
+doc/build/
