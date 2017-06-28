@@ -1,7 +1,6 @@
 package turbo
 
 import (
-	"errors"
 	"google.golang.org/grpc"
 )
 
