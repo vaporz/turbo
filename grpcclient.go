@@ -17,9 +17,6 @@ func (g *grpcClient) init(clientCreator func(conn *grpc.ClientConn) interface{})
 		return nil
 	}
 	addr := Config.GrpcServiceAddress()
-	if len(addr) == 0 {
-		return errors.New("Error: missing [grpc_service_address] in config")
-	}
 	log.Info("[grpc]connecting addr:", addr)
 	err := g.dial(addr)
 	if err == nil {
