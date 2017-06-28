@@ -6,5 +6,5 @@ import (
 )
 
 func main() {
-	turbo.StartThriftService(50052, "github.com/vaporz/turbo/test/testservice", "service", impl.TProcessor)
+	turbo.StartThriftService("github.com/vaporz/turbo/test/testservice", "service", impl.TProcessor)
 }

@@ -3,9 +3,11 @@ config:
   turbo_log_path: log
   http_port: 8081
   grpc_service_name: YourService
-  grpc_service_address: 127.0.0.1:50051
+  grpc_service_host: 127.0.0.1
+  grpc_service_port: 50051
   thrift_service_name: YourService
-  thrift_service_address: 127.0.0.1:50052
+  thrift_service_host: 127.0.0.1
+  thrift_service_port: 50052
   filter_proto_json: true
   filter_proto_json_emit_zerovalues: true
   filter_proto_json_int64_as_number: true

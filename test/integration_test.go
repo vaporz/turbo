@@ -54,7 +54,7 @@ func TestGrpcService(t *testing.T) {
 	turbo.ResetChans()
 
 	go turbo.StartGRPC("github.com/vaporz/turbo/test/testservice", "service",
-		50051, gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
+		gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 	time.Sleep(time.Second * 1)
 
 	runCommonTests(t, httpPort, "grpc")
@@ -88,7 +88,7 @@ func TestThriftService(t *testing.T) {
 	turbo.ResetChans()
 
 	go turbo.StartTHRIFT("github.com/vaporz/turbo/test/testservice", "service",
-		50052, tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
+		tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 	time.Sleep(time.Second * 2)
 	turbo.SetOutput(os.Stdout)
 
@@ -121,8 +121,7 @@ func TestHTTPGrpcService(t *testing.T) {
 	httpPort := "8083"
 	turbo.ResetChans()
 	overwriteServiceYaml(httpPort, "50053", "development")
-	go turbo.StartGrpcService(50053, "github.com/vaporz/turbo/test/testservice",
-		"service", gimpl.RegisterServer)
+	go turbo.StartGrpcService("github.com/vaporz/turbo/test/testservice", "service", gimpl.RegisterServer)
 	time.Sleep(time.Second * 1)
 
 	go turbo.StartGrpcHTTPServer("github.com/vaporz/turbo/test/testservice", "service",
@@ -139,8 +138,7 @@ func TestHTTPThriftService(t *testing.T) {
 	httpPort := "8084"
 	turbo.ResetChans()
 	overwriteServiceYaml(httpPort, "50054", "development")
-	go turbo.StartThriftService(50054, "github.com/vaporz/turbo/test/testservice",
-		"service", timpl.TProcessor)
+	go turbo.StartThriftService("github.com/vaporz/turbo/test/testservice", "service", timpl.TProcessor)
 	time.Sleep(time.Second * 1)
 
 	go turbo.StartThriftHTTPServer("github.com/vaporz/turbo/test/testservice", "service",
@@ -502,9 +500,11 @@ var serviceYamlFile string = `config:
   environment: {{.Env}}
   turbo_log_path: log
   grpc_service_name: {{.ServiceName}}
-  grpc_service_address: 127.0.0.1:{{.ServicePort}}
+  grpc_service_host: 127.0.0.1
+  grpc_service_port: {{.ServicePort}}
   thrift_service_name: {{.ServiceName}}
-  thrift_service_address: 127.0.0.1:{{.ServicePort}}
+  thrift_service_host: 127.0.0.1
+  thrift_service_port: {{.ServicePort}}
 
 urlmapping:
   - GET /hello/{your_name:[a-zA-Z0-9]+} SayHello

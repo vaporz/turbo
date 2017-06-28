@@ -10,9 +10,11 @@ import (
 )
 
 const grpcServiceName string = "grpc_service_name"
-const grpcServiceAddress string = "grpc_service_address"
+const grpcServiceHost string = "grpc_service_host"
+const grpcServicePort string = "grpc_service_port"
 const thriftServiceName string = "thrift_service_name"
-const thriftServiceAddress string = "thrift_service_address"
+const thriftServiceHost string = "thrift_service_host"
+const thriftServicePort string = "thrift_service_port"
 const httpPort string = "http_port"
 const filterProtoJson string = "filter_proto_json"
 const filterProtoJsonEmitZeroValues string = "filter_proto_json_emit_zerovalues"
@@ -100,45 +102,51 @@ func (c *config) SetGrpcServiceName(name string) {
 }
 
 func (c *config) GrpcServiceAddress() string {
-	return c.configs[grpcServiceAddress]
+	return c.GrpcServiceHost() + ":" + c.GrpcServicePort()
 }
 
-func (c *config) GrpcServicePortStr() string {
-	addr := c.configs[grpcServiceAddress]
-	i := strings.Index(addr, ":")
-	if i <= 0 {
-		panic("invalid grpc_service_address")
-	}
-	return addr[i:]
+func (c *config) GrpcServiceHost() string {
+	return c.configs[grpcServiceHost]
 }
 
-func (c *config) SetGrpcServiceAddress(address string) {
-	c.configs[grpcServiceAddress] = address
+func (c *config) GrpcServicePort() string {
+	return c.configs[grpcServicePort]
+}
+
+func (c *config) SetGrpcServiceHost(host string) {
+	c.configs[grpcServiceHost] = host
+}
+
+func (c *config) SetGrpcServicePort(port string) {
+	c.configs[grpcServicePort] = port
 }
 
 func (c *config) ThriftServiceName() string {
 	return c.configs[thriftServiceName]
 }
 
-func (c *config) ThriftServicePortStr() string {
-	addr := c.configs[thriftServiceAddress]
-	i := strings.Index(addr, ":")
-	if i <= 0 {
-		panic("invalid thrift_service_address")
-	}
-	return addr[i:]
+func (c *config) ThriftServiceHost() string {
+	return c.configs[thriftServiceHost]
+}
+
+func (c *config) ThriftServicePort() string {
+	return c.configs[thriftServicePort]
+}
+
+func (c *config) ThriftServiceAddress() string {
+	return c.ThriftServiceHost() + ":" + c.ThriftServicePort()
+}
+
+func (c *config) SetThriftServiceHost(host string) {
+	c.configs[thriftServiceHost] = host
+}
+
+func (c *config) SetThriftServicePort(port string) {
+	c.configs[thriftServicePort] = port
 }
 
 func (c *config) SetThriftServiceName(name string) {
 	c.configs[thriftServiceName] = name
-}
-
-func (c *config) ThriftServiceAddress() string {
-	return c.configs[thriftServiceAddress]
-}
-
-func (c *config) SetThriftServiceAddress(address string) {
-	c.configs[thriftServiceAddress] = address
 }
 
 func (c *config) HTTPPort() int64 {

@@ -157,9 +157,11 @@ var serviceYamlFile string = `config:
   environment: development
   turbo_log_path: log
   grpc_service_name: {{.ServiceName}}
-  grpc_service_address: 127.0.0.1:50051
+  grpc_service_host: 127.0.0.1
+  grpc_service_port: 50051
   thrift_service_name: {{.ServiceName}}
-  thrift_service_address: 127.0.0.1:50052
+  thrift_service_host: 127.0.0.1
+  thrift_service_port: 50052
 
 urlmapping:
   - GET /hello SayHello
@@ -642,13 +644,12 @@ func generateGrpcServiceMain() {
 	writeFileWithTemplate(
 		Config.ServiceRootPath()+"/grpcservice/"+nameLower+".go",
 		serviceMain,
-		serviceMainValues{PkgPath: Config.ServicePkgPath(), Port: "50051", ServiceName: Config.GrpcServiceName()},
+		serviceMainValues{PkgPath: Config.ServicePkgPath(), ServiceName: Config.GrpcServiceName()},
 	)
 }
 
 type serviceMainValues struct {
 	PkgPath     string
-	Port        string
 	ServiceName string
 }
 
@@ -660,7 +661,7 @@ import (
 )
 
 func main() {
-	turbo.StartGrpcService({{.Port}}, "{{.PkgPath}}", "service", impl.RegisterServer)
+	turbo.StartGrpcService("{{.PkgPath}}", "service", impl.RegisterServer)
 }
 `
 
@@ -669,13 +670,12 @@ func generateThriftServiceMain() {
 	writeFileWithTemplate(
 		Config.ServiceRootPath()+"/thriftservice/"+nameLower+".go",
 		thriftServiceMain,
-		thriftServiceMainValues{PkgPath: Config.ServicePkgPath(), Port: "50052", ServiceName: Config.ThriftServiceName()},
+		thriftServiceMainValues{PkgPath: Config.ServicePkgPath(), ServiceName: Config.ThriftServiceName()},
 	)
 }
 
 type thriftServiceMainValues struct {
 	PkgPath     string
-	Port        string
 	ServiceName string
 }
 
@@ -687,7 +687,7 @@ import (
 )
 
 func main() {
-	turbo.StartThriftService({{.Port}}, "{{.PkgPath}}", "service", impl.TProcessor)
+	turbo.StartThriftService("{{.PkgPath}}", "service", impl.TProcessor)
 }
 `
 
@@ -900,12 +900,11 @@ import (
 
 func main() {
 	gcomponent.InitComponents()
-	turbo.StartGRPC("{{.PkgPath}}", "service",
-		50051, gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
+	turbo.StartGRPC("{{.PkgPath}}", "service", gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
 	//tcompoent.InitComponents()
 	//turbo.StartTHRIFT("{{.PkgPath}}", "service",
-	//	50052, tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
+	//	tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 }
 `
 
@@ -923,10 +922,9 @@ import (
 func main() {
 	//gcomponent.InitComponents()
 	//turbo.StartGRPC("{{.PkgPath}}", "service",
-	//	50051, gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
+	//	gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
 	tcompoent.InitComponents()
-	turbo.StartTHRIFT("{{.PkgPath}}", "service",
-		50052, tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
+	turbo.StartTHRIFT("{{.PkgPath}}", "service", tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 }
 `

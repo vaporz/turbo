@@ -57,11 +57,11 @@ func waitForQuit() {
 type grpcClientCreator func(conn *grpc.ClientConn) interface{}
 
 // StartGRPC starts both HTTP server and GRPC service
-func StartGRPC(pkgPath, configFileName string, servicePort int, clientCreator grpcClientCreator, s switcher,
+func StartGRPC(pkgPath, configFileName string, clientCreator grpcClientCreator, s switcher,
 	registerServer func(s *grpc.Server)) {
 	LoadServiceConfig("grpc", pkgPath, configFileName)
 	log.Info("Starting Turbo...")
-	go startGrpcServiceInternal(servicePort, registerServer, false)
+	go startGrpcServiceInternal(registerServer, false)
 	<-serviceStarted
 	go startGrpcHTTPServerInternal(clientCreator, s)
 	waitForQuit()
@@ -91,11 +91,11 @@ func startGrpcHTTPServerInternal(clientCreator grpcClientCreator, s switcher) {
 type thriftClientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}
 
 // StartTHRIFT starts both HTTP server and Thrift service
-func StartTHRIFT(pkgPath, configFileName string, port int, clientCreator thriftClientCreator, s switcher,
+func StartTHRIFT(pkgPath, configFileName string, clientCreator thriftClientCreator, s switcher,
 	registerTProcessor func() thrift.TProcessor) {
 	LoadServiceConfig("thrift", pkgPath, configFileName)
 	log.Info("Starting Turbo...")
-	go startThriftServiceInternal(port, registerTProcessor, false)
+	go startThriftServiceInternal(registerTProcessor, false)
 	<-serviceStarted
 	time.Sleep(time.Second * 1)
 	go startThriftHTTPServerInternal(clientCreator, s)
@@ -165,15 +165,14 @@ func shutDownHTTP(s *http.Server) {
 }
 
 // StartGrpcService starts a GRPC service
-func StartGrpcService(port int, pkgPath, configFileName string, registerServer func(s *grpc.Server)) {
+func StartGrpcService(pkgPath, configFileName string, registerServer func(s *grpc.Server)) {
 	LoadServiceConfig("grpc", pkgPath, configFileName)
-	startGrpcServiceInternal(port, registerServer, true)
+	startGrpcServiceInternal(registerServer, true)
 }
 
-func startGrpcServiceInternal(port int, registerServer func(s *grpc.Server), alone bool) {
+func startGrpcServiceInternal(registerServer func(s *grpc.Server), alone bool) {
 	log.Info("Starting GRPC Service...")
-	portStr := fmt.Sprintf(":%d", port)
-	lis, err := net.Listen("tcp", portStr)
+	lis, err := net.Listen("tcp", ":"+Config.GrpcServicePort())
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -219,15 +218,15 @@ func startGrpcServiceInternal(port int, registerServer func(s *grpc.Server), alo
 }
 
 // StartThriftService starts a Thrift service
-func StartThriftService(port int, pkgPath, configFileName string, registerTProcessor func() thrift.TProcessor) {
+func StartThriftService(pkgPath, configFileName string, registerTProcessor func() thrift.TProcessor) {
 	LoadServiceConfig("thrift", pkgPath, configFileName)
-	startThriftServiceInternal(port, registerTProcessor, true)
+	startThriftServiceInternal(registerTProcessor, true)
 }
 
-func startThriftServiceInternal(port int, registerTProcessor func() thrift.TProcessor, alone bool) {
+func startThriftServiceInternal(registerTProcessor func() thrift.TProcessor, alone bool) {
+	port := Config.ThriftServicePort()
 	log.Infof("Starting Thrift Service at :%d...", port)
-	portStr := fmt.Sprintf(":%d", port)
-	transport, err := thrift.NewTServerSocket(portStr)
+	transport, err := thrift.NewTServerSocket(":" + port)
 	if err != nil {
 		log.Panic("socket error")
 	}

@@ -8,19 +8,10 @@ import (
 )
 
 func TestThriftInit(t *testing.T) {
-	thriftServiceAddress := Config.ThriftServiceAddress()
-	Config.SetThriftServiceAddress("")
-
 	client = &Client{tClient: new(thriftClient)}
-	err := client.tClient.init(func(thrift.TTransport, thrift.TProtocolFactory) interface{} { return nil })
-	assert.NotNil(t, err)
-	assert.Equal(t, "Error: missing [thrift_service_address] in config", err.Error())
-
 	client.tClient.thriftService = ""
-	err = client.tClient.init(func(thrift.TTransport, thrift.TProtocolFactory) interface{} { return nil })
+	err := client.tClient.init(func(thrift.TTransport, thrift.TProtocolFactory) interface{} { return nil })
 	assert.Nil(t, err)
-
-	Config.SetThriftServiceAddress(thriftServiceAddress)
 }
 
 func TestThriftClose(t *testing.T) {

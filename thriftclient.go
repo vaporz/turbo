@@ -1,7 +1,6 @@
 package turbo
 
 import (
-	"errors"
 	"git.apache.org/thrift.git/lib/go/thrift"
 )
 
@@ -16,9 +15,6 @@ func (t *thriftClient) init(clientCreator func(trans thrift.TTransport, f thrift
 		return nil
 	}
 	addr := Config.ThriftServiceAddress()
-	if len(addr) == 0 {
-		return errors.New("Error: missing [thrift_service_address] in config")
-	}
 	log.Debugf("connecting thrift addr: %s", addr)
 	err := t.connect(addr)
 	if err == nil {

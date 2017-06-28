@@ -22,19 +22,24 @@ func TestConfig(t *testing.T) {
 	Config.SetGrpcServiceName("test")
 	assert.Equal(t, "test", Config.GrpcServiceName())
 
+	assert.Equal(t, "127.0.0.1", Config.GrpcServiceHost())
+	assert.Equal(t, "50051", Config.GrpcServicePort())
 	assert.Equal(t, "127.0.0.1:50051", Config.GrpcServiceAddress())
-	assert.Equal(t, ":50051", Config.GrpcServicePortStr())
-	Config.SetGrpcServiceAddress("test address")
-	assert.Equal(t, "test address", Config.GrpcServiceAddress())
+	Config.SetGrpcServiceHost("test host")
+	Config.SetGrpcServicePort("test port")
+	assert.Equal(t, "test host:test port", Config.GrpcServiceAddress())
 
 	assert.Equal(t, "YourService", Config.ThriftServiceName())
 	Config.SetThriftServiceName("test thrift")
 	assert.Equal(t, "test thrift", Config.ThriftServiceName())
 
+	assert.Equal(t, "127.0.0.1", Config.ThriftServiceHost())
+	assert.Equal(t, "50052", Config.ThriftServicePort())
 	assert.Equal(t, "127.0.0.1:50052", Config.ThriftServiceAddress())
-	assert.Equal(t, ":50052", Config.ThriftServicePortStr())
-	Config.SetThriftServiceAddress("thrift address")
-	assert.Equal(t, "thrift address", Config.ThriftServiceAddress())
+	assert.Equal(t, "50052", Config.ThriftServicePort())
+	Config.SetThriftServiceHost("test host")
+	Config.SetThriftServicePort("test port")
+	assert.Equal(t, "test host:test port", Config.ThriftServiceAddress())
 
 	assert.Equal(t, true, Config.FilterProtoJson())
 	Config.SetFilterProtoJson(false)
@@ -62,34 +67,6 @@ func TestConfig(t *testing.T) {
 
 	loadFieldMapping()
 	assert.Equal(t, "CommonValues values", Config.fieldMappings["SayHelloRequest"][0])
-}
-
-func TestGrpcServiceAddressPanic(t *testing.T) {
-	addr := Config.GrpcServiceAddress()
-	defer func() {
-		Config.SetGrpcServiceAddress(addr)
-		if err := recover(); err != nil {
-			assert.Equal(t, "invalid grpc_service_address", err)
-		} else {
-			t.Errorf("The code did not panic")
-		}
-	}()
-	Config.SetGrpcServiceAddress("")
-	Config.GrpcServicePortStr()
-}
-
-func TestThriftServiceAddressPanic(t *testing.T) {
-	addr := Config.ThriftServiceAddress()
-	defer func() {
-		Config.SetThriftServiceAddress(addr)
-		if err := recover(); err != nil {
-			assert.Equal(t, "invalid thrift_service_address", err)
-		} else {
-			t.Errorf("The code did not panic")
-		}
-	}()
-	Config.SetThriftServiceAddress("")
-	Config.ThriftServicePortStr()
 }
 
 func TestHttpPortPanic(t *testing.T) {
