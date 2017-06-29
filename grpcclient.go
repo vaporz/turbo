@@ -9,13 +9,12 @@ type grpcClient struct {
 	conn        *grpc.ClientConn
 }
 
-func (g *grpcClient) init(clientCreator func(conn *grpc.ClientConn) interface{}) error {
+func (g *grpcClient) init(addr string, clientCreator func(conn *grpc.ClientConn) interface{}) error {
 	// ???? support multiple grpc clients
 	// ???? support grpcservice discovery
 	if g.grpcService != nil {
 		return nil
 	}
-	addr := Config.GrpcServiceAddress()
 	log.Info("[grpc]connecting addr:", addr)
 	err := g.dial(addr)
 	if err == nil {

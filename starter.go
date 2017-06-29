@@ -46,87 +46,81 @@ func ResetChans() {
 func waitForQuit() {
 	<-httpServerQuit
 	<-serviceQuit
-	//for _, c := range waitOnList {
-	// error:
-	// transport: http2Server.HandleStreams failed to read frame:
-	// read tcp 127.0.0.1:50051->127.0.0.1:55313: use of closed network connection
-	//	fmt.Printf(strconv.FormatBool(<-c))
-	//}
 }
 
 type grpcClientCreator func(conn *grpc.ClientConn) interface{}
 
 // StartGRPC starts both HTTP server and GRPC service
-func StartGRPC(pkgPath, configFileName string, clientCreator grpcClientCreator, s switcher,
+func StartGRPC(configFilePath string, clientCreator grpcClientCreator, s switcher,
 	registerServer func(s *grpc.Server)) {
-	LoadServiceConfig("grpc", pkgPath, configFileName)
+	c := LoadServiceConfig("grpc", configFilePath)
 	log.Info("Starting Turbo...")
-	go startGrpcServiceInternal(registerServer, false)
+	go startGrpcServiceInternal(c, registerServer, false)
 	<-serviceStarted
-	go startGrpcHTTPServerInternal(clientCreator, s)
+	go startGrpcHTTPServerInternal(c, clientCreator, s)
 	waitForQuit()
 	log.Info("Turbo exit, bye!")
 }
 
 // StartGrpcHTTPServer starts a HTTP server which sends requests via grpc
-func StartGrpcHTTPServer(pkgPath, configFileName string, clientCreator grpcClientCreator, s switcher) {
-	LoadServiceConfig("grpc", pkgPath, configFileName)
-	startGrpcHTTPServerInternal(clientCreator, s)
+func StartGrpcHTTPServer(configFilePath string, clientCreator grpcClientCreator, s switcher) {
+	c := LoadServiceConfig("grpc", configFilePath)
+	startGrpcHTTPServerInternal(c, clientCreator, s)
 }
 
-func startGrpcHTTPServerInternal(clientCreator grpcClientCreator, s switcher) {
+func startGrpcHTTPServerInternal(c *Config, clientCreator grpcClientCreator, s switcher) {
 	log.Info("Starting HTTP Server...")
 	client = &Client{
 		components:   new(Components),
 		gClient:      new(grpcClient),
 		switcherFunc: s}
-	err := client.gClient.init(clientCreator)
+	err := client.gClient.init(c.GrpcServiceAddress(), clientCreator)
 	if err != nil {
 		log.Panic(err.Error())
 	}
 	defer client.gClient.close()
-	startHTTPServer(Config.HTTPPortStr(), router())
+	startHTTPServer(c)
 }
 
 type thriftClientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}
 
 // StartTHRIFT starts both HTTP server and Thrift service
-func StartTHRIFT(pkgPath, configFileName string, clientCreator thriftClientCreator, s switcher,
+func StartTHRIFT(configFilePath string, clientCreator thriftClientCreator, s switcher,
 	registerTProcessor func() thrift.TProcessor) {
-	LoadServiceConfig("thrift", pkgPath, configFileName)
+	c := LoadServiceConfig("thrift", configFilePath)
 	log.Info("Starting Turbo...")
-	go startThriftServiceInternal(registerTProcessor, false)
+	go startThriftServiceInternal(c, registerTProcessor, false)
 	<-serviceStarted
 	time.Sleep(time.Second * 1)
-	go startThriftHTTPServerInternal(clientCreator, s)
+	go startThriftHTTPServerInternal(c, clientCreator, s)
 	waitForQuit()
 	log.Info("Turbo exit, bye!")
 }
 
 // StartThriftHTTPServer starts a HTTP server which sends requests via Thrift
-func StartThriftHTTPServer(pkgPath, configFileName string, clientCreator thriftClientCreator, s switcher) {
-	LoadServiceConfig("thrift", pkgPath, configFileName)
-	startThriftHTTPServerInternal(clientCreator, s)
+func StartThriftHTTPServer(configFilePath string, clientCreator thriftClientCreator, s switcher) {
+	c := LoadServiceConfig("thrift", configFilePath)
+	startThriftHTTPServerInternal(c, clientCreator, s)
 }
 
-func startThriftHTTPServerInternal(clientCreator thriftClientCreator, s switcher) {
+func startThriftHTTPServerInternal(c *Config, clientCreator thriftClientCreator, s switcher) {
 	log.Info("Starting HTTP Server...")
 	client = &Client{
 		components:   new(Components),
 		tClient:      new(thriftClient),
 		switcherFunc: s}
-	err := client.tClient.init(clientCreator)
+	err := client.tClient.init(c.ThriftServiceAddress(), clientCreator)
 	if err != nil {
 		log.Panic(err.Error())
 	}
 	defer client.tClient.close()
-	startHTTPServer(Config.HTTPPortStr(), router())
+	startHTTPServer(c)
 }
 
-func startHTTPServer(portStr string, handler http.Handler) {
+func startHTTPServer(c *Config) {
 	s := &http.Server{
-		Addr:    portStr,
-		Handler: handler,
+		Addr:    c.HTTPPortStr(),
+		Handler: router(c),
 	}
 	go func() {
 		if err := s.ListenAndServe(); err != nil {
@@ -149,7 +143,8 @@ func startHTTPServer(portStr string, handler http.Handler) {
 			stopService <- "service"
 			return
 		case <-reloadConfig:
-			s.Handler = router()
+			log.Info("Config file changed!")
+			s.Handler = router(c)
 			log.Info("HTTP Server ServeMux reloaded")
 		}
 	}
@@ -165,14 +160,14 @@ func shutDownHTTP(s *http.Server) {
 }
 
 // StartGrpcService starts a GRPC service
-func StartGrpcService(pkgPath, configFileName string, registerServer func(s *grpc.Server)) {
-	LoadServiceConfig("grpc", pkgPath, configFileName)
-	startGrpcServiceInternal(registerServer, true)
+func StartGrpcService(configFilePath string, registerServer func(s *grpc.Server)) {
+	c := LoadServiceConfig("grpc", configFilePath)
+	startGrpcServiceInternal(c, registerServer, true)
 }
 
-func startGrpcServiceInternal(registerServer func(s *grpc.Server), alone bool) {
+func startGrpcServiceInternal(c *Config, registerServer func(s *grpc.Server), alone bool) {
 	log.Info("Starting GRPC Service...")
-	lis, err := net.Listen("tcp", ":"+Config.GrpcServicePort())
+	lis, err := net.Listen("tcp", ":"+c.GrpcServicePort())
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -218,13 +213,13 @@ func startGrpcServiceInternal(registerServer func(s *grpc.Server), alone bool) {
 }
 
 // StartThriftService starts a Thrift service
-func StartThriftService(pkgPath, configFileName string, registerTProcessor func() thrift.TProcessor) {
-	LoadServiceConfig("thrift", pkgPath, configFileName)
-	startThriftServiceInternal(registerTProcessor, true)
+func StartThriftService(configFilePath string, registerTProcessor func() thrift.TProcessor) {
+	c := LoadServiceConfig("thrift", configFilePath)
+	startThriftServiceInternal(c, registerTProcessor, true)
 }
 
-func startThriftServiceInternal(registerTProcessor func() thrift.TProcessor, alone bool) {
-	port := Config.ThriftServicePort()
+func startThriftServiceInternal(c *Config, registerTProcessor func() thrift.TProcessor, alone bool) {
+	port := c.ThriftServicePort()
 	log.Infof("Starting Thrift Service at :%d...", port)
 	transport, err := thrift.NewTServerSocket(":" + port)
 	if err != nil {

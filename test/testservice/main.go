@@ -11,8 +11,7 @@ import (
 
 func main() {
 	gcomponent.InitComponents()
-	turbo.StartGRPC("github.com/vaporz/turbo/test/testservice", "service",
-		gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
+	turbo.StartGRPC(turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml", gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
 	//tcompoent.InitComponents()
 	//turbo.StartTHRIFT("github.com/vaporz/turbo/test/testservice", "service",

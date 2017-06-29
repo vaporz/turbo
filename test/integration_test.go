@@ -26,8 +26,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	turbo.InitGOPATH()
-	os.RemoveAll(turbo.GOPATH + "/src/github.com/vaporz/turbo/test/testcreateservice")
+	os.RemoveAll(turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice")
 	os.Exit(m.Run())
 }
 
@@ -35,7 +34,7 @@ func TestCreateGrpcService(t *testing.T) {
 	create(t, "grpc")
 	generate(t, "grpc")
 	overwriteProto()
-	os.RemoveAll(turbo.GOPATH + "/src/github.com/vaporz/turbo/test/testcreateservice/gen")
+	os.RemoveAll(turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice/gen")
 	generate(t, "grpc")
 }
 
@@ -43,7 +42,7 @@ func TestCreateThriftService(t *testing.T) {
 	create(t, "thrift")
 	generate(t, "thrift")
 	overwriteThrift()
-	os.RemoveAll(turbo.GOPATH + "/src/github.com/vaporz/turbo/test/testcreateservice/gen")
+	os.RemoveAll(turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice/gen")
 	generate(t, "thrift")
 }
 
@@ -53,7 +52,7 @@ func TestGrpcService(t *testing.T) {
 	overwriteServiceYaml("8081", "50051", "development")
 	turbo.ResetChans()
 
-	go turbo.StartGRPC("github.com/vaporz/turbo/test/testservice", "service",
+	go turbo.StartGRPC("testservice/service.yaml",
 		gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 	time.Sleep(time.Second * 1)
 
@@ -87,7 +86,7 @@ func TestThriftService(t *testing.T) {
 	overwriteServiceYaml(httpPort, "50052", "production")
 	turbo.ResetChans()
 
-	go turbo.StartTHRIFT("github.com/vaporz/turbo/test/testservice", "service",
+	go turbo.StartTHRIFT("testservice/service.yaml",
 		tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 	time.Sleep(time.Second * 2)
 	turbo.SetOutput(os.Stdout)
@@ -121,10 +120,10 @@ func TestHTTPGrpcService(t *testing.T) {
 	httpPort := "8083"
 	turbo.ResetChans()
 	overwriteServiceYaml(httpPort, "50053", "development")
-	go turbo.StartGrpcService("github.com/vaporz/turbo/test/testservice", "service", gimpl.RegisterServer)
+	go turbo.StartGrpcService("testservice/service.yaml", gimpl.RegisterServer)
 	time.Sleep(time.Second * 1)
 
-	go turbo.StartGrpcHTTPServer("github.com/vaporz/turbo/test/testservice", "service",
+	go turbo.StartGrpcHTTPServer("testservice/service.yaml",
 		gcomponent.GrpcClient, gen.GrpcSwitcher)
 	time.Sleep(time.Second)
 
@@ -138,10 +137,10 @@ func TestHTTPThriftService(t *testing.T) {
 	httpPort := "8084"
 	turbo.ResetChans()
 	overwriteServiceYaml(httpPort, "50054", "development")
-	go turbo.StartThriftService("github.com/vaporz/turbo/test/testservice", "service", timpl.TProcessor)
+	go turbo.StartThriftService("testservice/service.yaml", timpl.TProcessor)
 	time.Sleep(time.Second * 1)
 
-	go turbo.StartThriftHTTPServer("github.com/vaporz/turbo/test/testservice", "service",
+	go turbo.StartThriftHTTPServer("testservice/service.yaml",
 		tcompoent.ThriftClient, gen.ThriftSwitcher)
 	time.Sleep(time.Second)
 
@@ -152,7 +151,7 @@ func TestHTTPThriftService(t *testing.T) {
 
 func overwriteProto() {
 	writeFileWithTemplate(
-		turbo.GOPATH+"/src/github.com/vaporz/turbo/test/testcreateservice/testcreateservice.proto",
+		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testcreateservice/testcreateservice.proto",
 		`syntax = "proto3";
 import "shared.proto";
 package proto;
@@ -177,7 +176,7 @@ service TestService {
 		nil,
 	)
 	writeFileWithTemplate(
-		turbo.GOPATH+"/src/github.com/vaporz/turbo/test/testcreateservice/shared.proto",
+		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testcreateservice/shared.proto",
 		`syntax = "proto3";
 package proto;
 
@@ -191,7 +190,7 @@ message CommonValues {
 
 func overwriteThrift() {
 	writeFileWithTemplate(
-		turbo.GOPATH+"/src/github.com/vaporz/turbo/test/testcreateservice/shared.thrift",
+		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testcreateservice/shared.thrift",
 		`namespace go gen
 
 struct CommonValues {
@@ -205,7 +204,7 @@ struct HelloValues {
 		nil,
 	)
 	writeFileWithTemplate(
-		turbo.GOPATH+"/src/github.com/vaporz/turbo/test/testcreateservice/testcreateservice.thrift",
+		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testcreateservice/testcreateservice.thrift",
 		`namespace go gen
 include "shared.thrift"
 
@@ -257,7 +256,7 @@ func generate(t *testing.T, rpc string) {
 	}
 
 	cmd.RootCmd.SetArgs([]string{"generate", "github.com/vaporz/turbo/test/testcreateservice", "-r", rpc,
-								 "-I", turbo.TurboRootPath + "/test/testcreateservice"})
+								 "-I", turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice"})
 	err = cmd.Execute()
 	assert.Nil(t, err)
 
@@ -477,7 +476,7 @@ func convertThriftCommonValues(req *http.Request) reflect.Value {
 
 func overwriteServiceYaml(httpPort, servicePort, env string) {
 	writeFileWithTemplate(
-		turbo.GOPATH+"/src/github.com/vaporz/turbo/test/testservice/service.yaml",
+		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml",
 		serviceYamlFile,
 		serviceYamlValues{
 			HttpPort:    httpPort,

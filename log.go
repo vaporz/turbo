@@ -49,14 +49,14 @@ func (hook ContextHook) Fire(entry *logger.Entry) error {
 	return nil
 }
 
-func setupLoggerFile() {
+func setupLoggerFile(c *Config) {
 	//set up log file.
-	logPath := Config.TurboLogPath()
+	logPath := c.TurboLogPath()
 	if len(strings.TrimSpace(logPath)) == 0 {
 		logPath = "log"
 	}
 	if !path.IsAbs(logPath) {
-		logPath = Config.ServiceRootPath() + "/" + logPath
+		logPath = c.ServiceRootPath() + "/" + logPath
 	}
 	logPath = path.Clean(logPath)
 	if err := os.MkdirAll(logPath, 0755); err == nil {
@@ -72,10 +72,10 @@ func setupLoggerFile() {
 	}
 }
 
-func initLogger() {
-	if Config.Env() == "production" {
+func initLogger(c *Config) {
+	if c.Env() == "production" {
 		//init log file path
-		setupLoggerFile()
+		setupLoggerFile(c)
 		// Log as JSON instead of the default ASCII formatter.
 		logger.SetFormatter(&logger.JSONFormatter{})
 		//set up log level, info level by default.

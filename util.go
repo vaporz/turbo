@@ -81,20 +81,26 @@ func mergeMuxVars(req *http.Request) {
 	}
 }
 
+type Marshaler struct {
+	FilterProtoJson bool
+	EmitZeroValues  bool
+	Int64AsNumber   bool
+}
+
 // JSON returns the json encoding of v,
 // if v implements 'proto.Message', then FilterJsonWithStruct() is called, see comments for FilterJsonWithStruct(),
 // otherwise, call encoding/json.Marshal()
-func JSON(v interface{}) ([]byte, error) {
+func (m *Marshaler) JSON(v interface{}) ([]byte, error) {
 	if _, ok := v.(proto.Message); ok {
 		var buf bytes.Buffer
-		m := &jsonpb.Marshaler{}
-		m.OrigName = true
-		if err := m.Marshal(&buf, v.(proto.Message)); err != nil {
+		jm := &jsonpb.Marshaler{}
+		jm.OrigName = true
+		if err := jm.Marshal(&buf, v.(proto.Message)); err != nil {
 			return []byte{}, err
 		}
 
-		if Config.FilterProtoJson() {
-			return FilterJsonWithStruct(buf.Bytes(), v)
+		if m.FilterProtoJson {
+			return m.FilterJsonWithStruct(buf.Bytes(), v)
 		}
 		return buf.Bytes(), nil
 	}
@@ -110,7 +116,7 @@ func JSON(v interface{}) ([]byte, error) {
 // (a) protobuf parse int64 as string,
 // (b) a Key with a nil Ptr value is missing in the json marshaled by github.com/golang/protobuf/jsonpb.Marshaler
 // So, this func is a 'patch' to protobuf
-func FilterJsonWithStruct(jsonBytes []byte, structObj interface{}) (bytes []byte, e error) {
+func (m *Marshaler) FilterJsonWithStruct(jsonBytes []byte, structObj interface{}) (bytes []byte, e error) {
 	defer func() {
 		if err := recover(); err != nil {
 			bytes = jsonBytes
@@ -122,9 +128,9 @@ func FilterJsonWithStruct(jsonBytes []byte, structObj interface{}) (bytes []byte
 		panic(err)
 	}
 	if reflect.TypeOf(structObj).Kind() == reflect.Ptr {
-		filterStruct(json, reflect.TypeOf(structObj).Elem(), reflect.ValueOf(structObj).Elem())
+		m.filterStruct(json, reflect.TypeOf(structObj).Elem(), reflect.ValueOf(structObj).Elem())
 	} else {
-		filterStruct(json, reflect.TypeOf(structObj), reflect.ValueOf(structObj))
+		m.filterStruct(json, reflect.TypeOf(structObj), reflect.ValueOf(structObj))
 	}
 	result, err := json.MarshalJSON()
 	if err != nil {
@@ -133,72 +139,72 @@ func FilterJsonWithStruct(jsonBytes []byte, structObj interface{}) (bytes []byte
 	return result, nil
 }
 
-func filterStruct(structJson *sjson.Json, t reflect.Type, v reflect.Value) {
+func (m *Marshaler) filterStruct(structJson *sjson.Json, t reflect.Type, v reflect.Value) {
 	numField := t.NumField()
 	for i := 0; i < numField; i++ {
-		filterOf(t.Field(i).Type.Kind())(structJson, t.Field(i), v.Field(i))
+		m.filterOf(t.Field(i).Type.Kind())(structJson, t.Field(i), v.Field(i))
 	}
 }
 
 type fieldFilterFunc func(*sjson.Json, reflect.StructField, reflect.Value)
 
-func filterOf(kind reflect.Kind) fieldFilterFunc {
+func (m *Marshaler) filterOf(kind reflect.Kind) fieldFilterFunc {
 	switch kind {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32:
-		return intFieldFilter
+		return m.intFieldFilter
 	case reflect.Int64:
-		return int64FieldFilter
+		return m.int64FieldFilter
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return uintFieldFilter
+		return m.uintFieldFilter
 	case reflect.Float32, reflect.Float64:
-		return floatFieldFilter
+		return m.floatFieldFilter
 	case reflect.Ptr:
-		return ptrFieldFilter
+		return m.ptrFieldFilter
 	case reflect.Slice:
-		return sliceFieldFilter
+		return m.sliceFieldFilter
 	case reflect.Bool:
-		return boolFieldFilter
+		return m.boolFieldFilter
 	case reflect.String:
-		return stringFieldFilter
+		return m.stringFieldFilter
 	default:
-		return emptyFilter
+		return m.emptyFilter
 	}
 }
 
-func emptyFilter(*sjson.Json, reflect.StructField, reflect.Value) {
+func (m *Marshaler) emptyFilter(*sjson.Json, reflect.StructField, reflect.Value) {
 	// do nothing
 }
 
-func boolFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
-	jsonFieldName, ok := jsonFieldName(structJson, field)
-	if ok || Config.FilterProtoJsonEmitZeroValues() {
+func (m *Marshaler) boolFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
+	jsonFieldName, ok := m.jsonFieldName(structJson, field)
+	if ok || m.EmitZeroValues {
 		structJson.Set(jsonFieldName, v.Bool())
 	}
 }
 
-func stringFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
-	jsonFieldName, ok := jsonFieldName(structJson, field)
-	if ok || Config.FilterProtoJsonEmitZeroValues() {
+func (m *Marshaler) stringFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
+	jsonFieldName, ok := m.jsonFieldName(structJson, field)
+	if ok || m.EmitZeroValues {
 		structJson.Set(jsonFieldName, v.String())
 	}
 }
 
-func intFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
-	jsonFieldName, ok := jsonFieldName(structJson, field)
-	if ok || Config.FilterProtoJsonEmitZeroValues() {
+func (m *Marshaler) intFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
+	jsonFieldName, ok := m.jsonFieldName(structJson, field)
+	if ok || m.EmitZeroValues {
 		structJson.Set(jsonFieldName, v.Int())
 	}
 }
 
-func int64FieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
-	jsonFieldName, _ := jsonFieldName(structJson, field)
-	if Config.FilterProtoJsonInt64AsNumber() && Config.FilterProtoJsonEmitZeroValues() {
+func (m *Marshaler) int64FieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
+	jsonFieldName, _ := m.jsonFieldName(structJson, field)
+	if m.Int64AsNumber && m.EmitZeroValues {
 		structJson.Set(jsonFieldName, v.Int())
 	} else {
-		if v.Int() == 0 && Config.FilterProtoJsonEmitZeroValues() {
+		if v.Int() == 0 && m.EmitZeroValues {
 			structJson.Set(jsonFieldName, "0")
 		} else if v.Int() != 0 {
-			if Config.FilterProtoJsonInt64AsNumber() {
+			if m.Int64AsNumber {
 				structJson.Set(jsonFieldName, v.Int())
 			} else {
 				structJson.Set(jsonFieldName, strconv.FormatInt(v.Int(), 10))
@@ -207,35 +213,35 @@ func int64FieldFilter(structJson *sjson.Json, field reflect.StructField, v refle
 	}
 }
 
-func uintFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
-	jsonFieldName, ok := jsonFieldName(structJson, field)
-	if ok || Config.FilterProtoJsonEmitZeroValues() {
+func (m *Marshaler) uintFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
+	jsonFieldName, ok := m.jsonFieldName(structJson, field)
+	if ok || m.EmitZeroValues {
 		structJson.Set(jsonFieldName, v.Uint())
 	}
 }
 
-func floatFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
-	jsonFieldName, ok := jsonFieldName(structJson, field)
-	if ok || Config.FilterProtoJsonEmitZeroValues() {
+func (m *Marshaler) floatFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
+	jsonFieldName, ok := m.jsonFieldName(structJson, field)
+	if ok || m.EmitZeroValues {
 		structJson.Set(jsonFieldName, v.Float())
 	}
 }
 
-func ptrFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
-	jsonFieldName, ok := jsonFieldName(structJson, field)
-	if v.Elem().Kind() == reflect.Invalid && Config.FilterProtoJsonEmitZeroValues() {
+func (m *Marshaler) ptrFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
+	jsonFieldName, ok := m.jsonFieldName(structJson, field)
+	if v.Elem().Kind() == reflect.Invalid && m.EmitZeroValues {
 		structJson.Set(jsonFieldName, nil)
 	} else {
 		if !ok {
 			structJson.Set(jsonFieldName, make(map[string]interface{}))
 		}
-		filterStruct(structJson.Get(jsonFieldName), field.Type.Elem(), v.Elem())
+		m.filterStruct(structJson.Get(jsonFieldName), field.Type.Elem(), v.Elem())
 	}
 }
 
-func sliceFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
-	jsonFieldName, ok := jsonFieldName(structJson, field)
-	if !ok && Config.FilterProtoJsonEmitZeroValues() {
+func (m *Marshaler) sliceFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
+	jsonFieldName, ok := m.jsonFieldName(structJson, field)
+	if !ok && m.EmitZeroValues {
 		structJson.Set(jsonFieldName, make([]interface{}, 0))
 	}
 	if v.Len() == 0 {
@@ -257,7 +263,7 @@ func sliceFieldFilter(structJson *sjson.Json, field reflect.StructField, v refle
 		sliceJson = structJson.Get(jsonFieldName)
 	}
 
-	if sliceInnerKind == reflect.Int64 && Config.FilterProtoJsonInt64AsNumber() {
+	if sliceInnerKind == reflect.Int64 && m.Int64AsNumber {
 		for i := 0; i < l; i++ {
 			arr[i] = v.Index(i).Int()
 		}
@@ -267,12 +273,12 @@ func sliceFieldFilter(structJson *sjson.Json, field reflect.StructField, v refle
 			if i >= arrLength {
 				arr[i] = make(map[string]interface{})
 			}
-			filterStruct(sliceJson.GetIndex(i), v.Index(i).Type().Elem(), v.Index(i).Elem())
+			m.filterStruct(sliceJson.GetIndex(i), v.Index(i).Type().Elem(), v.Index(i).Elem())
 		}
 	}
 }
 
-func jsonFieldName(structJson *sjson.Json, field reflect.StructField) (string, bool) {
+func (m *Marshaler) jsonFieldName(structJson *sjson.Json, field reflect.StructField) (string, bool) {
 	fieldName := field.Name
 	_, ok := structJson.CheckGet(fieldName)
 	if ok {
@@ -284,21 +290,21 @@ func jsonFieldName(structJson *sjson.Json, field reflect.StructField) (string, b
 		return nameToSnake, true
 	}
 	defaultName := ""
-	nameInTag, ok := lookupJSONNameInProtoTag(field)
+	nameInTag, ok := m.lookupJSONNameInProtoTag(field)
 	if ok {
 		defaultName = nameInTag
 		if _, ok = structJson.CheckGet(nameInTag); ok {
 			return nameInTag, true
 		}
 	}
-	nameInTag, ok = lookupOrigNameInProtoTag(field)
+	nameInTag, ok = m.lookupOrigNameInProtoTag(field)
 	if ok {
 		defaultName = nameInTag
 		if _, ok = structJson.CheckGet(nameInTag); ok {
 			return nameInTag, true
 		}
 	}
-	nameInTag, ok = lookupNameInJsonTag(field)
+	nameInTag, ok = m.lookupNameInJsonTag(field)
 	if ok {
 		if defaultName == "" {
 			defaultName = nameInTag
@@ -313,7 +319,7 @@ func jsonFieldName(structJson *sjson.Json, field reflect.StructField) (string, b
 	return defaultName, false
 }
 
-func lookupJSONNameInProtoTag(field reflect.StructField) (string, bool) {
+func (m *Marshaler) lookupJSONNameInProtoTag(field reflect.StructField) (string, bool) {
 	protoTag := strings.TrimSpace(field.Tag.Get("protobuf"))
 	if len(protoTag) > 0 {
 		var prop proto.Properties
@@ -325,7 +331,7 @@ func lookupJSONNameInProtoTag(field reflect.StructField) (string, bool) {
 	return "", false
 }
 
-func lookupOrigNameInProtoTag(field reflect.StructField) (string, bool) {
+func (m *Marshaler) lookupOrigNameInProtoTag(field reflect.StructField) (string, bool) {
 	protoTag := strings.TrimSpace(field.Tag.Get("protobuf"))
 	if len(protoTag) > 0 {
 		var prop proto.Properties
@@ -337,7 +343,7 @@ func lookupOrigNameInProtoTag(field reflect.StructField) (string, bool) {
 	return "", false
 }
 
-func lookupNameInJsonTag(field reflect.StructField) (string, bool) {
+func (m *Marshaler) lookupNameInJsonTag(field reflect.StructField) (string, bool) {
 	jsonTag := strings.TrimSpace(field.Tag.Get("json"))
 	if len(jsonTag) > 0 {
 		if jsonTag == "-" {

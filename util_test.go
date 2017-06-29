@@ -11,14 +11,6 @@ import (
 func TestMain(m *testing.M) {
 	executeCmd("bash", "-c", "go install github.com/vaporz/turbo/turbo")
 	executeCmd("bash", "-c", "go install github.com/vaporz/turbo/protoc-gen-buildfields")
-	initRpcType("grpc")
-	initConfigFileName("service_test")
-	initPkgPath("github.com/vaporz/turbo/test")
-	loadServiceConfig()
-	p := Config.configs[turboLogPath]
-	Config.configs[turboLogPath] = ""
-	initLogger()
-	Config.configs[turboLogPath] = p
 	os.Exit(m.Run())
 }
 
@@ -51,39 +43,37 @@ func (t *testPrimitives) String() string { return "" }
 func (t *testPrimitives) ProtoMessage()  {}
 
 func TestPrimitives(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber: true}
 	ts := &testPrimitives{Int64Value: 111, Int32Value: 0, Float32Value: 1, BoolValue: true}
-	buf, _ := JSON(ts)
+	buf, _ := m.JSON(ts)
 	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Float64Value\":0,"+
 		"\"Int32Value\":0,\"Int64Value\":111,\"Uint32Value\":0,\"Uint64Value\":0}", string(buf))
 
 	ts = &testPrimitives{Int64Value: 0, Int32Value: 0, Float32Value: 1, BoolValue: true}
-	buf, _ = JSON(ts)
+	buf, _ = m.JSON(ts)
 	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Float64Value\":0,"+
 		"\"Int32Value\":0,\"Int64Value\":0,\"Uint32Value\":0,\"Uint64Value\":0}", string(buf))
 
-	Config.SetFilterProtoJsonInt64AsNumber(false)
+	m.Int64AsNumber = false
 	ts = &testPrimitives{Int64Value: 0, Int32Value: 0, Float32Value: 1, BoolValue: true}
-	buf, _ = JSON(ts)
+	buf, _ = m.JSON(ts)
 	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Float64Value\":0,"+
 		"\"Int32Value\":0,\"Int64Value\":\"0\",\"Uint32Value\":0,\"Uint64Value\":0}", string(buf))
-	Config.SetFilterProtoJsonInt64AsNumber(true)
 }
 
 func TestPrimitives_Int64_As_Number_False(t *testing.T) {
-	Config.SetFilterProtoJsonInt64AsNumber(false)
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
 	ts := &testPrimitives{Int64Value: 111, Float32Value: 1, BoolValue: true}
-	buf, _ := JSON(ts)
+	buf, _ := m.JSON(ts)
 	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Float64Value\":0,"+
 		"\"Int32Value\":0,\"Int64Value\":\"111\",\"Uint32Value\":0,\"Uint64Value\":0}", string(buf))
-	Config.SetFilterProtoJsonInt64AsNumber(true)
 }
 
 func TestPrimitives_Emit_Zerovalues_False(t *testing.T) {
-	Config.SetFilterProtoJsonEmitZeroValues(false)
+	m := Marshaler{FilterProtoJson: true, Int64AsNumber:true}
 	ts := &testPrimitives{Int64Value: 111, Float32Value: 1, BoolValue: true}
-	buf, _ := JSON(ts)
+	buf, _ := m.JSON(ts)
 	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Int64Value\":111}", string(buf))
-	Config.SetFilterProtoJsonEmitZeroValues(true)
 }
 
 type args struct {
@@ -103,80 +93,87 @@ func (t *testProtoStruct) String() string { return "" }
 func (t *testProtoStruct) ProtoMessage()  {}
 
 func TestJSON(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
 	ts := &testStruct{}
-	buf, _ := JSON(ts)
+	buf, _ := m.JSON(ts)
 	assert.Equal(t, "{\"TestId\":0,\"PtrValue\":null}", string(buf))
 }
 
 func TestJSON_Proto_OPTION_TRUE(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
 	ts := &testProtoStruct{}
-	buf, _ := JSON(ts)
+	buf, _ := m.JSON(ts)
 	assert.Equal(t, "{\"value\":0}", string(buf))
 }
 
 func TestJSON_Proto_OPTION_FALSE(t *testing.T) {
-	Config.SetFilterProtoJson(false)
+	m := Marshaler{}
 	ts := &testProtoStruct{}
-	buf, _ := JSON(ts)
+	buf, _ := m.JSON(ts)
 	assert.Equal(t, "{}", string(buf))
-	Config.SetFilterProtoJson(true)
 }
 
 func TestFilterFieldInt64Str(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
 	s := &testStruct{TestId: 123}
 	tp := reflect.TypeOf(s).Elem()
 	v := reflect.ValueOf(s).Elem()
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\"}"))
-	filterOf(tp.Field(0).Type.Kind())(json, tp.Field(0), v.Field(0))
+	m.filterOf(tp.Field(0).Type.Kind())(json, tp.Field(0), v.Field(0))
 	jsonBytes, _ := json.MarshalJSON()
 
 	assert.Equal(t, "{\"test_id\":123}", string(jsonBytes))
 }
 
 func TestFilterFieldInt64Number(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
 	s := &testStruct{TestId: 123}
 	json, _ := sjson.NewJson([]byte("{\"test_id\": 123}"))
-	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
+	m.filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
 
 	assert.Equal(t, "{\"PtrValue\":null,\"test_id\":123}", string(jsonBytes))
 }
 
 func TestFilterFieldNullPointer(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
 	s := &testStruct{TestId: 123}
 	tp := reflect.TypeOf(s).Elem()
 	v := reflect.ValueOf(s).Elem()
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\"}"))
-	filterOf(tp.Field(1).Type.Kind())(json, tp.Field(1), v.Field(1))
+	m.filterOf(tp.Field(1).Type.Kind())(json, tp.Field(1), v.Field(1))
 	jsonBytes, _ := json.MarshalJSON()
 
 	assert.Equal(t, "{\"PtrValue\":null,\"test_id\":\"123\"}", string(jsonBytes))
 }
 
 func TestFilterField_With_Empty_Json(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
 	s := &testStruct{PtrValue: &args{}}
 	tp := reflect.TypeOf(s).Elem()
 	v := reflect.ValueOf(s).Elem()
 	json, _ := sjson.NewJson([]byte("{}"))
-	filterStruct(json, tp, v)
+	m.filterStruct(json, tp, v)
 	jsonBytes, _ := json.MarshalJSON()
 
 	assert.Equal(t, "{\"PtrValue\":{},\"TestId\":0}", string(jsonBytes))
 }
 
 func TestFilterStruct(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
 	s := &testStruct{TestId: 123}
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\"}"))
-	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
+	m.filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
 
 	assert.Equal(t, "{\"PtrValue\":null,\"test_id\":123}", string(jsonBytes))
 }
 
 func TestFilterStruct_Missing_Key(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
 	s := &testStruct{TestId: 123}
 	json, _ := sjson.NewJson([]byte("{}"))
-	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
+	m.filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
 
 	assert.Equal(t, "{\"PtrValue\":null,\"TestId\":123}", string(jsonBytes))
@@ -187,18 +184,20 @@ type testSlice struct {
 }
 
 func TestFilterSlice_Missing_Key(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
 	s := &testSlice{Values: []int64{1, 2, 3}}
 	json, _ := sjson.NewJson([]byte("{\"values\":[1]}"))
-	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
+	m.filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
 
 	assert.Equal(t, "{\"values\":[1,2,3]}", string(jsonBytes))
 }
 
 func TestFilterSlice_Empty(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
 	s := &testSlice{Values: []int64{1, 2, 3}}
 	json, _ := sjson.NewJson([]byte("{}"))
-	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
+	m.filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
 
 	assert.Equal(t, "{\"Values\":[1,2,3]}", string(jsonBytes))
@@ -213,22 +212,24 @@ type testStructSlice struct {
 }
 
 func TestFilterSlice_Missing_Struct_Member(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
 	c := &child{}
 	c1 := &child{Num: 123}
 	s := &testStructSlice{Values: []*child{c, c1}}
 	json, _ := sjson.NewJson([]byte("{\"values\":[{\"num\":111}]}"))
-	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
+	m.filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
 
 	assert.Equal(t, "{\"values\":[{\"num\":0},{\"Num\":123}]}", string(jsonBytes))
 }
 
 func TestFilterSlice_Empty_Struct_Member(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
 	c := &child{}
 	c1 := &child{Num: 123}
 	s := &testStructSlice{Values: []*child{c, c1}}
 	json, _ := sjson.NewJson([]byte("{}"))
-	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
+	m.filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
 
 	assert.Equal(t, "{\"Values\":[{\"Num\":0},{\"Num\":123}]}", string(jsonBytes))
@@ -244,26 +245,29 @@ type nestedStruct struct {
 }
 
 func TestFilterNestedStruct_Nil_field(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
 	s := &nestedStruct{TestId: 123}
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\"}"))
-	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
+	m.filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
 	assert.Equal(t, "{\"NestedValue\":null,\"test_id\":123}", string(jsonBytes))
 }
 
 func TestFilterNestedStructField_Empty_Field(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
 	s := &nestedStruct{TestId: 123, NestedValue: &nestedValue{}}
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\", \"nested_value\":{}}"))
 	structField := reflect.TypeOf(s).Elem().Field(1)
-	filterOf(structField.Type.Kind())(json, structField, reflect.ValueOf(s).Elem().Field(1))
+	m.filterOf(structField.Type.Kind())(json, structField, reflect.ValueOf(s).Elem().Field(1))
 	jsonBytes, _ := json.MarshalJSON()
 	assert.Equal(t, "{\"nested_value\":{\"PtrValue\":null},\"test_id\":\"123\"}", string(jsonBytes))
 }
 
 func TestFilterNestedStruct_Empty_Field(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
 	s := &nestedStruct{TestId: 123, NestedValue: &nestedValue{}}
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\", \"nested_value\":{}}"))
-	filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
+	m.filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
 	jsonBytes, _ := json.MarshalJSON()
 	assert.Equal(t, "{\"nested_value\":{\"PtrValue\":null},\"test_id\":123}", string(jsonBytes))
 }
@@ -275,42 +279,46 @@ type testTag struct {
 }
 
 func TestLookupOrigNameInProtoTag(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
 	var v testTag
 	sf := reflect.TypeOf(v).Field(0)
-	name, _ := lookupOrigNameInProtoTag(sf)
+	name, _ := m.lookupOrigNameInProtoTag(sf)
 	assert.Equal(t, "test_name_proto", name)
 }
 
 func TestLookupJSONNameInProtoTag(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
 	var v testTag
 	sf := reflect.TypeOf(v).Field(0)
-	name, _ := lookupJSONNameInProtoTag(sf)
+	name, _ := m.lookupJSONNameInProtoTag(sf)
 	assert.Equal(t, "json_proto", name)
 }
 
 func TestLookupNameInJsonTag(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
 	var v testTag
 	sf := reflect.TypeOf(v).Field(2)
-	name, _ := lookupNameInJsonTag(sf)
+	name, _ := m.lookupNameInJsonTag(sf)
 	assert.Equal(t, "camel_case_value", name)
 }
 
 func TestTag(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
 	v := &testTag{Value: 1}
 	json, _ := sjson.NewJson([]byte("{\"json_proto\": 1}"))
-	filterStruct(json, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem())
+	m.filterStruct(json, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem())
 	jsonBytes, _ := json.MarshalJSON()
 	assert.Equal(t, "{\"CamelCaseValue\":0,\"Value1\":0,\"json_proto\":1}", string(jsonBytes))
 
 	v = &testTag{Value: 1}
 	json, _ = sjson.NewJson([]byte("{\"id\": 1}"))
-	filterStruct(json, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem())
+	m.filterStruct(json, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem())
 	jsonBytes, _ = json.MarshalJSON()
 	assert.Equal(t, "{\"CamelCaseValue\":0,\"Value1\":0,\"id\":1}", string(jsonBytes))
 
 	v = &testTag{Value1: 1}
 	json, _ = sjson.NewJson([]byte("{}"))
-	filterStruct(json, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem())
+	m.filterStruct(json, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem())
 	jsonBytes, _ = json.MarshalJSON()
 	assert.Equal(t, "{\"CamelCaseValue\":0,\"Value1\":1,\"test_name_proto\":0}", string(jsonBytes))
 }
@@ -343,6 +351,7 @@ type complexNestedStruct struct {
 }
 
 func TestFilterComplexNestedStructWithTags(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
 	cv := &childValue{TestId: 123, StringValue: "a string"}
 	cv1 := &childValue{TestId: 456, Args: &someArgs{}}
 	cv2 := &childValue{TestId: 789, IntArray: []int64{44, 55, 66}}
@@ -353,7 +362,7 @@ func TestFilterComplexNestedStructWithTags(t *testing.T) {
 		", \"int_array\":[\"11\",\"22\",\"33\"], \"child_value_arr\":[{\"test_id\":\"456\",\"args\":{}}," +
 		"{\"test_id\":\"789\",\"int_array\":[\"44\",\"55\",\"66\"]}]" +
 		", \"child_value1\":{\"test_id\":\"123\",\"string_value\":\"a string\"}}}")
-	bytes, _ = FilterJsonWithStruct(bytes, s)
+	bytes, _ = m.FilterJsonWithStruct(bytes, s)
 	assert.Equal(t, "{\"TestId\":0,\"c_n_v1\":null,\"c_n_v2\":null,\"complex_nested_value\":"+
 		"{\"StringValue\":\"\",\"child_value1\":{\"Args\":null,\"IntArray\":[],\"string_value\":"+
 		"\"a string\",\"test_id\":123},\"child_value_arr\":[{\"IntArray\":[],\"StringValue\":\"\","+
@@ -464,6 +473,7 @@ func (t *TestTagsData) String() string { return "" }
 func (t *TestTagsData) ProtoMessage()  {}
 
 func TestFilterStructWithTag(t *testing.T) {
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
 	ts := &TestTags{Data: &TestTagsData{
 		UploadUrl:        "http://testlink.dev.fwmrm.net/testlink/ui_asset/111_1311662179.mp4",
 		ContentTypeId:    42,
@@ -474,7 +484,7 @@ func TestFilterStructWithTag(t *testing.T) {
 		Height:           360,
 		Width:            640,
 		Fps:              23}}
-	bytes, _ := JSON(ts)
+	bytes, _ := m.JSON(ts)
 	assert.Equal(t, "{\"data\":{\"bitrate\":1322,\"content_type_id\":42,\"creative_api_id\":100,"+
 		"\"duration\":15,\"fps\":23,\"height\":360,\"id3tag\":\"\",\"metadata_only\":\"\","+
 		"\"physical_duration\":15.043999671936035,\"upload_file\":\"\",\"upload_url\":\"http://testlink.dev."+

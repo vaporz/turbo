@@ -10,7 +10,7 @@ import (
 func TestThriftInit(t *testing.T) {
 	client = &Client{tClient: new(thriftClient)}
 	client.tClient.thriftService = ""
-	err := client.tClient.init(func(thrift.TTransport, thrift.TProtocolFactory) interface{} { return nil })
+	err := client.tClient.init("", func(thrift.TTransport, thrift.TProtocolFactory) interface{} { return nil })
 	assert.Nil(t, err)
 }
 

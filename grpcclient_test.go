@@ -10,7 +10,7 @@ import (
 func TestGrpcInit(t *testing.T) {
 	client = &Client{gClient: new(grpcClient)}
 	client.gClient.grpcService = ""
-	err := client.gClient.init(func(*grpc.ClientConn) interface{} { return nil })
+	err := client.gClient.init("", func(*grpc.ClientConn) interface{} { return nil })
 	assert.Nil(t, err)
 }
 

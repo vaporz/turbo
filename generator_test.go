@@ -16,17 +16,19 @@ func TestUnknownType(t *testing.T) {
 			t.Errorf("The code did not panic")
 		}
 	}()
-	Generate("unknown", "", "", "")
+	g := &Generator{}
+	g.Generate()
 }
 
 func TestValidateServiceRootPath(t *testing.T) {
+	g := &Generator{c: &Config{configs: make(map[string]string)}}
 	var r io.Reader
 	r = strings.NewReader("y\n")
-	ServiceRootPath = "a"
-	validateServiceRootPath(r)
+	g.c.SetServiceRootPath("a")
+	g.validateServiceRootPath(r)
 
-	initPkgPath("github.com/vaporz/turbo/test")
-	os.MkdirAll(ServiceRootPath+"/a", 0755)
-	ServiceRootPath = ServiceRootPath + "/a"
-	validateServiceRootPath(r)
+	serviceRootPath := GOPATH() + "/src/" + "github.com/vaporz/turbo/test"
+	g.c.SetServiceRootPath(serviceRootPath + "/a")
+	os.MkdirAll(serviceRootPath+"/a", 0755)
+	g.validateServiceRootPath(r)
 }

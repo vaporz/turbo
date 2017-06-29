@@ -12,25 +12,25 @@ import (
 
 type switcher func(methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
 
-func router() *mux.Router {
+func router(c *Config) *mux.Router {
 	r := mux.NewRouter()
-	for _, v := range Config.urlServiceMaps {
+	for _, v := range c.urlServiceMaps {
 		httpMethods := strings.Split(v[0], ",")
 		path := v[1]
 		methodName := v[2]
-		r.HandleFunc(path, handler(methodName)).Methods(httpMethods...)
+		r.HandleFunc(path, handler(c, methodName)).Methods(httpMethods...)
 	}
 	return r
 }
 
-func handler(methodName string) func(http.ResponseWriter, *http.Request) {
+func handler(c *Config, methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		ParseRequestForm(req)
 		interceptors := getInterceptors(req)
 		req, err := doBefore(&interceptors, resp, req)
 		// TODO handle this err with errorHandler?
 		if err == nil {
-			doRequest(methodName, resp, req)
+			doRequest(c, methodName, resp, req)
 		}
 		doAfter(interceptors, resp, req)
 	}
@@ -56,7 +56,7 @@ func doBefore(interceptors *[]Interceptor, resp http.ResponseWriter, req *http.R
 	return req, nil
 }
 
-func doRequest(methodName string, resp http.ResponseWriter, req *http.Request) {
+func doRequest(c *Config, methodName string, resp http.ResponseWriter, req *http.Request) {
 	if hijack := Hijacker(req); hijack != nil {
 		hijack(resp, req)
 		return
@@ -71,7 +71,7 @@ func doRequest(methodName string, resp http.ResponseWriter, req *http.Request) {
 		client.components.errorHandlerFunc()(resp, req, err)
 		return
 	}
-	doPostprocessor(resp, req, serviceResp, err)
+	doPostprocessor(c, resp, req, serviceResp, err)
 }
 
 func doPreprocessor(resp http.ResponseWriter, req *http.Request) error {
@@ -84,7 +84,7 @@ func doPreprocessor(resp http.ResponseWriter, req *http.Request) error {
 	return nil
 }
 
-func doPostprocessor(resp http.ResponseWriter, req *http.Request, serviceResponse interface{}, err error) {
+func doPostprocessor(c *Config, resp http.ResponseWriter, req *http.Request, serviceResponse interface{}, err error) {
 	// 1, run postprocessor, if any
 	post := Postprocessor(req)
 	if post != nil {
@@ -100,7 +100,12 @@ func doPostprocessor(resp http.ResponseWriter, req *http.Request, serviceRespons
 	//}
 
 	//3, return as json
-	jsonBytes, err := JSON(serviceResponse)
+	m := Marshaler{
+		FilterProtoJson: c.FilterProtoJson(),
+		EmitZeroValues:  c.FilterProtoJsonEmitZeroValues(),
+		Int64AsNumber:   c.FilterProtoJsonInt64AsNumber(),
+	}
+	jsonBytes, err := m.JSON(serviceResponse)
 	if err == nil {
 		resp.Write(jsonBytes)
 	} else {

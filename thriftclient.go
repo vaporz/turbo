@@ -10,11 +10,10 @@ type thriftClient struct {
 	factory       thrift.TProtocolFactory
 }
 
-func (t *thriftClient) init(clientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}) error {
+func (t *thriftClient) init(addr string, clientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}) error {
 	if t.thriftService != nil {
 		return nil
 	}
-	addr := Config.ThriftServiceAddress()
 	log.Debugf("connecting thrift addr: %s", addr)
 	err := t.connect(addr)
 	if err == nil {

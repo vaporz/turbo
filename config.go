@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"path"
 )
 
 const grpcServiceName string = "grpc_service_name"
@@ -21,135 +22,114 @@ const filterProtoJsonEmitZeroValues string = "filter_proto_json_emit_zerovalues"
 const filterProtoJsonInt64AsNumber string = "filter_proto_json_int64_as_number"
 const turboLogPath string = "turbo_log_path"
 const environment string = "environment"
+const serviceRootPath string = "service_root_path"
 
-// Config struct which holds contents from yaml file
-var Config = &config{}
+// LoadServiceConfig accepts a package path, then load service.yaml in that path
+func LoadServiceConfig(rpcType, configFilePath string) *Config {
+	c := &Config{RpcType: rpcType, GOPATH: GOPATH()}
+	c.loadServiceConfig(configFilePath)
+	c.watchConfig(configFilePath)
 
-// GOPATH is the GOPATH used by Turbo
-var GOPATH string
-
-// RpcType should be "grpc" or "thrift"
-var RpcType string
-
-// ConfigFileName is the yaml file name, excluding extension("service" to "service.yaml")
-var ConfigFileName string
-
-// ServiceRootPath is the absolute path to service root directory
-var ServiceRootPath string
-
-// ServicePkgPath is the package path, e.g. "github.com/vaporz/turbo"
-var ServicePkgPath string
-
-// TurboRootPath is the absolute path to turbo
-var TurboRootPath string
-
-func init() {
-	InitGOPATH()
-	initTurboRootPath()
+	initLogger(c)
+	return c
 }
 
 // InitGOPATH inits the GOPATH turbo used.
-func InitGOPATH() {
+func GOPATH() string {
 	goPath := os.Getenv("GOPATH")
 	paths := strings.Split(goPath, ":")
-	GOPATH = paths[0]
+	return paths[0]
 }
 
-func initTurboRootPath() {
-	TurboRootPath = GOPATH + "/src/github.com/vaporz/turbo"
-}
+type Config struct {
+	// RpcType should be "grpc" or "thrift"
+	RpcType string
+	// GOPATH is the GOPATH used by Turbo
+	GOPATH string
 
-type config struct {
 	configs        map[string]string
 	urlServiceMaps [][3]string
 	fieldMappings  map[string][]string
 }
 
-func (c *config) Env() string {
+func (c *Config) Env() string {
 	return c.configs[environment]
 }
 
-func (c *config) TurboLogPath() string {
+func (c *Config) TurboLogPath() string {
 	return c.configs[turboLogPath]
 }
 
-func (c *config) GOPATH() string {
-	return GOPATH
+func (c *Config) ServiceRootPath() string {
+	p := c.configs[serviceRootPath]
+	if path.IsAbs(p) {
+		return p
+	} else {
+		return c.GOPATH + "/src/" + p
+	}
 }
 
-func (c *config) RpcType() string {
-	return RpcType
+func (c *Config) SetServiceRootPath(p string) {
+	c.configs[serviceRootPath] = p
 }
 
-func (c *config) ConfigFileName() string {
-	return ConfigFileName
-}
-
-func (c *config) ServiceRootPath() string {
-	return ServiceRootPath
-}
-
-func (c *config) ServicePkgPath() string {
-	return ServicePkgPath
-}
-
-func (c *config) GrpcServiceName() string {
+func (c *Config) GrpcServiceName() string {
 	return c.configs[grpcServiceName]
 }
 
-func (c *config) SetGrpcServiceName(name string) {
+func (c *Config) SetGrpcServiceName(name string) {
 	c.configs[grpcServiceName] = name
 }
 
-func (c *config) GrpcServiceAddress() string {
+func (c *Config) GrpcServiceAddress() string {
 	return c.GrpcServiceHost() + ":" + c.GrpcServicePort()
 }
 
-func (c *config) GrpcServiceHost() string {
+func (c *Config) GrpcServiceHost() string {
 	return c.configs[grpcServiceHost]
 }
 
-func (c *config) GrpcServicePort() string {
+func (c *Config) GrpcServicePort() string {
 	return c.configs[grpcServicePort]
 }
 
-func (c *config) SetGrpcServiceHost(host string) {
+func (c *Config) SetGrpcServiceHost(host string) {
 	c.configs[grpcServiceHost] = host
 }
 
-func (c *config) SetGrpcServicePort(port string) {
+func (c *Config) SetGrpcServicePort(port string) {
 	c.configs[grpcServicePort] = port
 }
 
-func (c *config) ThriftServiceName() string {
+func (c *Config) ThriftServiceName() string {
 	return c.configs[thriftServiceName]
 }
 
-func (c *config) ThriftServiceHost() string {
+func (c *Config) ThriftServiceHost() string {
 	return c.configs[thriftServiceHost]
 }
 
-func (c *config) ThriftServicePort() string {
+func (c *Config) ThriftServicePort() string {
 	return c.configs[thriftServicePort]
 }
 
-func (c *config) ThriftServiceAddress() string {
+func (c *Config) ThriftServiceAddress() string {
 	return c.ThriftServiceHost() + ":" + c.ThriftServicePort()
 }
 
-func (c *config) SetThriftServiceHost(host string) {
+func (c *Config) SetThriftServiceHost(host string) {
 	c.configs[thriftServiceHost] = host
 }
 
-func (c *config) SetThriftServicePort(port string) {
+func (c *Config) SetThriftServicePort(port string) {
 	c.configs[thriftServicePort] = port
 }
 
-func (c *config) SetThriftServiceName(name string) {
+func (c *Config) SetThriftServiceName(name string) {
 	c.configs[thriftServiceName] = name
 }
 
-func (c *config) HTTPPort() int64 {
+func (c *Config) HTTPPort() int64 {
 	p, ok := c.configs[httpPort]
 	if !ok || len(strings.TrimSpace(p)) == 0 {
 		panic("[http_port] is required!")
@@ -161,15 +141,15 @@ func (c *config) HTTPPort() int64 {
 	return i
 }
 
-func (c *config) HTTPPortStr() string {
+func (c *Config) HTTPPortStr() string {
 	return ":" + strconv.FormatInt(c.HTTPPort(), 10)
 }
 
-func (c *config) SetHTTPPort(p int64) {
+func (c *Config) SetHTTPPort(p int64) {
 	c.configs[httpPort] = strconv.FormatInt(p, 10)
 }
 
-func (c *config) FilterProtoJson() bool {
+func (c *Config) FilterProtoJson() bool {
 	option, ok := c.configs[filterProtoJson]
 	if !ok || option != "true" {
 		return false
@@ -177,11 +157,11 @@ func (c *config) FilterProtoJson() bool {
 	return true
 }
 
-func (c *config) SetFilterProtoJson(filterJson bool) {
+func (c *Config) SetFilterProtoJson(filterJson bool) {
 	c.configs[filterProtoJson] = strconv.FormatBool(filterJson)
 }
 
-func (c *config) FilterProtoJsonEmitZeroValues() bool {
+func (c *Config) FilterProtoJsonEmitZeroValues() bool {
 	option, ok := c.configs[filterProtoJson]
 	if !ok || option != "true" {
 		return false
@@ -193,11 +173,11 @@ func (c *config) FilterProtoJsonEmitZeroValues() bool {
 	return true
 }
 
-func (c *config) SetFilterProtoJsonEmitZeroValues(emitZeroValues bool) {
+func (c *Config) SetFilterProtoJsonEmitZeroValues(emitZeroValues bool) {
 	c.configs[filterProtoJsonEmitZeroValues] = strconv.FormatBool(emitZeroValues)
 }
 
-func (c *config) FilterProtoJsonInt64AsNumber() bool {
+func (c *Config) FilterProtoJsonInt64AsNumber() bool {
 	option, ok := c.configs[filterProtoJson]
 	if !ok || option != "true" {
 		return false
@@ -209,87 +189,61 @@ func (c *config) FilterProtoJsonInt64AsNumber() bool {
 	return true
 }
 
-func (c *config) SetFilterProtoJsonInt64AsNumber(asNumber bool) {
+func (c *Config) SetFilterProtoJsonInt64AsNumber(asNumber bool) {
 	c.configs[filterProtoJsonInt64AsNumber] = strconv.FormatBool(asNumber)
 }
 
-// LoadServiceConfig accepts a package path, then load service.yaml in that path
-func LoadServiceConfig(rpcType, pkgPath, configFileName string) {
-	initRpcType(rpcType)
-	initConfigFileName(configFileName)
-	initPkgPath(pkgPath)
-	loadServiceConfig()
-	initLogger()
-	watchConfig()
-}
-
-func watchConfig() {
+func (c *Config) watchConfig(configFilePath string) {
 	viper.WatchConfig()
 	viper.OnConfigChange(func(e fsnotify.Event) {
-		log.Info("Config file changed:" + e.Name)
-		loadServiceConfig()
-		log.Info("Config file reloaded!")
+		c.loadServiceConfig(configFilePath)
 		reloadConfig <- true
 	})
 }
 
-func initConfigFileName(name string) {
-	ConfigFileName = name
-}
-
-func initRpcType(r string) {
-	RpcType = r
-}
-
-func initPkgPath(pkgPath string) {
-	ServiceRootPath = GOPATH + "/src/" + pkgPath
-	ServicePkgPath = pkgPath
-}
-
-func loadServiceConfig() {
-	viper.SetConfigName(ConfigFileName)
-	viper.AddConfigPath(ServiceRootPath)
+func (c *Config) loadServiceConfig(configFilePath string) {
+	viper.SetConfigFile(configFilePath)
 	err := viper.ReadInConfig()
 	if err != nil {
 		panic(err)
 	}
-	loadUrlMap()
-	loadConfigs()
+	c.loadUrlMap()
+	c.loadConfigs()
 }
 
-func loadUrlMap() {
-	Config.urlServiceMaps = make([][3]string, 0)
+func (c *Config) loadUrlMap() {
+	c.urlServiceMaps = make([][3]string, 0)
 	urlMap := viper.GetStringSlice("urlmapping")
 	for _, line := range urlMap {
-		appendUrlServiceMap(strings.TrimSpace(line))
+		c.appendUrlServiceMap(strings.TrimSpace(line))
 	}
 }
 
-func appendUrlServiceMap(line string) {
+func (c *Config) appendUrlServiceMap(line string) {
 	values := strings.Split(line, " ")
 	HTTPMethod := strings.TrimSpace(values[0])
 	url := strings.TrimSpace(values[1])
 	methodName := strings.TrimSpace(values[2])
-	Config.urlServiceMaps = append(Config.urlServiceMaps, [3]string{HTTPMethod, url, methodName})
+	c.urlServiceMaps = append(c.urlServiceMaps, [3]string{HTTPMethod, url, methodName})
 }
 
-func loadConfigs() {
-	Config.configs = viper.GetStringMapString("config")
+func (c *Config) loadConfigs() {
+	c.configs = viper.GetStringMapString("config")
 }
 
 var matchKey = regexp.MustCompile("^(.*)\\[")
 var matchSlice = regexp.MustCompile("\\[(.+)\\]")
 
-func loadFieldMapping() {
+func (c *Config) loadFieldMapping() {
 	v := viper.New()
-	v.SetConfigName(RpcType + "fields")
-	v.AddConfigPath(ServiceRootPath + "/gen")
+	v.SetConfigName(c.RpcType + "fields")
+	v.AddConfigPath(c.ServiceRootPath() + "/gen")
 	err := v.ReadInConfig()
 	if err != nil {
 		panic(err)
 	}
-	Config.fieldMappings = make(map[string][]string)
-	mappings := v.GetStringSlice(RpcType + "-fieldmapping")
+	c.fieldMappings = make(map[string][]string)
+	mappings := v.GetStringSlice(c.RpcType + "-fieldmapping")
 	for _, m := range mappings {
 		keyStr := matchKey.FindStringSubmatch(m)
 		key := m
@@ -301,10 +255,10 @@ func loadFieldMapping() {
 		if len(valueSliceStr) >= 2 {
 			fields := strings.Split(valueSliceStr[1], ",")
 			for _, v := range fields {
-				Config.fieldMappings[k] = append(Config.fieldMappings[k], strings.TrimSpace(v))
+				c.fieldMappings[k] = append(c.fieldMappings[k], strings.TrimSpace(v))
 			}
 		} else {
-			Config.fieldMappings[k] = []string{}
+			c.fieldMappings[k] = []string{}
 		}
 	}
 }

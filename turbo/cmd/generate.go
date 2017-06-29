@@ -36,7 +36,14 @@ var generateCmd = &cobra.Command{
 				options = options + " -I " + p + " "
 			}
 		}
-		turbo.Generate(RpcType, args[0], "service", options)
+
+		g := turbo.Generator{
+			RpcType:        RpcType,
+			PkgPath:        args[0],
+			ConfigFileName: "service",
+			Options:        options,
+		}
+		g.Generate()
 		return nil
 	},
 }
