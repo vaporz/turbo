@@ -48,7 +48,10 @@ var generateCmd = &cobra.Command{
 	},
 }
 
+// FilePaths is a list of paths to proto files
 var FilePaths []string
+
+// RpcType should be either "grpc" or "thrift"
 var RpcType string
 
 func init() {

@@ -8,13 +8,16 @@ import (
 	"google.golang.org/grpc"
 )
 
+// RegisterServer registers a service struct to a server
 func RegisterServer(s *grpc.Server) {
 	proto.RegisterTestServiceServer(s, &TestService{})
 }
 
+// TestService is the struct which implements generated interface
 type TestService struct {
 }
 
+// SayHello is an example entry point
 func (s *TestService) SayHello(ctx context.Context, req *proto.SayHelloRequest) (*proto.SayHelloResponse, error) {
 	if req.BoolValue {
 		bytes, err := json.Marshal(req)

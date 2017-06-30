@@ -81,6 +81,7 @@ func mergeMuxVars(req *http.Request) {
 	}
 }
 
+// Marshaler marshals a struct to JSON
 type Marshaler struct {
 	FilterProtoJson bool
 	EmitZeroValues  bool

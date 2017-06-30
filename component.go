@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// Components holds all component mappings
 type Components struct {
 	commonInterceptors []Interceptor
 	interceptorMap     *mux.Router
@@ -20,6 +21,7 @@ type Components struct {
 // TODO setup component mappings via service.yaml
 // TODO reload mappings on config change
 // Interceptor -----------------
+
 // Interceptor intercepts requests, can run a func before and after a request
 type Interceptor interface {
 	Before(http.ResponseWriter, *http.Request) (*http.Request, error)
@@ -30,6 +32,7 @@ type Interceptor interface {
 type BaseInterceptor struct{}
 
 // TODO use ptr receiver?
+
 // Before will run before a request performs
 func (i BaseInterceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
 	return req, nil
@@ -242,6 +245,7 @@ func MessageFieldConvertor(theType reflect.Type) convertor {
 	return client.components.messageFieldConvertor(theType)
 }
 
+// ResetComponents reset all component mappings
 func ResetComponents() {
 	client.components = new(Components)
 }

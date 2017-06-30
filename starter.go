@@ -16,7 +16,9 @@ import (
 
 var client *Client
 
+// Client holds the data for a server
 type Client struct {
+	// TODO add config
 	components   *Components
 	gClient      *grpcClient
 	tClient      *thriftClient
@@ -32,6 +34,7 @@ var reloadConfig = make(chan bool)
 var stopHttp = make(chan string, 1)
 var stopService = make(chan string, 1)
 
+// ResetChans resets chan vars
 func ResetChans() {
 	serviceStarted = make(chan bool, 1)
 
@@ -261,6 +264,7 @@ func startThriftServiceInternal(c *Config, registerTProcessor func() thrift.TPro
 	}
 }
 
+// Stop stops the server gracefully
 func Stop() {
 	stopHttp <- "http"
 	<-httpServerQuit

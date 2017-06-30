@@ -11,6 +11,7 @@ import (
 /*
 this is a generated file, DO NOT EDIT!
 */
+// GrpcSwitcher is a runtime func with which a server starts.
 var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
 	switch methodName {
 	case "SayHello":

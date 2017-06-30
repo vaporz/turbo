@@ -44,6 +44,8 @@ func TestCreateThriftService(t *testing.T) {
 	overwriteThrift()
 	os.RemoveAll(turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice/gen")
 	generate(t, "thrift")
+	// recover grpc gen code
+	generate(t, "grpc")
 }
 
 func TestGrpcService(t *testing.T) {
@@ -169,7 +171,7 @@ message SayHelloResponse {
     string message = 1;
 }
 
-service TestService {
+service TestCreateService {
     rpc sayHello (SayHelloRequest) returns (SayHelloResponse) {}
 }
 `,
@@ -218,6 +220,30 @@ service TestCreateService {
 `,
 		nil,
 	)
+
+	writeFileWithTemplate(
+		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testcreateservice/thriftservice/impl/testcreateserviceimpl.go",
+		`package impl
+
+import (
+	"github.com/vaporz/turbo/test/testcreateservice/gen/thrift/gen-go/gen"
+	"git.apache.org/thrift.git/lib/go/thrift"
+)
+
+func TProcessor() thrift.TProcessor {
+	return gen.NewTestCreateServiceProcessor(TestCreateService{})
+}
+
+type TestCreateService struct {
+}
+
+func (s TestCreateService) SayHello(values *gen.CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64, uint64Value int64) (r *gen.SayHelloResponse, err error) {
+	return &gen.SayHelloResponse{Message: "[thrift server]Hello, " + yourName}, nil
+}
+`,
+		nil,
+	)
+
 }
 
 func create(t *testing.T, rpc string) {

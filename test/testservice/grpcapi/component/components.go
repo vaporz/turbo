@@ -5,9 +5,11 @@ import (
 	"google.golang.org/grpc"
 )
 
+// GrpcClient returns a grpc client
 func GrpcClient(conn *grpc.ClientConn) interface{} {
 	return proto.NewTestServiceClient(conn)
 }
 
+// InitComponents inits turbo components, such as interceptors, pre/postprocessors, errorHandlers, etc.
 func InitComponents() {
 }

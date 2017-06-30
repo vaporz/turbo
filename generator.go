@@ -10,6 +10,7 @@ import (
 	"text/template"
 )
 
+// Generator generates new projects or proto/thrift code
 type Generator struct {
 	RpcType        string
 	PkgPath        string
@@ -18,7 +19,7 @@ type Generator struct {
 	c              *Config
 }
 
-// gofmt bytes
+// Generate proto/thrift code
 func (g *Generator) Generate() {
 	if g.RpcType != "grpc" && g.RpcType != "thrift" {
 		panic("Invalid server type, should be (grpc|thrift)")
@@ -48,7 +49,7 @@ func (g *Generator) CreateProject(serviceName string, force bool) {
 		g.validateServiceRootPath(nil)
 	}
 	g.createRootFolder(GOPATH() + "/src/" + g.PkgPath)
-	g.createServiceYaml(GOPATH() + "/src/" + g.PkgPath, serviceName, "service")
+	g.createServiceYaml(GOPATH()+"/src/"+g.PkgPath, serviceName, "service")
 	g.c = &Config{RpcType: g.RpcType, GOPATH: GOPATH()}
 	g.c.loadServiceConfig(g.c.GOPATH + "/src/" + g.PkgPath + "/service.yaml")
 	if g.RpcType == "grpc" {
@@ -144,7 +145,7 @@ func writeFileWithTemplate(filePath, text string, data interface{}) {
 }
 
 func (g *Generator) createServiceYaml(serviceRootPath, serviceName, configFileName string) {
-	if _, err := os.Stat(serviceRootPath + "/"+configFileName+".yaml"); err == nil {
+	if _, err := os.Stat(serviceRootPath + "/" + configFileName + ".yaml"); err == nil {
 		return
 	}
 	writeFileWithTemplate(
@@ -302,6 +303,7 @@ import (
 /*
 this is a generated file, DO NOT EDIT!
  */
+// GrpcSwitcher is a runtime func with which a server starts.
 var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
 	switch methodName { {{.Cases}}
 	default:
@@ -377,16 +379,15 @@ type thriftParameterCasesValues struct {
 	ServiceName string
 }
 
-var thriftParameterCases string = `
-	case "{{.MethodName}}":
+var thriftParameterCases string = `	case "{{.MethodName}}":
 		var result string
 		args := g.{{.ServiceName}}{{.MethodName}}Args{}
 		at := reflect.TypeOf(args)
 		num := at.NumField()
 		for i := 0; i < num; i++ {
 			result += fmt.Sprintf(
-			"\n\t\t\tparams[%d].Interface().(%s),",
-			i, at.Field(i).Type.String())
+				"\n\t\t\tparams[%d].Interface().(%s),",
+				i, at.Field(i).Type.String())
 		}
 		return result`
 
@@ -400,13 +401,13 @@ type buildThriftParametersValues struct {
 var buildThriftParameters string = `package main
 
 import (
-	g "{{.PkgPath}}/gen/thrift/gen-go/gen"
-	"reflect"
-	"fmt"
 	"flag"
-	"strings"
+	"fmt"
+	g "{{.PkgPath}}/gen/thrift/gen-go/gen"
 	"io"
 	"os"
+	"reflect"
+	"strings"
 	"text/template"
 )
 
@@ -496,7 +497,8 @@ var fieldsYaml string = ` + "`" + `thrift-fieldmapping:
 ` + "`" + `
 
 func buildParameterStr(methodName string) string {
-	switch methodName { {{.Cases}}
+	switch methodName {
+{{.Cases}}
 	default:
 		return "error"
 	}
@@ -592,6 +594,7 @@ import (
 /*
 this is a generated file, DO NOT EDIT!
  */
+// ThriftSwitcher is a runtime func with which a server starts.
 var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
 	switch methodName { {{.Cases}}
 	default:
@@ -652,13 +655,13 @@ func (g *Generator) generateGrpcServiceMain() {
 	writeFileWithTemplate(
 		g.c.ServiceRootPath()+"/grpcservice/"+nameLower+".go",
 		serviceMain,
-		serviceMainValues{PkgPath: g.PkgPath, ServiceName: g.c.GrpcServiceName()},
+		serviceMainValues{PkgPath: g.PkgPath, ConfigFilePath: g.c.ServiceRootPath() + "/service.yaml"},
 	)
 }
 
 type serviceMainValues struct {
-	PkgPath     string
-	ServiceName string
+	PkgPath        string
+	ConfigFilePath string
 }
 
 var serviceMain string = `package main
@@ -669,7 +672,7 @@ import (
 )
 
 func main() {
-	turbo.StartGrpcService("{{.PkgPath}}", "service", impl.RegisterServer)
+	turbo.StartGrpcService("{{.ConfigFilePath}}", impl.RegisterServer)
 }
 `
 
@@ -678,13 +681,13 @@ func (g *Generator) generateThriftServiceMain() {
 	writeFileWithTemplate(
 		g.c.ServiceRootPath()+"/thriftservice/"+nameLower+".go",
 		thriftServiceMain,
-		thriftServiceMainValues{PkgPath: g.PkgPath, ServiceName: g.c.ThriftServiceName()},
+		thriftServiceMainValues{PkgPath: g.PkgPath, ConfigFilePath: g.c.ServiceRootPath() + "/service.yaml"},
 	)
 }
 
 type thriftServiceMainValues struct {
-	PkgPath     string
-	ServiceName string
+	PkgPath        string
+	ConfigFilePath string
 }
 
 var thriftServiceMain string = `package main
@@ -695,7 +698,7 @@ import (
 )
 
 func main() {
-	turbo.StartThriftService("{{.PkgPath}}", "service", impl.TProcessor)
+	turbo.StartThriftService("{{.ConfigFilePath}}", "service", impl.TProcessor)
 }
 `
 
@@ -721,13 +724,16 @@ import (
 	"google.golang.org/grpc"
 )
 
+// RegisterServer registers a service struct to a server
 func RegisterServer(s *grpc.Server) {
 	proto.Register{{.ServiceName}}Server(s, &{{.ServiceName}}{})
 }
 
+// {{.ServiceName}} is the struct which implements generated interface
 type {{.ServiceName}} struct {
 }
 
+// SayHello is an example entry point
 func (s *{{.ServiceName}}) SayHello(ctx context.Context, req *proto.SayHelloRequest) (*proto.SayHelloResponse, error) {
 	return &proto.SayHelloResponse{Message: "[grpc server]Hello, " + req.YourName}, nil
 }
@@ -754,13 +760,16 @@ import (
 	"git.apache.org/thrift.git/lib/go/thrift"
 )
 
+// TProcessor returns TProcessor
 func TProcessor() thrift.TProcessor {
 	return gen.New{{.ServiceName}}Processor({{.ServiceName}}{})
 }
 
+// {{.ServiceName}} is the struct which implements generated interface
 type {{.ServiceName}} struct {
 }
 
+// SayHello is an example entry point
 func (s {{.ServiceName}}) SayHello(yourName string) (r *gen.SayHelloResponse, err error) {
 	return &gen.SayHelloResponse{Message: "[thrift server]Hello, " + yourName}, nil
 }
@@ -771,13 +780,17 @@ func (g *Generator) generateGrpcHTTPMain() {
 	writeFileWithTemplate(
 		g.c.ServiceRootPath()+"/grpcapi/"+nameLower+"api.go",
 		_HTTPMain,
-		_HTTPMainValues{ServiceName: g.c.GrpcServiceName(), PkgPath: g.PkgPath},
+		_HTTPMainValues{
+			ServiceName:    g.c.GrpcServiceName(),
+			PkgPath:        g.PkgPath,
+			ConfigFilePath: g.c.ServiceRootPath() + "/service.yaml"},
 	)
 }
 
 type _HTTPMainValues struct {
-	ServiceName string
-	PkgPath     string
+	ServiceName    string
+	PkgPath        string
+	ConfigFilePath string
 }
 
 var _HTTPMain string = `package main
@@ -790,7 +803,7 @@ import (
 
 func main() {
 	component.InitComponents()
-	turbo.StartGrpcHTTPServer("{{.PkgPath}}", "service", component.GrpcClient, gen.GrpcSwitcher)
+	turbo.StartGrpcHTTPServer("{{.ConfigFilePath}}", component.GrpcClient, gen.GrpcSwitcher)
 }
 `
 
@@ -814,10 +827,12 @@ import (
 	"google.golang.org/grpc"
 )
 
+// GrpcClient returns a grpc client
 func GrpcClient(conn *grpc.ClientConn) interface{} {
 	return proto.New{{.ServiceName}}Client(conn)
 }
 
+// InitComponents inits turbo components, such as interceptors, pre/postprocessors, errorHandlers, etc.
 func InitComponents() {
 }
 `
@@ -842,10 +857,12 @@ import (
 	"git.apache.org/thrift.git/lib/go/thrift"
 )
 
+// ThriftClient returns a thrift client
 func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) interface{} {
 	return t.New{{.ServiceName}}ClientFactory(trans, f)
 }
 
+// InitComponents inits turbo components, such as interceptors, pre/postprocessors, errorHandlers, etc.
 func InitComponents() {
 }
 `
@@ -855,7 +872,10 @@ func (g *Generator) generateThriftHTTPMain() {
 	writeFileWithTemplate(
 		g.c.ServiceRootPath()+"/thriftapi/"+nameLower+"api.go",
 		thriftHTTPMain,
-		_HTTPMainValues{ServiceName: g.c.ThriftServiceName(), PkgPath: g.PkgPath},
+		_HTTPMainValues{
+			ServiceName:    g.c.ThriftServiceName(),
+			PkgPath:        g.PkgPath,
+			ConfigFilePath: g.c.ServiceRootPath() + "/service.yaml"},
 	)
 }
 
@@ -869,8 +889,7 @@ import (
 
 func main() {
 	component.InitComponents()
-	turbo.StartThriftHTTPServer("{{.PkgPath}}", "service",
-		component.ThriftClient, gen.ThriftSwitcher)
+	turbo.StartThriftHTTPServer("{{.ConfigFilePath}}", component.ThriftClient, gen.ThriftSwitcher)
 }
 `
 
@@ -879,20 +898,20 @@ func (g *Generator) generateServiceMain(rpcType string) {
 		writeFileWithTemplate(
 			g.c.ServiceRootPath()+"/main.go",
 			rootMainGrpc,
-			rootMainValues{ServiceName: g.c.ThriftServiceName(), PkgPath: g.PkgPath},
+			rootMainValues{PkgPath: g.PkgPath, ConfigFilePath: g.c.ServiceRootPath() + "/service.yaml"},
 		)
 	} else if rpcType == "thrift" {
 		writeFileWithTemplate(
 			g.c.ServiceRootPath()+"/main.go",
 			rootMainThrift,
-			rootMainValues{ServiceName: g.c.ThriftServiceName(), PkgPath: g.PkgPath},
+			rootMainValues{PkgPath: g.PkgPath, ConfigFilePath: g.c.ServiceRootPath() + "/service.yaml"},
 		)
 	}
 }
 
 type rootMainValues struct {
-	ServiceName string
-	PkgPath     string
+	PkgPath        string
+	ConfigFilePath string
 }
 
 var rootMainGrpc string = `package main
@@ -908,11 +927,10 @@ import (
 
 func main() {
 	gcomponent.InitComponents()
-	turbo.StartGRPC("{{.PkgPath}}", "service", gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
+	turbo.StartGRPC("{{.ConfigFilePath}}", gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
 	//tcompoent.InitComponents()
-	//turbo.StartTHRIFT("{{.PkgPath}}", "service",
-	//	tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
+	//turbo.StartTHRIFT("{{.ConfigFilePath}}", tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 }
 `
 
@@ -929,10 +947,9 @@ import (
 
 func main() {
 	//gcomponent.InitComponents()
-	//turbo.StartGRPC("{{.PkgPath}}", "service",
-	//	gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
+	//turbo.StartGRPC("{{.ConfigFilePath}}", gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
 	tcompoent.InitComponents()
-	turbo.StartTHRIFT("{{.PkgPath}}", "service", tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
+	turbo.StartTHRIFT("{{.ConfigFilePath}}", tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 }
 `

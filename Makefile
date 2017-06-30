@@ -6,6 +6,7 @@ install:
 .PHONY: test
 test:
 	@go test -cover -coverpkg github.com/vaporz/turbo github.com/vaporz/turbo github.com/vaporz/turbo/test
+	@cd test/testcreateservice && go build
 
 .PHONY: doc
 doc:

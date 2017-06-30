@@ -4,10 +4,10 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 	"os"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
-	"path"
 )
 
 const grpcServiceName string = "grpc_service_name"
@@ -34,14 +34,16 @@ func LoadServiceConfig(rpcType, configFilePath string) *Config {
 	return c
 }
 
-// InitGOPATH inits the GOPATH turbo used.
+// GOPATH inits the GOPATH turbo used.
 func GOPATH() string {
 	goPath := os.Getenv("GOPATH")
 	paths := strings.Split(goPath, ":")
 	return paths[0]
 }
 
+// Config holds the info in a config file
 type Config struct {
+	// TODO add viper
 	// RpcType should be "grpc" or "thrift"
 	RpcType string
 	// GOPATH is the GOPATH used by Turbo

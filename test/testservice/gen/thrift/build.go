@@ -1,13 +1,13 @@
 package main
 
 import (
-	g "github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/gen"
-	"reflect"
-	"fmt"
 	"flag"
-	"strings"
+	"fmt"
+	g "github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/gen"
 	"io"
 	"os"
+	"reflect"
+	"strings"
 	"text/template"
 )
 
@@ -97,7 +97,7 @@ var fieldsYaml string = `thrift-fieldmapping:
 `
 
 func buildParameterStr(methodName string) string {
-	switch methodName { 
+	switch methodName {
 	case "SayHello":
 		var result string
 		args := g.TestServiceSayHelloArgs{}
@@ -105,8 +105,8 @@ func buildParameterStr(methodName string) string {
 		num := at.NumField()
 		for i := 0; i < num; i++ {
 			result += fmt.Sprintf(
-			"\n\t\t\tparams[%d].Interface().(%s),",
-			i, at.Field(i).Type.String())
+				"\n\t\t\tparams[%d].Interface().(%s),",
+				i, at.Field(i).Type.String())
 		}
 		return result
 	default:

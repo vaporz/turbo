@@ -43,7 +43,7 @@ func (t *testPrimitives) String() string { return "" }
 func (t *testPrimitives) ProtoMessage()  {}
 
 func TestPrimitives(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber: true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true, Int64AsNumber: true}
 	ts := &testPrimitives{Int64Value: 111, Int32Value: 0, Float32Value: 1, BoolValue: true}
 	buf, _ := m.JSON(ts)
 	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Float64Value\":0,"+
@@ -62,7 +62,7 @@ func TestPrimitives(t *testing.T) {
 }
 
 func TestPrimitives_Int64_As_Number_False(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true}
 	ts := &testPrimitives{Int64Value: 111, Float32Value: 1, BoolValue: true}
 	buf, _ := m.JSON(ts)
 	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Float64Value\":0,"+
@@ -70,7 +70,7 @@ func TestPrimitives_Int64_As_Number_False(t *testing.T) {
 }
 
 func TestPrimitives_Emit_Zerovalues_False(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, Int64AsNumber:true}
+	m := Marshaler{FilterProtoJson: true, Int64AsNumber: true}
 	ts := &testPrimitives{Int64Value: 111, Float32Value: 1, BoolValue: true}
 	buf, _ := m.JSON(ts)
 	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Int64Value\":111}", string(buf))
@@ -93,14 +93,14 @@ func (t *testProtoStruct) String() string { return "" }
 func (t *testProtoStruct) ProtoMessage()  {}
 
 func TestJSON(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true}
 	ts := &testStruct{}
 	buf, _ := m.JSON(ts)
 	assert.Equal(t, "{\"TestId\":0,\"PtrValue\":null}", string(buf))
 }
 
 func TestJSON_Proto_OPTION_TRUE(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true, Int64AsNumber: true}
 	ts := &testProtoStruct{}
 	buf, _ := m.JSON(ts)
 	assert.Equal(t, "{\"value\":0}", string(buf))
@@ -114,7 +114,7 @@ func TestJSON_Proto_OPTION_FALSE(t *testing.T) {
 }
 
 func TestFilterFieldInt64Str(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true, Int64AsNumber: true}
 	s := &testStruct{TestId: 123}
 	tp := reflect.TypeOf(s).Elem()
 	v := reflect.ValueOf(s).Elem()
@@ -126,7 +126,7 @@ func TestFilterFieldInt64Str(t *testing.T) {
 }
 
 func TestFilterFieldInt64Number(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true, Int64AsNumber: true}
 	s := &testStruct{TestId: 123}
 	json, _ := sjson.NewJson([]byte("{\"test_id\": 123}"))
 	m.filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
@@ -136,7 +136,7 @@ func TestFilterFieldInt64Number(t *testing.T) {
 }
 
 func TestFilterFieldNullPointer(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true}
 	s := &testStruct{TestId: 123}
 	tp := reflect.TypeOf(s).Elem()
 	v := reflect.ValueOf(s).Elem()
@@ -148,7 +148,7 @@ func TestFilterFieldNullPointer(t *testing.T) {
 }
 
 func TestFilterField_With_Empty_Json(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true, Int64AsNumber: true}
 	s := &testStruct{PtrValue: &args{}}
 	tp := reflect.TypeOf(s).Elem()
 	v := reflect.ValueOf(s).Elem()
@@ -160,7 +160,7 @@ func TestFilterField_With_Empty_Json(t *testing.T) {
 }
 
 func TestFilterStruct(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true, Int64AsNumber: true}
 	s := &testStruct{TestId: 123}
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\"}"))
 	m.filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
@@ -170,7 +170,7 @@ func TestFilterStruct(t *testing.T) {
 }
 
 func TestFilterStruct_Missing_Key(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true, Int64AsNumber: true}
 	s := &testStruct{TestId: 123}
 	json, _ := sjson.NewJson([]byte("{}"))
 	m.filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
@@ -184,7 +184,7 @@ type testSlice struct {
 }
 
 func TestFilterSlice_Missing_Key(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true, Int64AsNumber: true}
 	s := &testSlice{Values: []int64{1, 2, 3}}
 	json, _ := sjson.NewJson([]byte("{\"values\":[1]}"))
 	m.filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
@@ -194,7 +194,7 @@ func TestFilterSlice_Missing_Key(t *testing.T) {
 }
 
 func TestFilterSlice_Empty(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true, Int64AsNumber: true}
 	s := &testSlice{Values: []int64{1, 2, 3}}
 	json, _ := sjson.NewJson([]byte("{}"))
 	m.filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
@@ -212,7 +212,7 @@ type testStructSlice struct {
 }
 
 func TestFilterSlice_Missing_Struct_Member(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true}
 	c := &child{}
 	c1 := &child{Num: 123}
 	s := &testStructSlice{Values: []*child{c, c1}}
@@ -224,7 +224,7 @@ func TestFilterSlice_Missing_Struct_Member(t *testing.T) {
 }
 
 func TestFilterSlice_Empty_Struct_Member(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true}
 	c := &child{}
 	c1 := &child{Num: 123}
 	s := &testStructSlice{Values: []*child{c, c1}}
@@ -245,7 +245,7 @@ type nestedStruct struct {
 }
 
 func TestFilterNestedStruct_Nil_field(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true, Int64AsNumber: true}
 	s := &nestedStruct{TestId: 123}
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\"}"))
 	m.filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
@@ -254,7 +254,7 @@ func TestFilterNestedStruct_Nil_field(t *testing.T) {
 }
 
 func TestFilterNestedStructField_Empty_Field(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true}
 	s := &nestedStruct{TestId: 123, NestedValue: &nestedValue{}}
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\", \"nested_value\":{}}"))
 	structField := reflect.TypeOf(s).Elem().Field(1)
@@ -264,7 +264,7 @@ func TestFilterNestedStructField_Empty_Field(t *testing.T) {
 }
 
 func TestFilterNestedStruct_Empty_Field(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true, Int64AsNumber: true}
 	s := &nestedStruct{TestId: 123, NestedValue: &nestedValue{}}
 	json, _ := sjson.NewJson([]byte("{\"test_id\": \"123\", \"nested_value\":{}}"))
 	m.filterStruct(json, reflect.TypeOf(s).Elem(), reflect.ValueOf(s).Elem())
@@ -279,7 +279,7 @@ type testTag struct {
 }
 
 func TestLookupOrigNameInProtoTag(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true}
 	var v testTag
 	sf := reflect.TypeOf(v).Field(0)
 	name, _ := m.lookupOrigNameInProtoTag(sf)
@@ -287,7 +287,7 @@ func TestLookupOrigNameInProtoTag(t *testing.T) {
 }
 
 func TestLookupJSONNameInProtoTag(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true}
 	var v testTag
 	sf := reflect.TypeOf(v).Field(0)
 	name, _ := m.lookupJSONNameInProtoTag(sf)
@@ -295,7 +295,7 @@ func TestLookupJSONNameInProtoTag(t *testing.T) {
 }
 
 func TestLookupNameInJsonTag(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true}
 	var v testTag
 	sf := reflect.TypeOf(v).Field(2)
 	name, _ := m.lookupNameInJsonTag(sf)
@@ -303,7 +303,7 @@ func TestLookupNameInJsonTag(t *testing.T) {
 }
 
 func TestTag(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true}
 	v := &testTag{Value: 1}
 	json, _ := sjson.NewJson([]byte("{\"json_proto\": 1}"))
 	m.filterStruct(json, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem())
@@ -351,7 +351,7 @@ type complexNestedStruct struct {
 }
 
 func TestFilterComplexNestedStructWithTags(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true, Int64AsNumber: true}
 	cv := &childValue{TestId: 123, StringValue: "a string"}
 	cv1 := &childValue{TestId: 456, Args: &someArgs{}}
 	cv2 := &childValue{TestId: 789, IntArray: []int64{44, 55, 66}}
@@ -473,7 +473,7 @@ func (t *TestTagsData) String() string { return "" }
 func (t *TestTagsData) ProtoMessage()  {}
 
 func TestFilterStructWithTag(t *testing.T) {
-	m := Marshaler{FilterProtoJson: true, EmitZeroValues:true, Int64AsNumber:true}
+	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true, Int64AsNumber: true}
 	ts := &TestTags{Data: &TestTagsData{
 		UploadUrl:        "http://testlink.dev.fwmrm.net/testlink/ui_asset/111_1311662179.mp4",
 		ContentTypeId:    42,
