@@ -349,25 +349,25 @@ func runCommonTests(t *testing.T, httpPort, rpcType string) {
 
 	turbo.ResetComponents()
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", &TestInterceptor{})
-	turbo.SetPreprocessor("/hello/{your_name:[a-zA-Z0-9]+}", errorPreProcessor)
+	turbo.SetPreprocessor([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", errorPreProcessor)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:error_preprocessor:error in preprocessor\n")
 
 	turbo.ResetComponents()
 	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", &TestInterceptor{})
-	turbo.SetPreprocessor("/hello/{your_name:[a-zA-Z0-9]+}", preProcessor)
+	turbo.SetPreprocessor([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", preProcessor)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:preprocessor:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
 	if rpcType == "thrift" {
-		turbo.SetPostprocessor("/hello/{your_name:[a-zA-Z0-9]+}", thriftPostProcessor)
+		turbo.SetPostprocessor([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", thriftPostProcessor)
 	} else {
-		turbo.SetPostprocessor("/hello/{your_name:[a-zA-Z0-9]+}", postProcessor)
+		turbo.SetPostprocessor([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", postProcessor)
 	}
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:preprocessor:postprocessor:["+rpcType+" server]Hello, testtest")
 
-	turbo.SetHijacker("/hello/{your_name:[a-zA-Z0-9]+}", hijacker)
+	turbo.SetHijacker([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", hijacker)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:hijacker")
 	turbo.ResetComponents()
