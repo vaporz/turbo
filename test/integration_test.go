@@ -16,7 +16,6 @@ import (
 	tcompoent "github.com/vaporz/turbo/test/testservice/thriftapi/component"
 	timpl "github.com/vaporz/turbo/test/testservice/thriftservice/impl"
 	"github.com/vaporz/turbo/turbo/cmd"
-	"io"
 	"net/http"
 	"os"
 	"reflect"
@@ -536,21 +535,17 @@ urlmapping:
   - GET /hello SayHello
 `
 
-func writeWithTemplate(wr io.Writer, text string, data interface{}) {
-	tmpl, err := template.New("").Parse(text)
-	if err != nil {
-		panic(err)
-	}
-	err = tmpl.Execute(wr, data)
-	if err != nil {
-		panic(err)
-	}
-}
-
 func writeFileWithTemplate(filePath, text string, data interface{}) {
 	f, err := os.Create(filePath)
 	if err != nil {
 		panic("fail to create file:" + filePath)
 	}
-	writeWithTemplate(f, text, data)
+	tmpl, err := template.New("").Parse(text)
+	if err != nil {
+		panic(err)
+	}
+	err = tmpl.Execute(f, data)
+	if err != nil {
+		panic(err)
+	}
 }

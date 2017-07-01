@@ -125,42 +125,33 @@ func (g *Generator) createThriftFolders() {
 	os.MkdirAll(g.c.ServiceRootPath()+"/thriftservice/impl", 0755)
 }
 
-func writeWithTemplate(wr io.Writer, text string, data interface{}) {
-	tmpl, err := template.New("").Parse(text)
-	if err != nil {
-		panic(err)
-	}
-	err = tmpl.Execute(wr, data)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func writeFileWithTemplate(filePath, text string, data interface{}) {
+func writeFileWithTemplate(filePath string, data interface{}, text string) {
 	f, err := os.Create(filePath)
 	if err != nil {
 		panic("fail to create file:" + filePath)
 	}
-	writeWithTemplate(f, text, data)
+	tmpl, err := template.New("").Parse(text)
+	if err != nil {
+		panic(err)
+	}
+	err = tmpl.Execute(f, data)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (g *Generator) createServiceYaml(serviceRootPath, serviceName, configFileName string) {
+	type serviceYamlValues struct {
+		ServiceRoot string
+		ServiceName string
+	}
 	if _, err := os.Stat(serviceRootPath + "/" + configFileName + ".yaml"); err == nil {
 		return
 	}
 	writeFileWithTemplate(
 		serviceRootPath+"/"+configFileName+".yaml",
-		serviceYamlFile,
 		serviceYamlValues{ServiceRoot: serviceRootPath, ServiceName: serviceName},
-	)
-}
-
-type serviceYamlValues struct {
-	ServiceRoot string
-	ServiceName string
-}
-
-var serviceYamlFile string = `config:
+		`config:
   environment: development
   service_root_path: {{.ServiceRoot}}
   turbo_log_path: log
@@ -174,22 +165,18 @@ var serviceYamlFile string = `config:
 
 urlmapping:
   - GET /hello SayHello
-`
+`, )
+}
 
 func (g *Generator) createProto(serviceName string) {
+	type protoValues struct {
+		ServiceName string
+	}
 	nameLower := strings.ToLower(serviceName)
 	writeFileWithTemplate(
 		g.c.ServiceRootPath()+"/"+nameLower+".proto",
-		protoFile,
 		protoValues{ServiceName: serviceName},
-	)
-}
-
-type protoValues struct {
-	ServiceName string
-}
-
-var protoFile string = `syntax = "proto3";
+		`syntax = "proto3";
 package proto;
 
 message SayHelloRequest {
@@ -203,22 +190,19 @@ message SayHelloResponse {
 service {{.ServiceName}} {
     rpc sayHello (SayHelloRequest) returns (SayHelloResponse) {}
 }
-`
-
-func (g *Generator) createThrift(serviceName string) {
-	nameLower := strings.ToLower(serviceName)
-	writeFileWithTemplate(
-		g.c.ServiceRootPath()+"/"+nameLower+".thrift",
-		thriftFile,
-		thriftValues{ServiceName: serviceName},
+`,
 	)
 }
 
-type thriftValues struct {
-	ServiceName string
-}
-
-var thriftFile string = `namespace go gen
+func (g *Generator) createThrift(serviceName string) {
+	type thriftValues struct {
+		ServiceName string
+	}
+	nameLower := strings.ToLower(serviceName)
+	writeFileWithTemplate(
+		g.c.ServiceRootPath()+"/"+nameLower+".thrift",
+		thriftValues{ServiceName: serviceName},
+		`namespace go gen
 
 struct SayHelloResponse {
   1: string message,
@@ -227,37 +211,64 @@ struct SayHelloResponse {
 service {{.ServiceName}} {
     SayHelloResponse sayHello (1:string yourName)
 }
-`
+`,
+	)
+}
 
 // GenerateGrpcSwitcher generates "grpcswither.go"
 func (g *Generator) GenerateGrpcSwitcher() {
+	type handlerContent struct {
+		MethodNames  []string
+		PkgPath      string
+		ServiceName  string
+		StructFields []string
+	}
 	if _, err := os.Stat(g.c.ServiceRootPath() + "/gen"); os.IsNotExist(err) {
 		os.Mkdir(g.c.ServiceRootPath()+"/gen", 0755)
 	}
-	var casesStr string
-	methodNames := make(map[string]int)
-	for _, v := range g.c.urlServiceMaps {
-		methodNames[v[2]] = 0
-	}
-	for v := range methodNames {
-		var casesBuf bytes.Buffer
-		writeWithTemplate(
-			&casesBuf,
-			grpcCases,
-			method{
-				ServiceName:  g.c.GrpcServiceName(),
-				MethodName:   v,
-				StructFields: g.structFields(v + "Request")},
-		)
-		casesStr = casesStr + casesBuf.String()
+	methodNames := methodNames(g.c.urlServiceMaps)
+	structFields := make([]string, len(methodNames))
+	for i, v := range methodNames {
+		structFields[i] = g.structFields(v + "Request")
 	}
 	writeFileWithTemplate(
 		g.c.ServiceRootPath()+"/gen/grpcswitcher.go",
-		grpcSwitcherFunc,
 		handlerContent{
-			Cases:   casesStr,
-			PkgPath: g.PkgPath},
-	)
+			MethodNames:  methodNames,
+			PkgPath:      g.PkgPath,
+			ServiceName:  g.c.GrpcServiceName(),
+			StructFields: structFields,
+		},
+		`package gen
+
+import (
+	g "{{.PkgPath}}/gen/proto"
+	"github.com/vaporz/turbo"
+	"reflect"
+	"net/http"
+	"errors"
+)
+
+/*
+this is a generated file, DO NOT EDIT!
+ */
+// GrpcSwitcher is a runtime func with which a server starts.
+var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
+	switch methodName {
+{{range $i, $MethodName := .MethodNames}}
+	case "{{$MethodName}}":
+		request := &g.{{$MethodName}}Request{ {{index $.StructFields $i}} }
+		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
+		if err != nil {
+			return nil, err
+		}
+		return turbo.GrpcService().(g.{{$.ServiceName}}Client).{{$MethodName}}(req.Context(), request)
+{{end}}
+	default:
+		return nil, errors.New("No such method[" + methodName + "]")
+	}
+}
+`)
 }
 
 func (g *Generator) structFields(structName string) string {
@@ -279,48 +290,6 @@ func (g *Generator) structFields(structName string) string {
 	return fieldStr
 }
 
-type method struct {
-	ServiceName  string
-	MethodName   string
-	StructFields string
-}
-
-type handlerContent struct {
-	Cases   string
-	PkgPath string
-}
-
-var grpcSwitcherFunc string = `package gen
-
-import (
-	g "{{.PkgPath}}/gen/proto"
-	"github.com/vaporz/turbo"
-	"reflect"
-	"net/http"
-	"errors"
-)
-
-/*
-this is a generated file, DO NOT EDIT!
- */
-// GrpcSwitcher is a runtime func with which a server starts.
-var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
-	switch methodName { {{.Cases}}
-	default:
-		return nil, errors.New("No such method[" + methodName + "]")
-	}
-}
-`
-
-var grpcCases string = `
-	case "{{.MethodName}}":
-		request := &g.{{.MethodName}}Request{ {{.StructFields}} }
-		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
-		if err != nil {
-			return nil, err
-		}
-		return turbo.GrpcService().(g.{{.ServiceName}}Client).{{.MethodName}}(req.Context(), request)`
-
 // GenerateProtobufStub generates protobuf stub codes
 func (g *Generator) GenerateProtobufStub() {
 	if _, err := os.Stat(g.c.ServiceRootPath() + "/gen/proto"); os.IsNotExist(err) {
@@ -334,31 +303,20 @@ func (g *Generator) GenerateProtobufStub() {
 
 // GenerateBuildThriftParameters generates "build.go"
 func (g *Generator) GenerateBuildThriftParameters() {
-	var casesStr string
-	methodNames := make(map[string]int)
-	for _, v := range g.c.urlServiceMaps {
-		methodNames[v[2]] = 0
+	type buildThriftParametersValues struct {
+		PkgPath         string
+		ServiceName     string
+		ServiceRootPath string
+		MethodNames     []string
 	}
-	for v := range methodNames {
-		var casesBuf bytes.Buffer
-		writeWithTemplate(
-			&casesBuf,
-			thriftParameterCases,
-			thriftParameterCasesValues{
-				ServiceName: g.c.ThriftServiceName(),
-				MethodName:  v},
-		)
-		casesStr = casesStr + casesBuf.String()
-	}
-
 	writeFileWithTemplate(
 		g.c.ServiceRootPath()+"/gen/thrift/build.go",
-		buildThriftParameters,
 		buildThriftParametersValues{
 			PkgPath:         g.PkgPath,
 			ServiceName:     g.c.GrpcServiceName(),
-			Cases:           casesStr,
-			ServiceRootPath: g.c.ServiceRootPath()},
+			ServiceRootPath: g.c.ServiceRootPath(),
+			MethodNames:     methodNames(g.c.urlServiceMaps)},
+		buildThriftParameters,
 	)
 	g.runBuildThriftFields()
 }
@@ -372,30 +330,6 @@ func (g *Generator) runBuildThriftFields() {
 	if err := c.Run(); err != nil {
 		panic(err)
 	}
-}
-
-type thriftParameterCasesValues struct {
-	MethodName  string
-	ServiceName string
-}
-
-var thriftParameterCases string = `	case "{{.MethodName}}":
-		var result string
-		args := g.{{.ServiceName}}{{.MethodName}}Args{}
-		at := reflect.TypeOf(args)
-		num := at.NumField()
-		for i := 0; i < num; i++ {
-			result += fmt.Sprintf(
-				"\n\t\t\tparams[%d].Interface().(%s),",
-				i, at.Field(i).Type.String())
-		}
-		return result`
-
-type buildThriftParametersValues struct {
-	PkgPath         string
-	ServiceName     string
-	Cases           string
-	ServiceRootPath string
 }
 
 var buildThriftParameters string = `package main
@@ -498,7 +432,19 @@ var fieldsYaml string = ` + "`" + `thrift-fieldmapping:
 
 func buildParameterStr(methodName string) string {
 	switch methodName {
-{{.Cases}}
+{{range $i, $MethodName := .MethodNames}}
+	case "{{$MethodName}}":
+		var result string
+		args := g.{{$.ServiceName}}{{$MethodName}}Args{}
+		at := reflect.TypeOf(args)
+		num := at.NumField()
+		for i := 0; i < num; i++ {
+			result += fmt.Sprintf(
+				"\n\t\t\tparams[%d].Interface().(%s),",
+				i, at.Field(i).Type.String())
+		}
+		return result
+{{end}}
 	default:
 		return "error"
 	}
@@ -507,46 +453,47 @@ func buildParameterStr(methodName string) string {
 
 // GenerateThriftSwitcher generates "thriftswitcher.go"
 func (g *Generator) GenerateThriftSwitcher() {
+	type thriftHandlerContent struct {
+		PkgPath            string
+		BuildArgsCases     string
+		ServiceName        string
+		MethodNames        []string
+		Parameters         []string
+		NotEmptyParameters []bool
+		StructNames        []string
+		StructFields       []string
+	}
 	if _, err := os.Stat(g.c.ServiceRootPath() + "/gen"); os.IsNotExist(err) {
 		os.Mkdir(g.c.ServiceRootPath()+"/gen", 0755)
 	}
-	var casesStr string
-	methodNames := make(map[string]int)
-	for _, v := range g.c.urlServiceMaps {
-		methodNames[v[2]] = 0
-	}
-	for v := range methodNames {
-		parametersStr := g.thriftParameters(v)
-		var casesBuf bytes.Buffer
-		writeWithTemplate(
-			&casesBuf,
-			thriftCases,
-			thriftMethod{
-				ServiceName:        g.c.ThriftServiceName(),
-				MethodName:         v,
-				Parameters:         parametersStr,
-				NotEmptyParameters: len(strings.TrimSpace(parametersStr)) > 0},
-		)
-		casesStr = casesStr + casesBuf.String()
+	methodNames := methodNames(g.c.urlServiceMaps)
+	parameters := make([]string, 0, len(methodNames))
+	notEmptyParameters := make([]bool, 0, len(methodNames))
+	for _, v := range methodNames {
+		p := g.thriftParameters(v)
+		parameters = append(parameters, p)
+		notEmptyParameters = append(notEmptyParameters, len(strings.TrimSpace(p)) > 0)
 	}
 
 	var argCasesStr string
+	fields := make([]string, 0, len(g.c.fieldMappings))
+	structNames := make([]string, 0, len(g.c.fieldMappings))
 	for k := range g.c.fieldMappings {
-		var argCasesBuf bytes.Buffer
-		writeWithTemplate(
-			&argCasesBuf,
-			buildArgCases,
-			buildArgParams{k, g.structFields(k)},
-		)
-		argCasesStr = argCasesStr + argCasesBuf.String()
+		structNames = append(structNames, k)
+		fields = append(fields, g.structFields(k))
 	}
 	writeFileWithTemplate(
 		g.c.ServiceRootPath()+"/gen/thriftswitcher.go",
-		thriftSwitcherFunc,
 		thriftHandlerContent{
-			Cases:          casesStr,
-			PkgPath:        g.PkgPath,
-			BuildArgsCases: argCasesStr},
+			PkgPath:            g.PkgPath,
+			BuildArgsCases:     argCasesStr,
+			ServiceName:        g.c.ThriftServiceName(),
+			MethodNames:        methodNames,
+			Parameters:         parameters,
+			NotEmptyParameters: notEmptyParameters,
+			StructNames:        structNames,
+			StructFields:       fields},
+		thriftSwitcherFunc,
 	)
 }
 
@@ -563,22 +510,16 @@ func (g *Generator) thriftParameters(methodName string) string {
 	return buf.String() + " "
 }
 
-type thriftMethod struct {
-	ServiceName        string
-	MethodName         string
-	Parameters         string
-	NotEmptyParameters bool
-}
-
-type thriftHandlerContent struct {
-	Cases          string
-	PkgPath        string
-	BuildArgsCases string
-}
-
-type buildArgParams struct {
-	StructName   string
-	StructFields string
+func methodNames(urlServiceMaps [][3]string) []string {
+	methodNamesMap := make(map[string]int)
+	for _, v := range urlServiceMaps {
+		methodNamesMap[v[2]] = 0
+	}
+	methodNames := make([]string, 0, len(methodNamesMap))
+	for k := range methodNamesMap {
+		methodNames = append(methodNames, k)
+	}
+	return methodNames
 }
 
 var thriftSwitcherFunc string = `package gen
@@ -596,37 +537,37 @@ this is a generated file, DO NOT EDIT!
  */
 // ThriftSwitcher is a runtime func with which a server starts.
 var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
-	switch methodName { {{.Cases}}
+	switch methodName {
+{{range $i, $MethodName := .MethodNames}}
+	case "{{$MethodName}}":{{if index $.NotEmptyParameters $i }}
+		args := gen.{{$.ServiceName}}{{$MethodName}}Args{}
+		params, err := turbo.BuildArgs(reflect.TypeOf(args), reflect.ValueOf(args), req, buildStructArg)
+		if err != nil {
+			return nil, err
+		}{{end}}
+		return turbo.ThriftService().(*gen.{{$.ServiceName}}Client).{{$MethodName}}({{index $.Parameters $i}})
+{{end}}
 	default:
 		return nil, errors.New("No such method[" + methodName + "]")
 	}
 }
 
 func buildStructArg(typeName string, req *http.Request) (v reflect.Value, err error) {
-	switch typeName { {{.BuildArgsCases}}
+	switch typeName {
+{{range $i, $StructName := .StructNames}}
+	case "{{$StructName}}":
+		request := &gen.{{$StructName}}{ {{index $.StructFields $i}} }
+		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
+		if err != nil {
+			return v, err
+		}
+		return reflect.ValueOf(request), nil
+{{end}}
 	default:
 		return v, errors.New("unknown typeName[" + typeName + "]")
 	}
 }
 `
-
-var thriftCases string = `
-	case "{{.MethodName}}":{{if .NotEmptyParameters }}
-		args := gen.{{.ServiceName}}{{.MethodName}}Args{}
-		params, err := turbo.BuildArgs(reflect.TypeOf(args), reflect.ValueOf(args), req, buildStructArg)
-		if err != nil {
-			return nil, err
-		}{{end}}
-		return turbo.ThriftService().(*gen.{{.ServiceName}}Client).{{.MethodName}}({{.Parameters}})`
-
-var buildArgCases string = `
-	case "{{.StructName}}":
-		request := &gen.{{.StructName}}{ {{.StructFields}} }
-		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
-		if err != nil {
-			return v, err
-		}
-		return reflect.ValueOf(request), nil`
 
 // GenerateThriftStub generates Thrift stub codes
 func (g *Generator) GenerateThriftStub() {
@@ -651,20 +592,15 @@ func executeCmd(cmd string, args ...string) {
 }
 
 func (g *Generator) generateGrpcServiceMain() {
+	type serviceMainValues struct {
+		PkgPath        string
+		ConfigFilePath string
+	}
 	nameLower := strings.ToLower(g.c.GrpcServiceName())
 	writeFileWithTemplate(
 		g.c.ServiceRootPath()+"/grpcservice/"+nameLower+".go",
-		serviceMain,
 		serviceMainValues{PkgPath: g.PkgPath, ConfigFilePath: g.c.ServiceRootPath() + "/service.yaml"},
-	)
-}
-
-type serviceMainValues struct {
-	PkgPath        string
-	ConfigFilePath string
-}
-
-var serviceMain string = `package main
+		`package main
 
 import (
 	"{{.PkgPath}}/grpcservice/impl"
@@ -674,23 +610,20 @@ import (
 func main() {
 	turbo.StartGrpcService("{{.ConfigFilePath}}", impl.RegisterServer)
 }
-`
-
-func (g *Generator) generateThriftServiceMain() {
-	nameLower := strings.ToLower(g.c.ThriftServiceName())
-	writeFileWithTemplate(
-		g.c.ServiceRootPath()+"/thriftservice/"+nameLower+".go",
-		thriftServiceMain,
-		thriftServiceMainValues{PkgPath: g.PkgPath, ConfigFilePath: g.c.ServiceRootPath() + "/service.yaml"},
+`,
 	)
 }
 
-type thriftServiceMainValues struct {
-	PkgPath        string
-	ConfigFilePath string
-}
-
-var thriftServiceMain string = `package main
+func (g *Generator) generateThriftServiceMain() {
+	type thriftServiceMainValues struct {
+		PkgPath        string
+		ConfigFilePath string
+	}
+	nameLower := strings.ToLower(g.c.ThriftServiceName())
+	writeFileWithTemplate(
+		g.c.ServiceRootPath()+"/thriftservice/"+nameLower+".go",
+		thriftServiceMainValues{PkgPath: g.PkgPath, ConfigFilePath: g.c.ServiceRootPath() + "/service.yaml"},
+		`package main
 
 import (
 	"{{.PkgPath}}/thriftservice/impl"
@@ -700,23 +633,20 @@ import (
 func main() {
 	turbo.StartThriftService("{{.ConfigFilePath}}", "service", impl.TProcessor)
 }
-`
-
-func (g *Generator) generateGrpcServiceImpl() {
-	nameLower := strings.ToLower(g.c.GrpcServiceName())
-	writeFileWithTemplate(
-		g.c.ServiceRootPath()+"/grpcservice/impl/"+nameLower+"impl.go",
-		serviceImpl,
-		serviceImplValues{PkgPath: g.PkgPath, ServiceName: g.c.GrpcServiceName()},
+`,
 	)
 }
 
-type serviceImplValues struct {
-	PkgPath     string
-	ServiceName string
-}
-
-var serviceImpl string = `package impl
+func (g *Generator) generateGrpcServiceImpl() {
+	type serviceImplValues struct {
+		PkgPath     string
+		ServiceName string
+	}
+	nameLower := strings.ToLower(g.c.GrpcServiceName())
+	writeFileWithTemplate(
+		g.c.ServiceRootPath()+"/grpcservice/impl/"+nameLower+"impl.go",
+		serviceImplValues{PkgPath: g.PkgPath, ServiceName: g.c.GrpcServiceName()},
+		`package impl
 
 import (
 	"golang.org/x/net/context"
@@ -737,23 +667,20 @@ type {{.ServiceName}} struct {
 func (s *{{.ServiceName}}) SayHello(ctx context.Context, req *proto.SayHelloRequest) (*proto.SayHelloResponse, error) {
 	return &proto.SayHelloResponse{Message: "[grpc server]Hello, " + req.YourName}, nil
 }
-`
-
-func (g *Generator) generateThriftServiceImpl() {
-	nameLower := strings.ToLower(g.c.ThriftServiceName())
-	writeFileWithTemplate(
-		g.c.ServiceRootPath()+"/thriftservice/impl/"+nameLower+"impl.go",
-		thriftServiceImpl,
-		thriftServiceImplValues{PkgPath: g.PkgPath, ServiceName: g.c.ThriftServiceName()},
+`,
 	)
 }
 
-type thriftServiceImplValues struct {
-	PkgPath     string
-	ServiceName string
-}
-
-var thriftServiceImpl string = `package impl
+func (g *Generator) generateThriftServiceImpl() {
+	type thriftServiceImplValues struct {
+		PkgPath     string
+		ServiceName string
+	}
+	nameLower := strings.ToLower(g.c.ThriftServiceName())
+	writeFileWithTemplate(
+		g.c.ServiceRootPath()+"/thriftservice/impl/"+nameLower+"impl.go",
+		thriftServiceImplValues{PkgPath: g.PkgPath, ServiceName: g.c.ThriftServiceName()},
+		`package impl
 
 import (
 	"{{.PkgPath}}/gen/thrift/gen-go/gen"
@@ -773,27 +700,24 @@ type {{.ServiceName}} struct {
 func (s {{.ServiceName}}) SayHello(yourName string) (r *gen.SayHelloResponse, err error) {
 	return &gen.SayHelloResponse{Message: "[thrift server]Hello, " + yourName}, nil
 }
-`
-
-func (g *Generator) generateGrpcHTTPMain() {
-	nameLower := strings.ToLower(g.c.GrpcServiceName())
-	writeFileWithTemplate(
-		g.c.ServiceRootPath()+"/grpcapi/"+nameLower+"api.go",
-		_HTTPMain,
-		_HTTPMainValues{
-			ServiceName:    g.c.GrpcServiceName(),
-			PkgPath:        g.PkgPath,
-			ConfigFilePath: g.c.ServiceRootPath() + "/service.yaml"},
+`,
 	)
 }
 
-type _HTTPMainValues struct {
-	ServiceName    string
-	PkgPath        string
-	ConfigFilePath string
-}
-
-var _HTTPMain string = `package main
+func (g *Generator) generateGrpcHTTPMain() {
+	type HTTPMainValues struct {
+		ServiceName    string
+		PkgPath        string
+		ConfigFilePath string
+	}
+	nameLower := strings.ToLower(g.c.GrpcServiceName())
+	writeFileWithTemplate(
+		g.c.ServiceRootPath()+"/grpcapi/"+nameLower+"api.go",
+		HTTPMainValues{
+			ServiceName:    g.c.GrpcServiceName(),
+			PkgPath:        g.PkgPath,
+			ConfigFilePath: g.c.ServiceRootPath() + "/service.yaml"},
+		`package main
 
 import (
 	"{{.PkgPath}}/gen"
@@ -805,22 +729,19 @@ func main() {
 	component.InitComponents()
 	turbo.StartGrpcHTTPServer("{{.ConfigFilePath}}", component.GrpcClient, gen.GrpcSwitcher)
 }
-`
-
-func (g *Generator) generateGrpcHTTPComponent() {
-	writeFileWithTemplate(
-		g.c.ServiceRootPath()+"/grpcapi/component/components.go",
-		_HTTPComponent,
-		_HTTPComponentValues{ServiceName: g.c.GrpcServiceName(), PkgPath: g.PkgPath},
+`,
 	)
 }
 
-type _HTTPComponentValues struct {
-	ServiceName string
-	PkgPath     string
-}
-
-var _HTTPComponent string = `package component
+func (g *Generator) generateGrpcHTTPComponent() {
+	type HTTPComponentValues struct {
+		ServiceName string
+		PkgPath     string
+	}
+	writeFileWithTemplate(
+		g.c.ServiceRootPath()+"/grpcapi/component/components.go",
+		HTTPComponentValues{ServiceName: g.c.GrpcServiceName(), PkgPath: g.PkgPath},
+		`package component
 
 import (
 	"{{.PkgPath}}/gen/proto"
@@ -835,22 +756,19 @@ func GrpcClient(conn *grpc.ClientConn) interface{} {
 // InitComponents inits turbo components, such as interceptors, pre/postprocessors, errorHandlers, etc.
 func InitComponents() {
 }
-`
-
-func (g *Generator) generateThriftHTTPComponent() {
-	writeFileWithTemplate(
-		g.c.ServiceRootPath()+"/thriftapi/component/components.go",
-		thrfitHTTPComponent,
-		thriftHTTPComponentValues{ServiceName: g.c.GrpcServiceName(), PkgPath: g.PkgPath},
+`,
 	)
 }
 
-type thriftHTTPComponentValues struct {
-	ServiceName string
-	PkgPath     string
-}
-
-var thrfitHTTPComponent string = `package component
+func (g *Generator) generateThriftHTTPComponent() {
+	type thriftHTTPComponentValues struct {
+		ServiceName string
+		PkgPath     string
+	}
+	writeFileWithTemplate(
+		g.c.ServiceRootPath()+"/thriftapi/component/components.go",
+		thriftHTTPComponentValues{ServiceName: g.c.GrpcServiceName(), PkgPath: g.PkgPath},
+		`package component
 
 import (
 	t "{{.PkgPath}}/gen/thrift/gen-go/gen"
@@ -865,21 +783,24 @@ func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) interface{
 // InitComponents inits turbo components, such as interceptors, pre/postprocessors, errorHandlers, etc.
 func InitComponents() {
 }
-`
-
-func (g *Generator) generateThriftHTTPMain() {
-	nameLower := strings.ToLower(g.c.ThriftServiceName())
-	writeFileWithTemplate(
-		g.c.ServiceRootPath()+"/thriftapi/"+nameLower+"api.go",
-		thriftHTTPMain,
-		_HTTPMainValues{
-			ServiceName:    g.c.ThriftServiceName(),
-			PkgPath:        g.PkgPath,
-			ConfigFilePath: g.c.ServiceRootPath() + "/service.yaml"},
+`,
 	)
 }
 
-var thriftHTTPMain string = `package main
+func (g *Generator) generateThriftHTTPMain() {
+	type HTTPMainValues struct {
+		ServiceName    string
+		PkgPath        string
+		ConfigFilePath string
+	}
+	nameLower := strings.ToLower(g.c.ThriftServiceName())
+	writeFileWithTemplate(
+		g.c.ServiceRootPath()+"/thriftapi/"+nameLower+"api.go",
+		HTTPMainValues{
+			ServiceName:    g.c.ThriftServiceName(),
+			PkgPath:        g.PkgPath,
+			ConfigFilePath: g.c.ServiceRootPath() + "/service.yaml"},
+		`package main
 
 import (
 	"github.com/vaporz/turbo"
@@ -891,27 +812,28 @@ func main() {
 	component.InitComponents()
 	turbo.StartThriftHTTPServer("{{.ConfigFilePath}}", component.ThriftClient, gen.ThriftSwitcher)
 }
-`
+`,
+	)
+}
 
 func (g *Generator) generateServiceMain(rpcType string) {
+	type rootMainValues struct {
+		PkgPath        string
+		ConfigFilePath string
+	}
 	if rpcType == "grpc" {
 		writeFileWithTemplate(
 			g.c.ServiceRootPath()+"/main.go",
-			rootMainGrpc,
 			rootMainValues{PkgPath: g.PkgPath, ConfigFilePath: g.c.ServiceRootPath() + "/service.yaml"},
+			rootMainGrpc,
 		)
 	} else if rpcType == "thrift" {
 		writeFileWithTemplate(
 			g.c.ServiceRootPath()+"/main.go",
-			rootMainThrift,
 			rootMainValues{PkgPath: g.PkgPath, ConfigFilePath: g.c.ServiceRootPath() + "/service.yaml"},
+			rootMainThrift,
 		)
 	}
-}
-
-type rootMainValues struct {
-	PkgPath        string
-	ConfigFilePath string
 }
 
 var rootMainGrpc string = `package main
