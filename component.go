@@ -31,15 +31,13 @@ type Interceptor interface {
 // BaseInterceptor implements an empty Before() and After()
 type BaseInterceptor struct{}
 
-// TODO use ptr receiver?
-
 // Before will run before a request performs
-func (i BaseInterceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+func (i *BaseInterceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
 	return req, nil
 }
 
 // After will run after a request performs
-func (i BaseInterceptor) After(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+func (i *BaseInterceptor) After(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
 	return req, nil
 }
 

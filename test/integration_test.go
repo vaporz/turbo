@@ -68,7 +68,7 @@ func TestGrpcService(t *testing.T) {
 		"from errorHandler:rpc error: code = Unknown desc = grpc error")
 	turbo.ResetComponents()
 
-	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", ContextValueInterceptor{})
+	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", &ContextValueInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"test1_intercepted:{\"message\":\"{\\\"values\\\":{},\\\"yourName\\\":\\\"testtest\\\",\\\"int64Value\\\":1234567,\\\"boolValue\\\":true,\\\"float64Value\\\":1.23}\"}")
 	turbo.ResetComponents()
@@ -103,7 +103,7 @@ func TestThriftService(t *testing.T) {
 		"from errorHandler:Internal error processing sayHello: thrift error")
 	turbo.ResetComponents()
 
-	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", ContextValueInterceptor{})
+	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", &ContextValueInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"test1_intercepted:{\"message\":\"[thrift server]values.TransactionId=0, yourName=testtest,int64Value=1234567, boolValue=true, float64Value=1.230000, uint64Value=0, int32Value=0, int16Value=0\"}")
 	turbo.ResetComponents()
@@ -304,57 +304,57 @@ func runCommonTests(t *testing.T, httpPort, rpcType string) {
 	testPost(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"404 page not found\n")
 
-	turbo.SetCommonInterceptor(Test1Interceptor{})
+	turbo.SetCommonInterceptor(&Test1Interceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"test1_intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
 	turbo.ResetComponents()
-	turbo.Intercept([]string{"GET"}, "/", TestInterceptor{})
+	turbo.Intercept([]string{"GET"}, "/", &TestInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?yourName=testname",
 		"intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
 	turbo.ResetComponents()
-	turbo.Intercept([]string{"GET"}, "/", TestInterceptor{})
+	turbo.Intercept([]string{"GET"}, "/", &TestInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
 	turbo.ResetComponents()
-	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", BeforeErrorInterceptor{})
+	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", &BeforeErrorInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"interceptor_error:")
 
 	turbo.ResetComponents()
-	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", turbo.BaseInterceptor{}, BeforeErrorInterceptor{})
+	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", &turbo.BaseInterceptor{}, &BeforeErrorInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"interceptor_error:")
 
 	turbo.ResetComponents()
-	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", TestInterceptor{})
+	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", &TestInterceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
 	turbo.ResetComponents()
-	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", TestInterceptor{}, Test1Interceptor{})
+	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", &TestInterceptor{}, &Test1Interceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:test1_intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
-	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", TestInterceptor{}, AfterErrorInterceptor{}, Test1Interceptor{})
+	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", &TestInterceptor{}, &AfterErrorInterceptor{}, &Test1Interceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:test1_intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
 	turbo.ResetComponents()
-	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", TestInterceptor{}, BeforeErrorInterceptor{}, Test1Interceptor{})
+	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", &TestInterceptor{}, &BeforeErrorInterceptor{}, &Test1Interceptor{})
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:interceptor_error:")
 
 	turbo.ResetComponents()
-	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", TestInterceptor{})
+	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", &TestInterceptor{})
 	turbo.SetPreprocessor("/hello/{your_name:[a-zA-Z0-9]+}", errorPreProcessor)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:error_preprocessor:error in preprocessor\n")
 
 	turbo.ResetComponents()
-	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", TestInterceptor{})
+	turbo.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", &TestInterceptor{})
 	turbo.SetPreprocessor("/hello/{your_name:[a-zA-Z0-9]+}", preProcessor)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:preprocessor:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
@@ -403,7 +403,7 @@ type BeforeErrorInterceptor struct {
 	turbo.BaseInterceptor
 }
 
-func (l BeforeErrorInterceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+func (l *BeforeErrorInterceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
 	resp.Write([]byte("interceptor_error:"))
 	return req, errors.New("error!")
 }
@@ -412,7 +412,7 @@ type AfterErrorInterceptor struct {
 	turbo.BaseInterceptor
 }
 
-func (l AfterErrorInterceptor) After(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+func (l *AfterErrorInterceptor) After(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
 	fmt.Println("[After] Request URL:" + req.URL.Path)
 	return req, errors.New("error: after interceptor")
 }
@@ -421,13 +421,13 @@ type TestInterceptor struct {
 	turbo.BaseInterceptor
 }
 
-func (l TestInterceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+func (l *TestInterceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
 	fmt.Println("TestInterceptor before")
 	resp.Write([]byte("intercepted:"))
 	return req, nil
 }
 
-func (l TestInterceptor) After(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+func (l *TestInterceptor) After(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
 	fmt.Println("[After] Request URL:" + req.URL.Path)
 	return req, nil
 }
@@ -436,12 +436,12 @@ type Test1Interceptor struct {
 	turbo.BaseInterceptor
 }
 
-func (l Test1Interceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+func (l *Test1Interceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
 	resp.Write([]byte("test1_intercepted:"))
 	return req, nil
 }
 
-func (l Test1Interceptor) After(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+func (l *Test1Interceptor) After(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
 	fmt.Println("[After] Request URL:" + req.URL.Path)
 	return req, nil
 }
@@ -450,7 +450,7 @@ type ContextValueInterceptor struct {
 	turbo.BaseInterceptor
 }
 
-func (l ContextValueInterceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+func (l *ContextValueInterceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
 	ctx := req.Context()
 	fmt.Println("set context!!")
 	ctx = context.WithValue(ctx, "bool_value", "true")

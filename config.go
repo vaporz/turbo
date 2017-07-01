@@ -28,7 +28,7 @@ const serviceRootPath string = "service_root_path"
 func LoadServiceConfig(rpcType, configFilePath string) *Config {
 	c := &Config{RpcType: rpcType, GOPATH: GOPATH()}
 	c.loadServiceConfig(configFilePath)
-	c.watchConfig(configFilePath)
+	c.watchConfig()
 
 	initLogger(c)
 	return c
@@ -48,6 +48,8 @@ type Config struct {
 	RpcType string
 	// GOPATH is the GOPATH used by Turbo
 	GOPATH string
+	// File is the config file path
+	File string
 
 	configs        map[string]string
 	urlServiceMaps [][3]string
@@ -195,10 +197,10 @@ func (c *Config) SetFilterProtoJsonInt64AsNumber(asNumber bool) {
 	c.configs[filterProtoJsonInt64AsNumber] = strconv.FormatBool(asNumber)
 }
 
-func (c *Config) watchConfig(configFilePath string) {
+func (c *Config) watchConfig() {
 	viper.WatchConfig()
 	viper.OnConfigChange(func(e fsnotify.Event) {
-		c.loadServiceConfig(configFilePath)
+		c.loadServiceConfig(c.File)
 		reloadConfig <- true
 	})
 }
@@ -209,6 +211,7 @@ func (c *Config) loadServiceConfig(configFilePath string) {
 	if err != nil {
 		panic(err)
 	}
+	c.File = configFilePath
 	c.loadUrlMap()
 	c.loadConfigs()
 }
