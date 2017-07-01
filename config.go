@@ -26,7 +26,7 @@ const serviceRootPath string = "service_root_path"
 
 // LoadServiceConfig accepts a package path, then load service.yaml in that path
 func LoadServiceConfig(rpcType, configFilePath string) *Config {
-	c := &Config{RpcType: rpcType, GOPATH: GOPATH()}
+	c := NewConfig(rpcType)
 	c.loadServiceConfig(configFilePath)
 	c.watchConfig()
 
@@ -43,7 +43,7 @@ func GOPATH() string {
 
 // Config holds the info in a config file
 type Config struct {
-	// TODO add viper
+	viper.Viper
 	// RpcType should be "grpc" or "thrift"
 	RpcType string
 	// GOPATH is the GOPATH used by Turbo
@@ -54,6 +54,10 @@ type Config struct {
 	configs        map[string]string
 	urlServiceMaps [][3]string
 	fieldMappings  map[string][]string
+}
+
+func NewConfig(rpcType string) *Config {
+	return &Config{Viper: *viper.New(), RpcType: rpcType, GOPATH: GOPATH()}
 }
 
 func (c *Config) Env() string {
@@ -198,27 +202,38 @@ func (c *Config) SetFilterProtoJsonInt64AsNumber(asNumber bool) {
 }
 
 func (c *Config) watchConfig() {
-	viper.WatchConfig()
-	viper.OnConfigChange(func(e fsnotify.Event) {
+	c.WatchConfig()
+	c.OnConfigChange(func(e fsnotify.Event) {
 		c.loadServiceConfig(c.File)
 		reloadConfig <- true
 	})
 }
 
-func (c *Config) loadServiceConfig(configFilePath string) {
-	viper.SetConfigFile(configFilePath)
-	err := viper.ReadInConfig()
+func (c *Config) loadServiceConfig(p string) {
+	//p = path.Clean(p)
+	//file, err := os.Open(p)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//c.SetConfigFile(p)
+	//err = c.MergeConfig(file)
+	//if err != nil {
+	//	panic(err)
+	//}
+
+	c.SetConfigFile(p)
+	err := c.ReadInConfig()
 	if err != nil {
 		panic(err)
 	}
-	c.File = configFilePath
+	c.File = p
 	c.loadUrlMap()
 	c.loadConfigs()
 }
 
 func (c *Config) loadUrlMap() {
 	c.urlServiceMaps = make([][3]string, 0)
-	urlMap := viper.GetStringSlice("urlmapping")
+	urlMap := c.GetStringSlice("urlmapping")
 	for _, line := range urlMap {
 		c.appendUrlServiceMap(strings.TrimSpace(line))
 	}
@@ -233,22 +248,21 @@ func (c *Config) appendUrlServiceMap(line string) {
 }
 
 func (c *Config) loadConfigs() {
-	c.configs = viper.GetStringMapString("config")
+	c.configs = c.GetStringMapString("config")
 }
 
 var matchKey = regexp.MustCompile("^(.*)\\[")
 var matchSlice = regexp.MustCompile("\\[(.+)\\]")
 
 func (c *Config) loadFieldMapping() {
-	v := viper.New()
-	v.SetConfigName(c.RpcType + "fields")
-	v.AddConfigPath(c.ServiceRootPath() + "/gen")
-	err := v.ReadInConfig()
+	c.SetConfigName(c.RpcType + "fields")
+	c.AddConfigPath(c.ServiceRootPath() + "/gen")
+	err := c.ReadInConfig()
 	if err != nil {
 		panic(err)
 	}
 	c.fieldMappings = make(map[string][]string)
-	mappings := v.GetStringSlice(c.RpcType + "-fieldmapping")
+	mappings := c.GetStringSlice(c.RpcType + "-fieldmapping")
 	for _, m := range mappings {
 		keyStr := matchKey.FindStringSubmatch(m)
 		key := m

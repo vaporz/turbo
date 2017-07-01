@@ -24,7 +24,7 @@ func (g *Generator) Generate() {
 	if g.RpcType != "grpc" && g.RpcType != "thrift" {
 		panic("Invalid server type, should be (grpc|thrift)")
 	}
-	g.c = &Config{RpcType: g.RpcType, GOPATH: GOPATH()}
+	g.c = NewConfig(g.RpcType)
 	g.c.loadServiceConfig(g.c.GOPATH + "/src/" + g.PkgPath + "/" + g.ConfigFileName + ".yaml")
 	if g.RpcType == "grpc" {
 		g.GenerateProtobufStub()
@@ -50,7 +50,7 @@ func (g *Generator) CreateProject(serviceName string, force bool) {
 	}
 	g.createRootFolder(GOPATH() + "/src/" + g.PkgPath)
 	g.createServiceYaml(GOPATH()+"/src/"+g.PkgPath, serviceName, "service")
-	g.c = &Config{RpcType: g.RpcType, GOPATH: GOPATH()}
+	g.c = NewConfig(g.RpcType)
 	g.c.loadServiceConfig(g.c.GOPATH + "/src/" + g.PkgPath + "/service.yaml")
 	if g.RpcType == "grpc" {
 		g.createGrpcProject(serviceName)
