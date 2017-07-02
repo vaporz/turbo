@@ -21,14 +21,16 @@ func TestUnknownType(t *testing.T) {
 }
 
 func TestValidateServiceRootPath(t *testing.T) {
-	g := &Generator{c: &Config{configs: make(map[string]string)}}
+	g := &Generator{c: &Config{configs: make(map[string]string), GOPATH: GOPATH()}}
 	var r io.Reader
 	r = strings.NewReader("y\n")
 	g.c.configs[serviceRootPath] = "a"
 	g.validateServiceRootPath(r)
 
-	serviceRootPath := GOPATH() + "/src/" + "github.com/vaporz/turbo/test"
-	g.c.configs[serviceRootPath] = serviceRootPath + "a"
-	os.MkdirAll(serviceRootPath+"/a", 0755)
+	p := GOPATH() + "/src/" + "github.com/vaporz/turbo/test"
+	g.c.configs[serviceRootPath] = p + "/a"
+	os.MkdirAll(p+"/a", 0755)
 	g.validateServiceRootPath(r)
+	_, err := os.Stat(g.c.ServiceRootPath())
+	assert.True(t, os.IsNotExist(err))
 }

@@ -15,8 +15,16 @@ type Components struct {
 	errorHandler       errorHandlerFunc
 }
 
+// Reset resets all component mappings
+func (c *Components) Reset() {
+	c.commonInterceptors = make([]Interceptor, 0)
+	c.routers = make(map[int]*mux.Router)
+	c.convertorMap = make(map[reflect.Type]convertor)
+	c.errorHandler = nil
+}
+
 const (
-	rInterceptor   = iota
+	rInterceptor = iota
 	rPreprocessor
 	rPostprocessor
 	rHijacker

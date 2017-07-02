@@ -6,6 +6,6 @@ import (
 )
 
 func main() {
-	s := turbo.NewServer("thrift", turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml")
+	s := turbo.NewThriftServer("thrift", turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml")
 	s.StartThriftService(impl.TProcessor)
 }

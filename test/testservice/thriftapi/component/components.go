@@ -10,5 +10,5 @@ func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) interface{
 	return t.NewTestServiceClientFactory(trans, f)
 }
 
-func InitComponents(s *turbo.Server) {
+func InitComponents(s *turbo.ThriftServer) {
 }

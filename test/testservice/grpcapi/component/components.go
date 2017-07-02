@@ -12,5 +12,5 @@ func GrpcClient(conn *grpc.ClientConn) interface{} {
 }
 
 // InitComponents inits turbo components, such as interceptors, pre/postprocessors, errorHandlers, etc.
-func InitComponents(s *turbo.Server) {
+func InitComponents(s *turbo.GrpcServer) {
 }
