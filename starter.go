@@ -18,7 +18,7 @@ import (
 // Client holds the data for a server
 type Server struct {
 	config       *Config
-	components   *Components
+	Components   *Components
 	gClient      *grpcClient
 	tClient      *thriftClient
 	switcherFunc switcher
@@ -28,7 +28,7 @@ type Server struct {
 func NewServer(rpcType, configFilePath string) *Server {
 	s := &Server{
 		config:     NewConfig(rpcType, configFilePath),
-		components: new(Components),
+		Components: new(Components),
 		gClient:    new(grpcClient),
 		tClient:    new(thriftClient),
 		chans:      make(map[int]chan bool)}
@@ -68,6 +68,11 @@ func (s *Server) initChans() {
 func (s *Server) waitForQuit() {
 	<-s.chans[httpServerQuit]
 	<-s.chans[serviceQuit]
+}
+
+// ResetComponents reset all component mappings
+func (s *Server) ResetComponents() {
+	s.Components = new(Components)
 }
 
 type grpcClientCreator func(conn *grpc.ClientConn) interface{}

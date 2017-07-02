@@ -37,9 +37,9 @@ func handler(s *Server, methodName string) func(http.ResponseWriter, *http.Reque
 }
 
 func getInterceptors(s *Server, req *http.Request) []Interceptor {
-	interceptors := s.Interceptors(req)
+	interceptors := s.Components.Interceptors(req)
 	if len(interceptors) == 0 {
-		interceptors = s.CommonInterceptors()
+		interceptors = s.Components.CommonInterceptors()
 	}
 	return interceptors
 }
@@ -57,25 +57,25 @@ func doBefore(interceptors *[]Interceptor, resp http.ResponseWriter, req *http.R
 }
 
 func doRequest(s *Server, methodName string, resp http.ResponseWriter, req *http.Request) {
-	if hijack := s.Hijacker(req); hijack != nil {
+	if hijack := s.Components.Hijacker(req); hijack != nil {
 		hijack(resp, req)
 		return
 	}
 	err := doPreprocessor(s, resp, req)
 	if err != nil {
-		s.components.errorHandlerFunc()(resp, req, err)
+		s.Components.errorHandlerFunc()(resp, req, err)
 		return
 	}
 	serviceResp, err := s.switcherFunc(s, methodName, resp, req)
 	if err != nil {
-		s.components.errorHandlerFunc()(resp, req, err)
+		s.Components.errorHandlerFunc()(resp, req, err)
 		return
 	}
 	doPostprocessor(s, resp, req, serviceResp, err)
 }
 
 func doPreprocessor(s *Server, resp http.ResponseWriter, req *http.Request) error {
-	if pre := s.Preprocessor(req); pre != nil {
+	if pre := s.Components.Preprocessor(req); pre != nil {
 		if err := pre(resp, req); err != nil {
 			log.Println(err.Error())
 			return err
@@ -86,7 +86,7 @@ func doPreprocessor(s *Server, resp http.ResponseWriter, req *http.Request) erro
 
 func doPostprocessor(s *Server, resp http.ResponseWriter, req *http.Request, serviceResponse interface{}, err error) {
 	// 1, run postprocessor, if any
-	post := s.Postprocessor(req)
+	post := s.Components.Postprocessor(req)
 	if post != nil {
 		post(resp, req, serviceResponse, err)
 		return
@@ -215,7 +215,7 @@ func BuildStruct(s *Server, theType reflect.Type, theValue reflect.Value, req *h
 		fieldName := theType.Field(i).Name
 		fieldValue := theValue.FieldByName(fieldName)
 		if fieldValue.Kind() == reflect.Ptr && fieldValue.Type().Elem().Kind() == reflect.Struct {
-			convertor := s.MessageFieldConvertor(fieldValue.Type().Elem())
+			convertor := s.Components.MessageFieldConvertor(fieldValue.Type().Elem())
 			if convertor != nil {
 				fieldValue.Set(convertor(req))
 				continue
@@ -264,7 +264,7 @@ func BuildArgs(s *Server, argsType reflect.Type, argsValue reflect.Value, req *h
 		fieldName := field.Name
 		valueType := argsValue.FieldByName(fieldName).Type()
 		if field.Type.Kind() == reflect.Ptr && valueType.Elem().Kind() == reflect.Struct {
-			convertor := s.MessageFieldConvertor(valueType.Elem())
+			convertor := s.Components.MessageFieldConvertor(valueType.Elem())
 			if convertor != nil {
 				params[i] = convertor(req)
 				continue

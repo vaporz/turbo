@@ -102,15 +102,21 @@ func (c *Config) loadFieldMapping() {
 		}
 		k := strings.TrimSpace(key)
 		valueSliceStr := matchSlice.FindStringSubmatch(m)
-		if len(valueSliceStr) >= 2 {
-			fields := strings.Split(valueSliceStr[1], ",")
-			for _, v := range fields {
-				c.fieldMappings[k] = append(c.fieldMappings[k], strings.TrimSpace(v))
-			}
-		} else {
-			c.fieldMappings[k] = []string{}
-		}
+		c.fieldMappings[k] = parseSliceStr(valueSliceStr)
 	}
+}
+
+func parseSliceStr(valueSliceStr []string) []string {
+	result := make([]string, 0)
+	if len(valueSliceStr) >= 2 {
+		fields := strings.Split(valueSliceStr[1], ",")
+		for _, v := range fields {
+			result = append(result, strings.TrimSpace(v))
+		}
+	} else {
+		result = []string{}
+	}
+	return result
 }
 
 func (c *Config) Env() string {
