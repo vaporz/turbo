@@ -61,11 +61,15 @@ func (g *Generator) validateServiceRootPath(in io.Reader) {
 	if in == nil {
 		in = os.Stdin
 	}
-	_, err := os.Stat(g.c.ServiceRootPath())
+	if len(strings.TrimSpace(g.PkgPath)) == 0 {
+		panic("pkgPath is blank")
+	}
+	p := GOPATH() + "/src/" + g.PkgPath
+	_, err := os.Stat(p)
 	if os.IsNotExist(err) {
 		return
 	}
-	fmt.Print("Path '" + g.c.ServiceRootPath() + "' already exist!\n" +
+	fmt.Print("Path '" + p + "' already exist!\n" +
 		"Do you want to remove this directory before creating a new project? (type 'y' to remove):")
 	var input string
 	fmt.Fscan(in, &input)
@@ -77,7 +81,7 @@ func (g *Generator) validateServiceRootPath(in io.Reader) {
 	if input != "y" {
 		panic("aborted")
 	}
-	os.RemoveAll(g.c.ServiceRootPath())
+	os.RemoveAll(p)
 }
 
 func (g *Generator) createGrpcProject(serviceName string) {

@@ -123,6 +123,7 @@ func (c *Config) Env() string {
 	return c.configs[environment]
 }
 
+// TODO should return raw value
 func (c *Config) ServiceRootPath() string {
 	p := c.configs[serviceRootPath]
 	if path.IsAbs(p) {
