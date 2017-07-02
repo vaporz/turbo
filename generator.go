@@ -606,7 +606,7 @@ import (
 )
 
 func main() {
-	s := turbo.NewGprcServer("{{.ConfigFilePath}}")
+	s := turbo.NewGrpcServer("{{.ConfigFilePath}}")
 	s.StartGrpcService(impl.RegisterServer)
 }
 `,
@@ -812,7 +812,7 @@ import (
 )
 
 func main() {
-	s := turbo.NewThriftServer({{.ConfigFilePath}}")
+	s := turbo.NewThriftServer("{{.ConfigFilePath}}")
 	component.InitComponents(s)
 	s.StartThriftHTTPServer(component.ThriftClient, gen.ThriftSwitcher)
 }
