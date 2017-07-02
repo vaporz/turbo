@@ -17,7 +17,7 @@ import (
 
 // Client holds the data for a server
 type Server struct {
-	config       *Config
+	Config       *Config
 	Components   *Components
 	gClient      *grpcClient
 	tClient      *thriftClient
@@ -27,21 +27,21 @@ type Server struct {
 
 func NewServer(rpcType, configFilePath string) *Server {
 	s := &Server{
-		config:     NewConfig(rpcType, configFilePath),
+		Config:     NewConfig(rpcType, configFilePath),
 		Components: new(Components),
 		gClient:    new(grpcClient),
 		tClient:    new(thriftClient),
 		chans:      make(map[int]chan bool)}
 	s.initChans()
 	s.watchConfig()
-	initLogger(s.config)
+	initLogger(s.Config)
 	return s
 }
 
 func (s *Server) watchConfig() {
-	s.config.WatchConfig()
-	s.config.OnConfigChange(func(e fsnotify.Event) {
-		s.config.loadServiceConfig(s.config.File)
+	s.Config.WatchConfig()
+	s.Config.OnConfigChange(func(e fsnotify.Event) {
+		s.Config.loadServiceConfig(s.Config.File)
 		s.chans[reloadConfig] <- true
 	})
 }
@@ -92,7 +92,7 @@ func (s *Server) StartGRPC(clientCreator grpcClientCreator, sw switcher,
 func (s *Server) StartGrpcHTTPServer(clientCreator grpcClientCreator, sw switcher) {
 	log.Info("Starting HTTP Server...")
 	s.switcherFunc = sw
-	err := s.gClient.init(s.config.GrpcServiceHost()+":"+s.config.GrpcServicePort(), clientCreator)
+	err := s.gClient.init(s.Config.GrpcServiceHost()+":"+s.Config.GrpcServicePort(), clientCreator)
 	if err != nil {
 		log.Panic(err.Error())
 	}
@@ -118,7 +118,7 @@ func (s *Server) StartTHRIFT(clientCreator thriftClientCreator, sw switcher,
 func (s *Server) StartThriftHTTPServer(clientCreator thriftClientCreator, sw switcher) {
 	log.Info("Starting HTTP Server...")
 	s.switcherFunc = sw
-	err := s.tClient.init(s.config.ThriftServiceHost()+":"+s.config.ThriftServicePort(), clientCreator)
+	err := s.tClient.init(s.Config.ThriftServiceHost()+":"+s.Config.ThriftServicePort(), clientCreator)
 	if err != nil {
 		log.Panic(err.Error())
 	}
@@ -128,7 +128,7 @@ func (s *Server) StartThriftHTTPServer(clientCreator thriftClientCreator, sw swi
 
 func (s *Server) startHTTPServer() {
 	hs := &http.Server{
-		Addr:    ":" + strconv.FormatInt(s.config.HTTPPort(), 10),
+		Addr:    ":" + strconv.FormatInt(s.Config.HTTPPort(), 10),
 		Handler: router(s),
 	}
 	go func() {
@@ -173,7 +173,7 @@ func (s *Server) StartGrpcService(registerServer func(s *grpc.Server)) {
 
 func (s *Server) startGrpcServiceInternal(registerServer func(s *grpc.Server), alone bool) {
 	log.Info("Starting GRPC Service...")
-	lis, err := net.Listen("tcp", ":"+s.config.GrpcServicePort())
+	lis, err := net.Listen("tcp", ":"+s.Config.GrpcServicePort())
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -219,7 +219,7 @@ func (s *Server) StartThriftService(registerTProcessor func() thrift.TProcessor)
 }
 
 func (s *Server) startThriftServiceInternal(registerTProcessor func() thrift.TProcessor, alone bool) {
-	port := s.config.ThriftServicePort()
+	port := s.Config.ThriftServicePort()
 	log.Infof("Starting Thrift Service at :%d...", port)
 	transport, err := thrift.NewTServerSocket(":" + port)
 	if err != nil {

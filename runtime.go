@@ -14,7 +14,7 @@ type switcher func(s *Server, methodName string, resp http.ResponseWriter, req *
 
 func router(s *Server) *mux.Router {
 	r := mux.NewRouter()
-	for _, v := range s.config.urlServiceMaps {
+	for _, v := range s.Config.urlServiceMaps {
 		httpMethods := strings.Split(v[0], ",")
 		path := v[1]
 		methodName := v[2]
@@ -101,9 +101,9 @@ func doPostprocessor(s *Server, resp http.ResponseWriter, req *http.Request, ser
 
 	//3, return as json
 	m := Marshaler{
-		FilterProtoJson: s.config.FilterProtoJson(),
-		EmitZeroValues:  s.config.FilterProtoJsonEmitZeroValues(),
-		Int64AsNumber:   s.config.FilterProtoJsonInt64AsNumber(),
+		FilterProtoJson: s.Config.FilterProtoJson(),
+		EmitZeroValues:  s.Config.FilterProtoJsonEmitZeroValues(),
+		Int64AsNumber:   s.Config.FilterProtoJsonInt64AsNumber(),
 	}
 	jsonBytes, err := m.JSON(serviceResponse)
 	if err == nil {
