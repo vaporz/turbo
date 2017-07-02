@@ -10,13 +10,17 @@ import (
 // Components holds all component mappings
 type Components struct {
 	commonInterceptors []Interceptor
-	interceptorMap     *mux.Router
-	preprocessorMap    *mux.Router
-	postprocessorMap   *mux.Router
-	hijackerMap        *mux.Router
+	routers            map[int]*mux.Router
 	convertorMap       map[reflect.Type]convertor
 	errorHandler       errorHandlerFunc
 }
+
+const (
+	rInterceptor   = iota
+	rPreprocessor
+	rPostprocessor
+	rHijacker
+)
 
 // TODO setup component mappings via service.yaml
 // TODO reload mappings on config change
@@ -58,11 +62,14 @@ type interceptors []Interceptor
 func (i interceptors) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
 func (c *Components) intercept(methods []string, urlPattern string, list ...Interceptor) {
-	c.interceptorMap = setComponent(c.interceptorMap, methods, urlPattern, interceptors(list))
+	if c.routers == nil {
+		c.routers = make(map[int]*mux.Router)
+	}
+	c.routers[rInterceptor] = setComponent(c.routers[rInterceptor], methods, urlPattern, interceptors(list))
 }
 
 func (c *Components) interceptors(req *http.Request) interceptors {
-	if cp := component(c.interceptorMap, req); cp != nil {
+	if cp := component(c.routers[rInterceptor], req); cp != nil {
 		return cp.(interceptors)
 	}
 	return nil
@@ -75,11 +82,14 @@ type preprocessor func(http.ResponseWriter, *http.Request) error
 func (p preprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
 func (c *Components) setPreprocessor(methods []string, urlPattern string, pre preprocessor) {
-	c.preprocessorMap = setComponent(c.preprocessorMap, methods, urlPattern, pre)
+	if c.routers == nil {
+		c.routers = make(map[int]*mux.Router)
+	}
+	c.routers[rPreprocessor] = setComponent(c.routers[rPreprocessor], methods, urlPattern, pre)
 }
 
 func (c *Components) preprocessor(req *http.Request) preprocessor {
-	if cp := component(c.preprocessorMap, req); cp != nil {
+	if cp := component(c.routers[rPreprocessor], req); cp != nil {
 		return cp.(preprocessor)
 	}
 	return nil
@@ -92,11 +102,14 @@ type postprocessor func(http.ResponseWriter, *http.Request, interface{}, error)
 func (p postprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
 func (c *Components) setPostprocessor(methods []string, urlPattern string, post postprocessor) {
-	c.postprocessorMap = setComponent(c.postprocessorMap, methods, urlPattern, post)
+	if c.routers == nil {
+		c.routers = make(map[int]*mux.Router)
+	}
+	c.routers[rPostprocessor] = setComponent(c.routers[rPostprocessor], methods, urlPattern, post)
 }
 
 func (c *Components) postprocessor(req *http.Request) postprocessor {
-	if cp := component(c.postprocessorMap, req); cp != nil {
+	if cp := component(c.routers[rPostprocessor], req); cp != nil {
 		return cp.(postprocessor)
 	}
 	return nil
@@ -109,11 +122,14 @@ type hijacker func(http.ResponseWriter, *http.Request)
 func (h hijacker) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
 func (c *Components) setHijacker(methods []string, urlPattern string, h hijacker) {
-	c.hijackerMap = setComponent(c.hijackerMap, methods, urlPattern, h)
+	if c.routers == nil {
+		c.routers = make(map[int]*mux.Router)
+	}
+	c.routers[rHijacker] = setComponent(c.routers[rHijacker], methods, urlPattern, h)
 }
 
 func (c *Components) hijacker(req *http.Request) hijacker {
-	if cp := component(c.hijackerMap, req); cp != nil {
+	if cp := component(c.routers[rHijacker], req); cp != nil {
 		return cp.(hijacker)
 	}
 	return nil
