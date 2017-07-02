@@ -16,7 +16,7 @@ type Components struct {
 }
 
 const (
-	rInterceptor   = iota
+	rInterceptor = iota
 	rPreprocessor
 	rPostprocessor
 	rHijacker
@@ -191,72 +191,72 @@ func (c *Components) errorHandlerFunc() errorHandlerFunc {
 }
 
 // WithErrorHandler registers an errorHandler to handle errors
-func WithErrorHandler(e errorHandlerFunc) {
-	client.components.errorHandler = e
+func (s *Server) WithErrorHandler(e errorHandlerFunc) {
+	s.components.errorHandler = e
 }
 
 // SetCommonInterceptor assigns interceptors to all URLs, if the URL has no other interceptors assigned
-func SetCommonInterceptor(interceptors ...Interceptor) {
-	client.components.setCommonInterceptor(interceptors...)
+func (s *Server) SetCommonInterceptor(interceptors ...Interceptor) {
+	s.components.setCommonInterceptor(interceptors...)
 }
 
 // CommonInterceptors returns a list of interceptors which are default
-func CommonInterceptors() []Interceptor {
-	return client.components.commonInterceptor()
+func (s *Server) CommonInterceptors() []Interceptor {
+	return s.components.commonInterceptor()
 }
 
 // Intercept registers a list of interceptors to an URL pattern at given HTTP methods
-func Intercept(methods []string, urlPattern string, list ...Interceptor) {
-	client.components.intercept(methods, urlPattern, list...)
+func (s *Server) Intercept(methods []string, urlPattern string, list ...Interceptor) {
+	s.components.intercept(methods, urlPattern, list...)
 }
 
 // Interceptors returns a list of interceptors for this request
-func Interceptors(req *http.Request) interceptors {
-	return client.components.interceptors(req)
+func (s *Server) Interceptors(req *http.Request) interceptors {
+	return s.components.interceptors(req)
 }
 
 // SetPreprocessor registers a preprocessor to an URL pattern
-func SetPreprocessor(methods []string, urlPattern string, pre preprocessor) {
-	client.components.setPreprocessor(methods, urlPattern, pre)
+func (s *Server) SetPreprocessor(methods []string, urlPattern string, pre preprocessor) {
+	s.components.setPreprocessor(methods, urlPattern, pre)
 }
 
 // Preprocessor returns a preprocessor for this request
-func Preprocessor(req *http.Request) preprocessor {
-	return client.components.preprocessor(req)
+func (s *Server) Preprocessor(req *http.Request) preprocessor {
+	return s.components.preprocessor(req)
 }
 
 // SetPostprocessor registers a postprocessor to an URL pattern
-func SetPostprocessor(methods []string, urlPattern string, post postprocessor) {
-	client.components.setPostprocessor(methods, urlPattern, post)
+func (s *Server) SetPostprocessor(methods []string, urlPattern string, post postprocessor) {
+	s.components.setPostprocessor(methods, urlPattern, post)
 }
 
 // Postprocessor returns a postprocessor for this request
-func Postprocessor(req *http.Request) postprocessor {
-	return client.components.postprocessor(req)
+func (s *Server) Postprocessor(req *http.Request) postprocessor {
+	return s.components.postprocessor(req)
 }
 
 // SetHijacker registers a hijacker to an URL pattern
-func SetHijacker(methods []string, urlPattern string, h hijacker) {
-	client.components.setHijacker(methods, urlPattern, h)
+func (s *Server) SetHijacker(methods []string, urlPattern string, h hijacker) {
+	s.components.setHijacker(methods, urlPattern, h)
 }
 
 // Hijacker returns a hijacker for this request
-func Hijacker(req *http.Request) hijacker {
-	return client.components.hijacker(req)
+func (s *Server) Hijacker(req *http.Request) hijacker {
+	return s.components.hijacker(req)
 }
 
 // RegisterMessageFieldConvertor registers a convertor on a type
 // usage: RegisterMessageFieldConvertor(new(SomeInterface), convertorFunc)
-func RegisterMessageFieldConvertor(field interface{}, convertorFunc convertor) {
-	client.components.registerMessageFieldConvertor(field, convertorFunc)
+func (s *Server) RegisterMessageFieldConvertor(field interface{}, convertorFunc convertor) {
+	s.components.registerMessageFieldConvertor(field, convertorFunc)
 }
 
 // MessageFieldConvertor returns the convertor for this type
-func MessageFieldConvertor(theType reflect.Type) convertor {
-	return client.components.messageFieldConvertor(theType)
+func (s *Server) MessageFieldConvertor(theType reflect.Type) convertor {
+	return s.components.messageFieldConvertor(theType)
 }
 
 // ResetComponents reset all component mappings
-func ResetComponents() {
-	client.components = new(Components)
+func (s *Server) ResetComponents() {
+	s.components = new(Components)
 }

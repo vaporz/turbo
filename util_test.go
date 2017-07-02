@@ -2,6 +2,7 @@ package turbo
 
 import (
 	sjson "github.com/bitly/go-simplejson"
+	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"reflect"
@@ -11,6 +12,7 @@ import (
 func TestMain(m *testing.M) {
 	executeCmd("bash", "-c", "go install github.com/vaporz/turbo/turbo")
 	executeCmd("bash", "-c", "go install github.com/vaporz/turbo/protoc-gen-buildfields")
+	log = logger.StandardLogger()
 	os.Exit(m.Run())
 }
 

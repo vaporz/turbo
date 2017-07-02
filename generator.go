@@ -24,8 +24,7 @@ func (g *Generator) Generate() {
 	if g.RpcType != "grpc" && g.RpcType != "thrift" {
 		panic("Invalid server type, should be (grpc|thrift)")
 	}
-	g.c = NewConfig(g.RpcType)
-	g.c.loadServiceConfig(g.c.GOPATH + "/src/" + g.PkgPath + "/" + g.ConfigFileName + ".yaml")
+	g.c = NewConfig(g.RpcType, GOPATH()+"/src/"+g.PkgPath+"/"+g.ConfigFileName+".yaml")
 	if g.RpcType == "grpc" {
 		g.GenerateProtobufStub()
 		g.c.loadFieldMapping()
@@ -50,8 +49,7 @@ func (g *Generator) CreateProject(serviceName string, force bool) {
 	}
 	g.createRootFolder(GOPATH() + "/src/" + g.PkgPath)
 	g.createServiceYaml(GOPATH()+"/src/"+g.PkgPath, serviceName, "service")
-	g.c = NewConfig(g.RpcType)
-	g.c.loadServiceConfig(g.c.GOPATH + "/src/" + g.PkgPath + "/service.yaml")
+	g.c = NewConfig(g.RpcType, GOPATH()+"/src/"+g.PkgPath+"/service.yaml")
 	if g.RpcType == "grpc" {
 		g.createGrpcProject(serviceName)
 	} else if g.RpcType == "thrift" {
@@ -165,7 +163,7 @@ func (g *Generator) createServiceYaml(serviceRootPath, serviceName, configFileNa
 
 urlmapping:
   - GET /hello SayHello
-`, )
+`)
 }
 
 func (g *Generator) createProto(serviceName string) {
@@ -253,16 +251,16 @@ import (
 this is a generated file, DO NOT EDIT!
  */
 // GrpcSwitcher is a runtime func with which a server starts.
-var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
+var GrpcSwitcher = func(s *turbo.Server, methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
 	switch methodName {
 {{range $i, $MethodName := .MethodNames}}
 	case "{{$MethodName}}":
 		request := &g.{{$MethodName}}Request{ {{index $.StructFields $i}} }
-		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
+		err = turbo.BuildStruct(s, reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
 		if err != nil {
 			return nil, err
 		}
-		return turbo.GrpcService().(g.{{$.ServiceName}}Client).{{$MethodName}}(req.Context(), request)
+		return turbo.GrpcService(s).(g.{{$.ServiceName}}Client).{{$MethodName}}(req.Context(), request)
 {{end}}
 	default:
 		return nil, errors.New("No such method[" + methodName + "]")
@@ -536,28 +534,28 @@ import (
 this is a generated file, DO NOT EDIT!
  */
 // ThriftSwitcher is a runtime func with which a server starts.
-var ThriftSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
+var ThriftSwitcher = func(s *turbo.Server, methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
 	switch methodName {
 {{range $i, $MethodName := .MethodNames}}
 	case "{{$MethodName}}":{{if index $.NotEmptyParameters $i }}
 		args := gen.{{$.ServiceName}}{{$MethodName}}Args{}
-		params, err := turbo.BuildArgs(reflect.TypeOf(args), reflect.ValueOf(args), req, buildStructArg)
+		params, err := turbo.BuildArgs(s, reflect.TypeOf(args), reflect.ValueOf(args), req, buildStructArg)
 		if err != nil {
 			return nil, err
 		}{{end}}
-		return turbo.ThriftService().(*gen.{{$.ServiceName}}Client).{{$MethodName}}({{index $.Parameters $i}})
+		return turbo.ThriftService(s).(*gen.{{$.ServiceName}}Client).{{$MethodName}}({{index $.Parameters $i}})
 {{end}}
 	default:
 		return nil, errors.New("No such method[" + methodName + "]")
 	}
 }
 
-func buildStructArg(typeName string, req *http.Request) (v reflect.Value, err error) {
+func buildStructArg(s *turbo.Server, typeName string, req *http.Request) (v reflect.Value, err error) {
 	switch typeName {
 {{range $i, $StructName := .StructNames}}
 	case "{{$StructName}}":
 		request := &gen.{{$StructName}}{ {{index $.StructFields $i}} }
-		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
+		err = turbo.BuildStruct(s, reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
 		if err != nil {
 			return v, err
 		}
@@ -608,7 +606,8 @@ import (
 )
 
 func main() {
-	turbo.StartGrpcService("{{.ConfigFilePath}}", impl.RegisterServer)
+	s := turbo.NewServer("grpc", "{{.ConfigFilePath}}")
+	s.StartGrpcService(impl.RegisterServer)
 }
 `,
 	)
@@ -631,7 +630,8 @@ import (
 )
 
 func main() {
-	turbo.StartThriftService("{{.ConfigFilePath}}", "service", impl.TProcessor)
+	s := turbo.NewServer("thrift", "{{.ConfigFilePath}}")
+	s.StartThriftService(impl.TProcessor)
 }
 `,
 	)
@@ -726,8 +726,9 @@ import (
 )
 
 func main() {
-	component.InitComponents()
-	turbo.StartGrpcHTTPServer("{{.ConfigFilePath}}", component.GrpcClient, gen.GrpcSwitcher)
+	s := turbo.NewServer("grpc", "{{.ConfigFilePath}}")
+	component.InitComponents(s)
+	s.StartGrpcHTTPServer(component.GrpcClient, gen.GrpcSwitcher)
 }
 `,
 	)
@@ -746,6 +747,7 @@ func (g *Generator) generateGrpcHTTPComponent() {
 import (
 	"{{.PkgPath}}/gen/proto"
 	"google.golang.org/grpc"
+	"github.com/vaporz/turbo"
 )
 
 // GrpcClient returns a grpc client
@@ -754,7 +756,7 @@ func GrpcClient(conn *grpc.ClientConn) interface{} {
 }
 
 // InitComponents inits turbo components, such as interceptors, pre/postprocessors, errorHandlers, etc.
-func InitComponents() {
+func InitComponents(s *turbo.Server) {
 }
 `,
 	)
@@ -773,6 +775,7 @@ func (g *Generator) generateThriftHTTPComponent() {
 import (
 	t "{{.PkgPath}}/gen/thrift/gen-go/gen"
 	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/vaporz/turbo"
 )
 
 // ThriftClient returns a thrift client
@@ -781,7 +784,7 @@ func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) interface{
 }
 
 // InitComponents inits turbo components, such as interceptors, pre/postprocessors, errorHandlers, etc.
-func InitComponents() {
+func InitComponents(s *turbo.Server) {
 }
 `,
 	)
@@ -809,8 +812,9 @@ import (
 )
 
 func main() {
-	component.InitComponents()
-	turbo.StartThriftHTTPServer("{{.ConfigFilePath}}", component.ThriftClient, gen.ThriftSwitcher)
+	s := turbo.NewServer("thrift", "{{.ConfigFilePath}}")
+	component.InitComponents(s)
+	s.StartThriftHTTPServer(component.ThriftClient, gen.ThriftSwitcher)
 }
 `,
 	)
@@ -848,11 +852,13 @@ import (
 )
 
 func main() {
-	gcomponent.InitComponents()
-	turbo.StartGRPC("{{.ConfigFilePath}}", gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
+	s := turbo.NewServer("grpc", "{{.ConfigFilePath}}")
+	gcomponent.InitComponents(s)
+	s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
-	//tcompoent.InitComponents()
-	//turbo.StartTHRIFT("{{.ConfigFilePath}}", tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
+	//s := turbo.NewServer("thrift", "{{.ConfigFilePath}}")
+	//tcompoent.InitComponents(s)
+	//s.StartTHRIFT(tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 }
 `
 
@@ -868,10 +874,12 @@ import (
 )
 
 func main() {
-	//gcomponent.InitComponents()
-	//turbo.StartGRPC("{{.ConfigFilePath}}", gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
+	//s := turbo.NewServer("grpc", "{{.ConfigFilePath}}")
+	//gcomponent.InitComponents(s)
+	//s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
-	tcompoent.InitComponents()
-	turbo.StartTHRIFT("{{.ConfigFilePath}}", tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
+	s := turbo.NewServer("thrift", "{{.ConfigFilePath}}")
+	tcompoent.InitComponents(s)
+	s.StartTHRIFT(tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 }
 `

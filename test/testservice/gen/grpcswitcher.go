@@ -12,15 +12,15 @@ import (
 this is a generated file, DO NOT EDIT!
 */
 // GrpcSwitcher is a runtime func with which a server starts.
-var GrpcSwitcher = func(methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
+var GrpcSwitcher = func(s *turbo.Server, methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
 	switch methodName {
 	case "SayHello":
 		request := &g.SayHelloRequest{Values: &g.CommonValues{}}
-		err = turbo.BuildStruct(reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
+		err = turbo.BuildStruct(s, reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
 		if err != nil {
 			return nil, err
 		}
-		return turbo.GrpcService().(g.TestServiceClient).SayHello(req.Context(), request)
+		return turbo.GrpcService(s).(g.TestServiceClient).SayHello(req.Context(), request)
 	default:
 		return nil, errors.New("No such method[" + methodName + "]")
 	}

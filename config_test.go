@@ -2,12 +2,12 @@ package turbo
 
 import (
 	"github.com/stretchr/testify/assert"
-	"testing"
 	"strconv"
+	"testing"
 )
 
 func TestConfig(t *testing.T) {
-	c := LoadServiceConfig("grpc", "test/service_test.yaml")
+	c := NewConfig("grpc", "test/service_test.yaml")
 	assert.Equal(t, "production", c.Env())
 	assert.Equal(t, "grpc", c.RpcType)
 	assert.Equal(t, c.GOPATH+"/src/"+"github.com/vaporz/turbo/test", c.ServiceRootPath())
@@ -56,7 +56,7 @@ func TestConfig(t *testing.T) {
 }
 
 func TestHttpPortPanic(t *testing.T) {
-	c := LoadServiceConfig("grpc", "test/service_test.yaml")
+	c := NewConfig("grpc", "test/service_test.yaml")
 	p := c.HTTPPort()
 	defer func() {
 		c.configs[httpPort] = strconv.FormatInt(p, 10)

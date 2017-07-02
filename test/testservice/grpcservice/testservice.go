@@ -6,5 +6,6 @@ import (
 )
 
 func main() {
-	turbo.StartGrpcService(turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml", impl.RegisterServer)
+	s := turbo.NewServer("grpc", turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml")
+	s.StartGrpcService(impl.RegisterServer)
 }

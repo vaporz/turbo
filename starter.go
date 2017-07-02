@@ -2,132 +2,132 @@ package turbo
 
 import (
 	"context"
-	"fmt"
 	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/fsnotify/fsnotify"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
-	"strconv"
 )
 
-var client *Client
-
 // Client holds the data for a server
-type Client struct {
-	// TODO add config
+type Server struct {
+	config       *Config
 	components   *Components
 	gClient      *grpcClient
 	tClient      *thriftClient
 	switcherFunc switcher
+	chans        map[int]chan bool
 }
 
-var serviceStarted = make(chan bool, 1)
+func NewServer(rpcType, configFilePath string) *Server {
+	s := &Server{
+		config:     NewConfig(rpcType, configFilePath),
+		components: new(Components),
+		gClient:    new(grpcClient),
+		tClient:    new(thriftClient),
+		chans:      make(map[int]chan bool)}
+	s.initChans()
+	s.watchConfig()
+	initLogger(s.config)
+	return s
+}
 
-var httpServerQuit = make(chan bool)
-var serviceQuit = make(chan bool)
+func (s *Server) watchConfig() {
+	s.config.WatchConfig()
+	s.config.OnConfigChange(func(e fsnotify.Event) {
+		s.config.loadServiceConfig(s.config.File)
+		s.chans[reloadConfig] <- true
+	})
+}
 
-var reloadConfig = make(chan bool)
-var stopHttp = make(chan string, 1)
-var stopService = make(chan string, 1)
+const (
+	serviceStarted = iota
+	httpServerQuit
+	serviceQuit
+	reloadConfig
+	stopHttp
+	stopService
+)
 
 // ResetChans resets chan vars
-func ResetChans() {
-	serviceStarted = make(chan bool, 1)
-
-	httpServerQuit = make(chan bool)
-	serviceQuit = make(chan bool)
-
-	reloadConfig = make(chan bool)
-	stopHttp = make(chan string, 1)
-	stopService = make(chan string, 1)
+func (s *Server) initChans() {
+	s.chans[serviceStarted] = make(chan bool, 1)
+	s.chans[httpServerQuit] = make(chan bool)
+	s.chans[serviceQuit] = make(chan bool)
+	s.chans[reloadConfig] = make(chan bool)
+	s.chans[stopHttp] = make(chan bool, 1)
+	s.chans[stopService] = make(chan bool, 1)
 }
 
-func waitForQuit() {
-	<-httpServerQuit
-	<-serviceQuit
+func (s *Server) waitForQuit() {
+	<-s.chans[httpServerQuit]
+	<-s.chans[serviceQuit]
 }
 
 type grpcClientCreator func(conn *grpc.ClientConn) interface{}
 
 // StartGRPC starts both HTTP server and GRPC service
-func StartGRPC(configFilePath string, clientCreator grpcClientCreator, s switcher,
+func (s *Server) StartGRPC(clientCreator grpcClientCreator, sw switcher,
 	registerServer func(s *grpc.Server)) {
-	c := LoadServiceConfig("grpc", configFilePath)
 	log.Info("Starting Turbo...")
-	go startGrpcServiceInternal(c, registerServer, false)
-	<-serviceStarted
-	go startGrpcHTTPServerInternal(c, clientCreator, s)
-	waitForQuit()
+	go s.startGrpcServiceInternal(registerServer, false)
+	<-s.chans[serviceStarted]
+	go s.StartGrpcHTTPServer(clientCreator, sw)
+	s.waitForQuit()
 	log.Info("Turbo exit, bye!")
 }
 
 // StartGrpcHTTPServer starts a HTTP server which sends requests via grpc
-func StartGrpcHTTPServer(configFilePath string, clientCreator grpcClientCreator, s switcher) {
-	c := LoadServiceConfig("grpc", configFilePath)
-	startGrpcHTTPServerInternal(c, clientCreator, s)
-}
-
-func startGrpcHTTPServerInternal(c *Config, clientCreator grpcClientCreator, s switcher) {
+func (s *Server) StartGrpcHTTPServer(clientCreator grpcClientCreator, sw switcher) {
 	log.Info("Starting HTTP Server...")
-	client = &Client{
-		components:   new(Components),
-		gClient:      new(grpcClient),
-		switcherFunc: s}
-	err := client.gClient.init(c.GrpcServiceHost()+":"+c.GrpcServicePort(), clientCreator)
+	s.switcherFunc = sw
+	err := s.gClient.init(s.config.GrpcServiceHost()+":"+s.config.GrpcServicePort(), clientCreator)
 	if err != nil {
 		log.Panic(err.Error())
 	}
-	defer client.gClient.close()
-	startHTTPServer(c)
+	defer s.gClient.close()
+	s.startHTTPServer()
 }
 
 type thriftClientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}
 
 // StartTHRIFT starts both HTTP server and Thrift service
-func StartTHRIFT(configFilePath string, clientCreator thriftClientCreator, s switcher,
+func (s *Server) StartTHRIFT(clientCreator thriftClientCreator, sw switcher,
 	registerTProcessor func() thrift.TProcessor) {
-	c := LoadServiceConfig("thrift", configFilePath)
 	log.Info("Starting Turbo...")
-	go startThriftServiceInternal(c, registerTProcessor, false)
-	<-serviceStarted
+	go s.startThriftServiceInternal(registerTProcessor, false)
+	<-s.chans[serviceStarted]
 	time.Sleep(time.Second * 1)
-	go startThriftHTTPServerInternal(c, clientCreator, s)
-	waitForQuit()
+	go s.StartThriftHTTPServer(clientCreator, sw)
+	s.waitForQuit()
 	log.Info("Turbo exit, bye!")
 }
 
 // StartThriftHTTPServer starts a HTTP server which sends requests via Thrift
-func StartThriftHTTPServer(configFilePath string, clientCreator thriftClientCreator, s switcher) {
-	c := LoadServiceConfig("thrift", configFilePath)
-	startThriftHTTPServerInternal(c, clientCreator, s)
-}
-
-func startThriftHTTPServerInternal(c *Config, clientCreator thriftClientCreator, s switcher) {
+func (s *Server) StartThriftHTTPServer(clientCreator thriftClientCreator, sw switcher) {
 	log.Info("Starting HTTP Server...")
-	client = &Client{
-		components:   new(Components),
-		tClient:      new(thriftClient),
-		switcherFunc: s}
-	err := client.tClient.init(c.ThriftServiceHost()+":"+c.ThriftServicePort(), clientCreator)
+	s.switcherFunc = sw
+	err := s.tClient.init(s.config.ThriftServiceHost()+":"+s.config.ThriftServicePort(), clientCreator)
 	if err != nil {
 		log.Panic(err.Error())
 	}
-	defer client.tClient.close()
-	startHTTPServer(c)
+	defer s.tClient.close()
+	s.startHTTPServer()
 }
 
-func startHTTPServer(c *Config) {
-	s := &http.Server{
-		Addr:    ":" + strconv.FormatInt(c.HTTPPort(), 10),
-		Handler: router(c),
+func (s *Server) startHTTPServer() {
+	hs := &http.Server{
+		Addr:    ":" + strconv.FormatInt(s.config.HTTPPort(), 10),
+		Handler: router(s),
 	}
 	go func() {
-		if err := s.ListenAndServe(); err != nil {
+		if err := hs.ListenAndServe(); err != nil {
 			log.Printf("HTTP Server failed to serve: %v", err)
 		}
 	}()
@@ -137,41 +137,38 @@ func startHTTPServer(c *Config) {
 	signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
 	for {
 		select {
-		case v := <-stopHttp:
-			if v == "http" {
-				shutDownHTTP(s)
-				return
-			}
-		case <-exit:
-			shutDownHTTP(s)
-			stopService <- "service"
+		case <-s.chans[stopHttp]:
+			s.shutDownHTTP(hs)
 			return
-		case <-reloadConfig:
+		case <-exit:
+			s.shutDownHTTP(hs)
+			s.chans[stopService] <- true
+			return
+		case <-s.chans[reloadConfig]:
 			log.Info("Config file changed!")
-			s.Handler = router(c)
+			hs.Handler = router(s)
 			log.Info("HTTP Server ServeMux reloaded")
 		}
 	}
 }
 
-func shutDownHTTP(s *http.Server) {
+func (s *Server) shutDownHTTP(hs *http.Server) {
 	log.Info("HTTP Server is shutting down...")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
-	s.Shutdown(ctx)
-	log.Info("HTTP Server stop")
-	close(httpServerQuit)
+	hs.Shutdown(ctx)
+	log.Info("HTTP Server stopped")
+	close(s.chans[httpServerQuit])
 }
 
 // StartGrpcService starts a GRPC service
-func StartGrpcService(configFilePath string, registerServer func(s *grpc.Server)) {
-	c := LoadServiceConfig("grpc", configFilePath)
-	startGrpcServiceInternal(c, registerServer, true)
+func (s *Server) StartGrpcService(registerServer func(s *grpc.Server)) {
+	s.startGrpcServiceInternal(registerServer, true)
 }
 
-func startGrpcServiceInternal(c *Config, registerServer func(s *grpc.Server), alone bool) {
+func (s *Server) startGrpcServiceInternal(registerServer func(s *grpc.Server), alone bool) {
 	log.Info("Starting GRPC Service...")
-	lis, err := net.Listen("tcp", ":"+c.GrpcServicePort())
+	lis, err := net.Listen("tcp", ":"+s.config.GrpcServicePort())
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -184,46 +181,40 @@ func startGrpcServiceInternal(c *Config, registerServer func(s *grpc.Server), al
 		}
 	}()
 	log.Info("GRPC Service started")
-	serviceStarted <- true
-
+	time.Sleep(time.Millisecond * 10)
+	s.chans[serviceStarted] <- true
 	if alone {
 		//TODO bug:exit can't log.
 		//wait for exit
 		exit := make(chan os.Signal, 1)
 		signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
-	doSelect:
 		select {
-		case v := <-stopService:
-			if v != "service" {
-				goto doSelect
-			}
+		case <-s.chans[stopService]:
 			grpcServer.GracefulStop()
 			log.Info("GRPC Service stop")
 		case <-exit:
 			log.Info("Received CTRL-C, GRPC Service is stopping...")
 			grpcServer.GracefulStop()
-			log.Info("GRPC Service stop")
+			log.Info("GRPC Service stopped")
 		}
-		close(serviceQuit)
+		close(s.chans[serviceQuit])
 	} else {
-		fmt.Println("waiting for http server quit")
-		<-stopService
-		<-httpServerQuit // wait for http server quit
+		<-s.chans[stopService]
+		<-s.chans[httpServerQuit] // wait for http server quit
 		log.Info("Stopping GRPC Service...")
 		grpcServer.GracefulStop()
-		log.Info("GRPC Service stop")
-		close(serviceQuit)
+		log.Info("GRPC Service stopped")
+		close(s.chans[serviceQuit])
 	}
 }
 
 // StartThriftService starts a Thrift service
-func StartThriftService(configFilePath string, registerTProcessor func() thrift.TProcessor) {
-	c := LoadServiceConfig("thrift", configFilePath)
-	startThriftServiceInternal(c, registerTProcessor, true)
+func (s *Server) StartThriftService(registerTProcessor func() thrift.TProcessor) {
+	s.startThriftServiceInternal(registerTProcessor, true)
 }
 
-func startThriftServiceInternal(c *Config, registerTProcessor func() thrift.TProcessor, alone bool) {
-	port := c.ThriftServicePort()
+func (s *Server) startThriftServiceInternal(registerTProcessor func() thrift.TProcessor, alone bool) {
+	port := s.config.ThriftServicePort()
 	log.Infof("Starting Thrift Service at :%d...", port)
 	transport, err := thrift.NewTServerSocket(":" + port)
 	if err != nil {
@@ -233,42 +224,37 @@ func startThriftServiceInternal(c *Config, registerTProcessor func() thrift.TPro
 		thrift.NewTTransportFactory(), thrift.NewTBinaryProtocolFactoryDefault())
 	go server.Serve()
 	log.Info("Thrift Service started")
-	serviceStarted <- true
+	s.chans[serviceStarted] <- true
 
 	if alone {
 		//wait for exit
 		exit := make(chan os.Signal, 1)
 		signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
-	doSelect:
 		select {
-		case v := <-stopService:
-			if v != "service" {
-				goto doSelect
-			}
+		case <-s.chans[stopService]:
 			log.Info("stop, Thrift Service is stopping...")
 			server.Stop()
 			log.Info("Thrift Service stop")
 		case <-exit:
 			log.Info("Received CTRL-C, Thrift Service is stopping...")
 			server.Stop()
-			log.Info("Thrift Service stop")
+			log.Info("Thrift Service stopped")
 		}
-		close(serviceQuit)
+		close(s.chans[serviceQuit])
 	} else {
-		fmt.Println("waiting for http server quit")
-		<-stopService
-		<-httpServerQuit // wait for http server quit
+		<-s.chans[stopService]
+		<-s.chans[httpServerQuit] // wait for http server quit
 		log.Info("Stopping Thrift Service...")
 		server.Stop()
-		log.Info("Thrift Service stop")
-		close(serviceQuit)
+		log.Info("Thrift Service stopped")
+		close(s.chans[serviceQuit])
 	}
 }
 
 // Stop stops the server gracefully
-func Stop() {
-	stopHttp <- "http"
-	<-httpServerQuit
-	stopService <- "service"
-	<-serviceQuit
+func (s *Server) Stop() {
+	s.chans[stopHttp] <- true
+	<-s.chans[httpServerQuit]
+	s.chans[stopService] <- true
+	<-s.chans[serviceQuit]
 }

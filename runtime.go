@@ -10,36 +10,36 @@ import (
 	"strings"
 )
 
-type switcher func(methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
+type switcher func(s *Server, methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
 
-func router(c *Config) *mux.Router {
+func router(s *Server) *mux.Router {
 	r := mux.NewRouter()
-	for _, v := range c.urlServiceMaps {
+	for _, v := range s.config.urlServiceMaps {
 		httpMethods := strings.Split(v[0], ",")
 		path := v[1]
 		methodName := v[2]
-		r.HandleFunc(path, handler(c, methodName)).Methods(httpMethods...)
+		r.HandleFunc(path, handler(s, methodName)).Methods(httpMethods...)
 	}
 	return r
 }
 
-func handler(c *Config, methodName string) func(http.ResponseWriter, *http.Request) {
+func handler(s *Server, methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		ParseRequestForm(req)
-		interceptors := getInterceptors(req)
+		interceptors := getInterceptors(s, req)
 		req, err := doBefore(&interceptors, resp, req)
 		// TODO handle this err with errorHandler?
 		if err == nil {
-			doRequest(c, methodName, resp, req)
+			doRequest(s, methodName, resp, req)
 		}
 		doAfter(interceptors, resp, req)
 	}
 }
 
-func getInterceptors(req *http.Request) []Interceptor {
-	interceptors := Interceptors(req)
+func getInterceptors(s *Server, req *http.Request) []Interceptor {
+	interceptors := s.Interceptors(req)
 	if len(interceptors) == 0 {
-		interceptors = CommonInterceptors()
+		interceptors = s.CommonInterceptors()
 	}
 	return interceptors
 }
@@ -56,26 +56,26 @@ func doBefore(interceptors *[]Interceptor, resp http.ResponseWriter, req *http.R
 	return req, nil
 }
 
-func doRequest(c *Config, methodName string, resp http.ResponseWriter, req *http.Request) {
-	if hijack := Hijacker(req); hijack != nil {
+func doRequest(s *Server, methodName string, resp http.ResponseWriter, req *http.Request) {
+	if hijack := s.Hijacker(req); hijack != nil {
 		hijack(resp, req)
 		return
 	}
-	err := doPreprocessor(resp, req)
+	err := doPreprocessor(s, resp, req)
 	if err != nil {
-		client.components.errorHandlerFunc()(resp, req, err)
+		s.components.errorHandlerFunc()(resp, req, err)
 		return
 	}
-	serviceResp, err := client.switcherFunc(methodName, resp, req)
+	serviceResp, err := s.switcherFunc(s, methodName, resp, req)
 	if err != nil {
-		client.components.errorHandlerFunc()(resp, req, err)
+		s.components.errorHandlerFunc()(resp, req, err)
 		return
 	}
-	doPostprocessor(c, resp, req, serviceResp, err)
+	doPostprocessor(s, resp, req, serviceResp, err)
 }
 
-func doPreprocessor(resp http.ResponseWriter, req *http.Request) error {
-	if pre := Preprocessor(req); pre != nil {
+func doPreprocessor(s *Server, resp http.ResponseWriter, req *http.Request) error {
+	if pre := s.Preprocessor(req); pre != nil {
 		if err := pre(resp, req); err != nil {
 			log.Println(err.Error())
 			return err
@@ -84,9 +84,9 @@ func doPreprocessor(resp http.ResponseWriter, req *http.Request) error {
 	return nil
 }
 
-func doPostprocessor(c *Config, resp http.ResponseWriter, req *http.Request, serviceResponse interface{}, err error) {
+func doPostprocessor(s *Server, resp http.ResponseWriter, req *http.Request, serviceResponse interface{}, err error) {
 	// 1, run postprocessor, if any
-	post := Postprocessor(req)
+	post := s.Postprocessor(req)
 	if post != nil {
 		post(resp, req, serviceResponse, err)
 		return
@@ -101,9 +101,9 @@ func doPostprocessor(c *Config, resp http.ResponseWriter, req *http.Request, ser
 
 	//3, return as json
 	m := Marshaler{
-		FilterProtoJson: c.FilterProtoJson(),
-		EmitZeroValues:  c.FilterProtoJsonEmitZeroValues(),
-		Int64AsNumber:   c.FilterProtoJsonInt64AsNumber(),
+		FilterProtoJson: s.config.FilterProtoJson(),
+		EmitZeroValues:  s.config.FilterProtoJsonEmitZeroValues(),
+		Int64AsNumber:   s.config.FilterProtoJsonInt64AsNumber(),
 	}
 	jsonBytes, err := m.JSON(serviceResponse)
 	if err == nil {
@@ -205,7 +205,7 @@ func ReflectValue(fieldValue reflect.Value, v string) (reflect.Value, error) {
 }
 
 //BuildStruct finds values from request, and set them to struct fields recursively
-func BuildStruct(theType reflect.Type, theValue reflect.Value, req *http.Request) error {
+func BuildStruct(s *Server, theType reflect.Type, theValue reflect.Value, req *http.Request) error {
 	if theValue.Kind() == reflect.Invalid {
 		log.Info("value is invalid, please check grpc-fieldmapping")
 		return nil
@@ -215,12 +215,12 @@ func BuildStruct(theType reflect.Type, theValue reflect.Value, req *http.Request
 		fieldName := theType.Field(i).Name
 		fieldValue := theValue.FieldByName(fieldName)
 		if fieldValue.Kind() == reflect.Ptr && fieldValue.Type().Elem().Kind() == reflect.Struct {
-			convertor := MessageFieldConvertor(fieldValue.Type().Elem())
+			convertor := s.MessageFieldConvertor(fieldValue.Type().Elem())
 			if convertor != nil {
 				fieldValue.Set(convertor(req))
 				continue
 			}
-			err := BuildStruct(fieldValue.Type().Elem(), fieldValue.Elem(), req)
+			err := BuildStruct(s, fieldValue.Type().Elem(), fieldValue.Elem(), req)
 			if err != nil {
 				return err
 			}
@@ -256,7 +256,7 @@ func findValue(fieldName string, req *http.Request) (string, bool) {
 }
 
 // BuildArgs returns a list of reflect.Value for thrift request
-func BuildArgs(argsType reflect.Type, argsValue reflect.Value, req *http.Request, buildStructArg func(typeName string, req *http.Request) (v reflect.Value, err error)) ([]reflect.Value, error) {
+func BuildArgs(s *Server, argsType reflect.Type, argsValue reflect.Value, req *http.Request, buildStructArg func(s *Server, typeName string, req *http.Request) (v reflect.Value, err error)) ([]reflect.Value, error) {
 	fieldNum := argsType.NumField()
 	params := make([]reflect.Value, fieldNum)
 	for i := 0; i < fieldNum; i++ {
@@ -264,13 +264,13 @@ func BuildArgs(argsType reflect.Type, argsValue reflect.Value, req *http.Request
 		fieldName := field.Name
 		valueType := argsValue.FieldByName(fieldName).Type()
 		if field.Type.Kind() == reflect.Ptr && valueType.Elem().Kind() == reflect.Struct {
-			convertor := MessageFieldConvertor(valueType.Elem())
+			convertor := s.MessageFieldConvertor(valueType.Elem())
 			if convertor != nil {
 				params[i] = convertor(req)
 				continue
 			}
 			structName := valueType.Elem().Name()
-			v, err := buildStructArg(structName, req)
+			v, err := buildStructArg(s, structName, req)
 			if err != nil {
 				return nil, err
 			}

@@ -47,9 +47,9 @@ func (t *thriftClient) close() error {
 
 // ThriftService returns a Thrift client instance,
 // example: client := turbo.ThriftService().(proto.YourServiceClient)
-func ThriftService() interface{} {
-	if client == nil || client.tClient == nil || client.tClient.thriftService == nil {
+func ThriftService(s *Server) interface{} {
+	if s == nil || s.tClient == nil || s.tClient.thriftService == nil {
 		log.Panic("thrift connection not initiated!")
 	}
-	return client.tClient.thriftService
+	return s.tClient.thriftService
 }

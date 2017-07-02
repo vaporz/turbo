@@ -1,7 +1,6 @@
 package turbo
 
 import (
-	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 	"os"
 	"path"
@@ -23,16 +22,6 @@ const filterProtoJsonInt64AsNumber string = "filter_proto_json_int64_as_number"
 const turboLogPath string = "turbo_log_path"
 const environment string = "environment"
 const serviceRootPath string = "service_root_path"
-
-// LoadServiceConfig accepts a package path, then load service.yaml in that path
-func LoadServiceConfig(rpcType, configFilePath string) *Config {
-	c := NewConfig(rpcType)
-	c.loadServiceConfig(configFilePath)
-	c.watchConfig()
-
-	initLogger(c)
-	return c
-}
 
 // GOPATH inits the GOPATH turbo used.
 func GOPATH() string {
@@ -56,16 +45,10 @@ type Config struct {
 	fieldMappings  map[string][]string
 }
 
-func NewConfig(rpcType string) *Config {
-	return &Config{Viper: *viper.New(), RpcType: rpcType, GOPATH: GOPATH()}
-}
-
-func (c *Config) watchConfig() {
-	c.WatchConfig()
-	c.OnConfigChange(func(e fsnotify.Event) {
-		c.loadServiceConfig(c.File)
-		reloadConfig <- true
-	})
+func NewConfig(rpcType, configFilePath string) *Config {
+	c := &Config{Viper: *viper.New(), RpcType: rpcType, GOPATH: GOPATH()}
+	c.loadServiceConfig(configFilePath)
+	return c
 }
 
 func (c *Config) loadServiceConfig(p string) {
