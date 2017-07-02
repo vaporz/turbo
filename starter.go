@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	"strconv"
 )
 
 var client *Client
@@ -77,7 +78,7 @@ func startGrpcHTTPServerInternal(c *Config, clientCreator grpcClientCreator, s s
 		components:   new(Components),
 		gClient:      new(grpcClient),
 		switcherFunc: s}
-	err := client.gClient.init(c.GrpcServiceAddress(), clientCreator)
+	err := client.gClient.init(c.GrpcServiceHost()+":"+c.GrpcServicePort(), clientCreator)
 	if err != nil {
 		log.Panic(err.Error())
 	}
@@ -112,7 +113,7 @@ func startThriftHTTPServerInternal(c *Config, clientCreator thriftClientCreator,
 		components:   new(Components),
 		tClient:      new(thriftClient),
 		switcherFunc: s}
-	err := client.tClient.init(c.ThriftServiceAddress(), clientCreator)
+	err := client.tClient.init(c.ThriftServiceHost()+":"+c.ThriftServicePort(), clientCreator)
 	if err != nil {
 		log.Panic(err.Error())
 	}
@@ -122,7 +123,7 @@ func startThriftHTTPServerInternal(c *Config, clientCreator thriftClientCreator,
 
 func startHTTPServer(c *Config) {
 	s := &http.Server{
-		Addr:    c.HTTPPortStr(),
+		Addr:    ":" + strconv.FormatInt(c.HTTPPort(), 10),
 		Handler: router(c),
 	}
 	go func() {

@@ -24,11 +24,11 @@ func TestValidateServiceRootPath(t *testing.T) {
 	g := &Generator{c: &Config{configs: make(map[string]string)}}
 	var r io.Reader
 	r = strings.NewReader("y\n")
-	g.c.SetServiceRootPath("a")
+	g.c.configs[serviceRootPath] = "a"
 	g.validateServiceRootPath(r)
 
 	serviceRootPath := GOPATH() + "/src/" + "github.com/vaporz/turbo/test"
-	g.c.SetServiceRootPath(serviceRootPath + "/a")
+	g.c.configs[serviceRootPath] = serviceRootPath + "a"
 	os.MkdirAll(serviceRootPath+"/a", 0755)
 	g.validateServiceRootPath(r)
 }

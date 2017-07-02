@@ -60,147 +60,6 @@ func NewConfig(rpcType string) *Config {
 	return &Config{Viper: *viper.New(), RpcType: rpcType, GOPATH: GOPATH()}
 }
 
-func (c *Config) Env() string {
-	return c.configs[environment]
-}
-
-func (c *Config) TurboLogPath() string {
-	return c.configs[turboLogPath]
-}
-
-func (c *Config) ServiceRootPath() string {
-	p := c.configs[serviceRootPath]
-	if path.IsAbs(p) {
-		return p
-	} else {
-		return c.GOPATH + "/src/" + p
-	}
-}
-
-func (c *Config) SetServiceRootPath(p string) {
-	c.configs[serviceRootPath] = p
-}
-
-func (c *Config) GrpcServiceName() string {
-	return c.configs[grpcServiceName]
-}
-
-func (c *Config) SetGrpcServiceName(name string) {
-	c.configs[grpcServiceName] = name
-}
-
-func (c *Config) GrpcServiceAddress() string {
-	return c.GrpcServiceHost() + ":" + c.GrpcServicePort()
-}
-
-func (c *Config) GrpcServiceHost() string {
-	return c.configs[grpcServiceHost]
-}
-
-func (c *Config) GrpcServicePort() string {
-	return c.configs[grpcServicePort]
-}
-
-func (c *Config) SetGrpcServiceHost(host string) {
-	c.configs[grpcServiceHost] = host
-}
-
-func (c *Config) SetGrpcServicePort(port string) {
-	c.configs[grpcServicePort] = port
-}
-
-func (c *Config) ThriftServiceName() string {
-	return c.configs[thriftServiceName]
-}
-
-func (c *Config) ThriftServiceHost() string {
-	return c.configs[thriftServiceHost]
-}
-
-func (c *Config) ThriftServicePort() string {
-	return c.configs[thriftServicePort]
-}
-
-func (c *Config) ThriftServiceAddress() string {
-	return c.ThriftServiceHost() + ":" + c.ThriftServicePort()
-}
-
-func (c *Config) SetThriftServiceHost(host string) {
-	c.configs[thriftServiceHost] = host
-}
-
-func (c *Config) SetThriftServicePort(port string) {
-	c.configs[thriftServicePort] = port
-}
-
-func (c *Config) SetThriftServiceName(name string) {
-	c.configs[thriftServiceName] = name
-}
-
-func (c *Config) HTTPPort() int64 {
-	p, ok := c.configs[httpPort]
-	if !ok || len(strings.TrimSpace(p)) == 0 {
-		panic("[http_port] is required!")
-	}
-	i, err := strconv.ParseInt(p, 10, 64)
-	if err != nil {
-		log.Error(err.Error())
-	}
-	return i
-}
-
-func (c *Config) HTTPPortStr() string {
-	return ":" + strconv.FormatInt(c.HTTPPort(), 10)
-}
-
-func (c *Config) SetHTTPPort(p int64) {
-	c.configs[httpPort] = strconv.FormatInt(p, 10)
-}
-
-func (c *Config) FilterProtoJson() bool {
-	option, ok := c.configs[filterProtoJson]
-	if !ok || option != "true" {
-		return false
-	}
-	return true
-}
-
-func (c *Config) SetFilterProtoJson(filterJson bool) {
-	c.configs[filterProtoJson] = strconv.FormatBool(filterJson)
-}
-
-func (c *Config) FilterProtoJsonEmitZeroValues() bool {
-	option, ok := c.configs[filterProtoJson]
-	if !ok || option != "true" {
-		return false
-	}
-	option, ok = c.configs[filterProtoJsonEmitZeroValues]
-	if ok && option == "false" {
-		return false
-	}
-	return true
-}
-
-func (c *Config) SetFilterProtoJsonEmitZeroValues(emitZeroValues bool) {
-	c.configs[filterProtoJsonEmitZeroValues] = strconv.FormatBool(emitZeroValues)
-}
-
-func (c *Config) FilterProtoJsonInt64AsNumber() bool {
-	option, ok := c.configs[filterProtoJson]
-	if !ok || option != "true" {
-		return false
-	}
-	option, ok = c.configs[filterProtoJsonInt64AsNumber]
-	if ok && option == "false" {
-		return false
-	}
-	return true
-}
-
-func (c *Config) SetFilterProtoJsonInt64AsNumber(asNumber bool) {
-	c.configs[filterProtoJsonInt64AsNumber] = strconv.FormatBool(asNumber)
-}
-
 func (c *Config) watchConfig() {
 	c.WatchConfig()
 	c.OnConfigChange(func(e fsnotify.Event) {
@@ -210,17 +69,6 @@ func (c *Config) watchConfig() {
 }
 
 func (c *Config) loadServiceConfig(p string) {
-	//p = path.Clean(p)
-	//file, err := os.Open(p)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//c.SetConfigFile(p)
-	//err = c.MergeConfig(file)
-	//if err != nil {
-	//	panic(err)
-	//}
-
 	c.SetConfigFile(p)
 	err := c.ReadInConfig()
 	if err != nil {
@@ -280,4 +128,85 @@ func (c *Config) loadFieldMapping() {
 			c.fieldMappings[k] = []string{}
 		}
 	}
+}
+
+func (c *Config) Env() string {
+	return c.configs[environment]
+}
+
+func (c *Config) ServiceRootPath() string {
+	p := c.configs[serviceRootPath]
+	if path.IsAbs(p) {
+		return p
+	} else {
+		return c.GOPATH + "/src/" + p
+	}
+}
+
+func (c *Config) GrpcServiceName() string {
+	return c.configs[grpcServiceName]
+}
+
+func (c *Config) GrpcServiceHost() string {
+	return c.configs[grpcServiceHost]
+}
+
+func (c *Config) GrpcServicePort() string {
+	return c.configs[grpcServicePort]
+}
+
+func (c *Config) ThriftServiceName() string {
+	return c.configs[thriftServiceName]
+}
+
+func (c *Config) ThriftServiceHost() string {
+	return c.configs[thriftServiceHost]
+}
+
+func (c *Config) ThriftServicePort() string {
+	return c.configs[thriftServicePort]
+}
+
+func (c *Config) HTTPPort() int64 {
+	p, ok := c.configs[httpPort]
+	if !ok || len(strings.TrimSpace(p)) == 0 {
+		panic("[http_port] is required!")
+	}
+	i, err := strconv.ParseInt(p, 10, 64)
+	if err != nil {
+		log.Error(err.Error())
+	}
+	return i
+}
+
+func (c *Config) FilterProtoJson() bool {
+	option, ok := c.configs[filterProtoJson]
+	if !ok || option != "true" {
+		return false
+	}
+	return true
+}
+
+func (c *Config) FilterProtoJsonEmitZeroValues() bool {
+	option, ok := c.configs[filterProtoJson]
+	if !ok || option != "true" {
+		return false
+	}
+	option, ok = c.configs[filterProtoJsonEmitZeroValues]
+	if ok && option == "false" {
+		return false
+	}
+	return true
+}
+
+func (c *Config) FilterProtoJsonInt64AsNumber() bool {
+	option, ok := c.configs[filterProtoJson]
+	if !ok || option != "true" {
+		return false
+	}
+	option, ok = c.configs[filterProtoJsonInt64AsNumber]
+	if ok && option == "false" {
+		return false
+	}
+	return true
 }

@@ -51,7 +51,7 @@ func (hook ContextHook) Fire(entry *logger.Entry) error {
 
 func setupLoggerFile(c *Config) {
 	//set up log file.
-	logPath := c.TurboLogPath()
+	logPath := c.configs[turboLogPath]
 	if len(strings.TrimSpace(logPath)) == 0 {
 		logPath = "log"
 	}
