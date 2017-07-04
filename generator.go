@@ -760,7 +760,7 @@ func GrpcClient(conn *grpc.ClientConn) interface{} {
 	return proto.New{{.ServiceName}}Client(conn)
 }
 
-// InitComponents inits turbo components, such as interceptors, pre/postprocessors, errorHandlers, etc.
+// InitComponents inits turbo components, such as Interceptors, pre/postprocessors, errorHandlers, etc.
 func InitComponents(s *turbo.GrpcServer) {
 }
 `,
@@ -788,7 +788,7 @@ func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) interface{
 	return t.New{{.ServiceName}}ClientFactory(trans, f)
 }
 
-// InitComponents inits turbo components, such as interceptors, pre/postprocessors, errorHandlers, etc.
+// InitComponents inits turbo components, such as Interceptors, pre/postprocessors, errorHandlers, etc.
 func InitComponents(s *turbo.ThriftServer) {
 }
 `,

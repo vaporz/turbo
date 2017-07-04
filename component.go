@@ -9,17 +9,32 @@ import (
 
 // Components holds all component mappings
 type Components struct {
-	commonInterceptors []Interceptor
-	routers            map[int]*mux.Router
-	convertorMap       map[reflect.Type]convertor
-	errorHandler       errorHandlerFunc
+	commonInterceptors   Interceptors
+	routers              map[int]*mux.Router
+	convertorMap         map[string]Convertor
+	errorHandler         ErrorHandlerFunc
+	RegisteredComponents map[string]interface{}
+}
+
+func (c *Components) RegisterComponent(name string, component interface{}) {
+	if c.RegisteredComponents == nil {
+		c.RegisteredComponents = make(map[string]interface{})
+	}
+	c.RegisteredComponents[name] = component
+}
+
+func (c *Components) Component(name string) interface{} {
+	if c.RegisteredComponents == nil {
+		return nil
+	}
+	return c.RegisteredComponents[name]
 }
 
 // Reset resets all component mappings
 func (c *Components) Reset() {
-	c.commonInterceptors = make([]Interceptor, 0)
+	c.commonInterceptors = Interceptors{}
 	c.routers = make(map[int]*mux.Router)
-	c.convertorMap = make(map[reflect.Type]convertor)
+	c.convertorMap = make(map[string]Convertor)
 	c.errorHandler = nil
 }
 
@@ -53,92 +68,92 @@ func (i *BaseInterceptor) After(resp http.ResponseWriter, req *http.Request) (*h
 	return req, nil
 }
 
-func (c *Components) setCommonInterceptor(interceptors ...Interceptor) {
+type Interceptors []Interceptor
+
+func (c *Components) setCommonInterceptor(interceptors Interceptors) {
 	c.commonInterceptors = interceptors
 }
 
-func (c *Components) commonInterceptor() []Interceptor {
+func (c *Components) commonInterceptor() Interceptors {
 	if c.commonInterceptors != nil {
 		return c.commonInterceptors
 	}
-	return []Interceptor{}
+	return Interceptors{}
 }
 
-type interceptors []Interceptor
-
 // ServeHTTP is an empty func, only for implementing http.Handler
-func (i interceptors) ServeHTTP(http.ResponseWriter, *http.Request) {}
+func (i Interceptors) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
 func (c *Components) intercept(methods []string, urlPattern string, list ...Interceptor) {
 	if c.routers == nil {
 		c.routers = make(map[int]*mux.Router)
 	}
-	c.routers[rInterceptor] = setComponent(c.routers[rInterceptor], methods, urlPattern, interceptors(list))
+	c.routers[rInterceptor] = setComponent(c.routers[rInterceptor], methods, urlPattern, Interceptors(list))
 }
 
-func (c *Components) interceptors(req *http.Request) interceptors {
+func (c *Components) interceptors(req *http.Request) Interceptors {
 	if cp := component(c.routers[rInterceptor], req); cp != nil {
-		return cp.(interceptors)
+		return cp.(Interceptors)
 	}
 	return nil
 }
 
 // PreProcessor-------------
-type preprocessor func(http.ResponseWriter, *http.Request) error
+type Preprocessor func(http.ResponseWriter, *http.Request) error
 
 // ServeHTTP is an empty func, only for implementing http.Handler
-func (p preprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}
+func (p Preprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
-func (c *Components) setPreprocessor(methods []string, urlPattern string, pre preprocessor) {
+func (c *Components) setPreprocessor(methods []string, urlPattern string, pre Preprocessor) {
 	if c.routers == nil {
 		c.routers = make(map[int]*mux.Router)
 	}
 	c.routers[rPreprocessor] = setComponent(c.routers[rPreprocessor], methods, urlPattern, pre)
 }
 
-func (c *Components) preprocessor(req *http.Request) preprocessor {
+func (c *Components) preprocessor(req *http.Request) Preprocessor {
 	if cp := component(c.routers[rPreprocessor], req); cp != nil {
-		return cp.(preprocessor)
+		return cp.(Preprocessor)
 	}
 	return nil
 }
 
 // PostProcessor--------------
-type postprocessor func(http.ResponseWriter, *http.Request, interface{}, error)
+type Postprocessor func(http.ResponseWriter, *http.Request, interface{}, error)
 
 // ServeHTTP is an empty func, only for implementing http.Handler
-func (p postprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}
+func (p Postprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
-func (c *Components) setPostprocessor(methods []string, urlPattern string, post postprocessor) {
+func (c *Components) setPostprocessor(methods []string, urlPattern string, post Postprocessor) {
 	if c.routers == nil {
 		c.routers = make(map[int]*mux.Router)
 	}
 	c.routers[rPostprocessor] = setComponent(c.routers[rPostprocessor], methods, urlPattern, post)
 }
 
-func (c *Components) postprocessor(req *http.Request) postprocessor {
+func (c *Components) postprocessor(req *http.Request) Postprocessor {
 	if cp := component(c.routers[rPostprocessor], req); cp != nil {
-		return cp.(postprocessor)
+		return cp.(Postprocessor)
 	}
 	return nil
 }
 
 // Hijacker-----------------
-type hijacker func(http.ResponseWriter, *http.Request)
+type Hijacker func(http.ResponseWriter, *http.Request)
 
 // ServeHTTP is an empty func, only for implementing http.Handler
-func (h hijacker) ServeHTTP(http.ResponseWriter, *http.Request) {}
+func (h Hijacker) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
-func (c *Components) setHijacker(methods []string, urlPattern string, h hijacker) {
+func (c *Components) setHijacker(methods []string, urlPattern string, h Hijacker) {
 	if c.routers == nil {
 		c.routers = make(map[int]*mux.Router)
 	}
 	c.routers[rHijacker] = setComponent(c.routers[rHijacker], methods, urlPattern, h)
 }
 
-func (c *Components) hijacker(req *http.Request) hijacker {
+func (c *Components) hijacker(req *http.Request) Hijacker {
 	if cp := component(c.routers[rHijacker], req); cp != nil {
-		return cp.(hijacker)
+		return cp.(Hijacker)
 	}
 	return nil
 }
@@ -168,16 +183,16 @@ func component(r *mux.Router, req *http.Request) http.Handler {
 }
 
 // Convertor--------------
-type convertor func(r *http.Request) reflect.Value
+type Convertor func(r *http.Request) reflect.Value
 
-func (c *Components) registerMessageFieldConvertor(field interface{}, convertorFunc convertor) {
+func (c *Components) registerMessageFieldConvertor(field string, convertorFunc Convertor) {
 	if c.convertorMap == nil {
-		c.convertorMap = make(map[reflect.Type]convertor)
+		c.convertorMap = make(map[string]Convertor)
 	}
-	c.convertorMap[reflect.TypeOf(field).Elem()] = convertorFunc
+	c.convertorMap[field] = convertorFunc
 }
 
-func (c *Components) messageFieldConvertor(theType reflect.Type) convertor {
+func (c *Components) messageFieldConvertor(theType string) Convertor {
 	if c.convertorMap == nil {
 		return nil
 	}
@@ -185,13 +200,13 @@ func (c *Components) messageFieldConvertor(theType reflect.Type) convertor {
 }
 
 // ErrorHandler----------
-type errorHandlerFunc func(http.ResponseWriter, *http.Request, error)
+type ErrorHandlerFunc func(http.ResponseWriter, *http.Request, error)
 
 func defaultErrorHandler(resp http.ResponseWriter, req *http.Request, err error) {
 	http.Error(resp, err.Error(), http.StatusInternalServerError)
 }
 
-func (c *Components) errorHandlerFunc() errorHandlerFunc {
+func (c *Components) errorHandlerFunc() ErrorHandlerFunc {
 	if c.errorHandler == nil {
 		return defaultErrorHandler
 	}
@@ -199,67 +214,67 @@ func (c *Components) errorHandlerFunc() errorHandlerFunc {
 }
 
 // WithErrorHandler registers an errorHandler to handle errors
-func (c *Components) WithErrorHandler(e errorHandlerFunc) {
+func (c *Components) WithErrorHandler(e ErrorHandlerFunc) {
 	c.errorHandler = e
 }
 
-// SetCommonInterceptor assigns interceptors to all URLs, if the URL has no other interceptors assigned
+// SetCommonInterceptor assigns Interceptors to all URLs, if the URL has no other Interceptors assigned
 func (c *Components) SetCommonInterceptor(interceptors ...Interceptor) {
-	c.setCommonInterceptor(interceptors...)
+	c.setCommonInterceptor(interceptors)
 }
 
-// CommonInterceptors returns a list of interceptors which are default
+// CommonInterceptors returns a list of Interceptors which are default
 func (c *Components) CommonInterceptors() []Interceptor {
 	return c.commonInterceptor()
 }
 
-// Intercept registers a list of interceptors to an URL pattern at given HTTP methods
+// Intercept registers a list of Interceptors to an URL pattern at given HTTP methods
 func (c *Components) Intercept(methods []string, urlPattern string, list ...Interceptor) {
 	c.intercept(methods, urlPattern, list...)
 }
 
-// Interceptors returns a list of interceptors for this request
-func (c *Components) Interceptors(req *http.Request) interceptors {
+// Interceptors returns a list of Interceptors for this request
+func (c *Components) Interceptors(req *http.Request) Interceptors {
 	return c.interceptors(req)
 }
 
 // SetPreprocessor registers a preprocessor to an URL pattern
-func (c *Components) SetPreprocessor(methods []string, urlPattern string, pre preprocessor) {
+func (c *Components) SetPreprocessor(methods []string, urlPattern string, pre Preprocessor) {
 	c.setPreprocessor(methods, urlPattern, pre)
 }
 
 // Preprocessor returns a preprocessor for this request
-func (c *Components) Preprocessor(req *http.Request) preprocessor {
+func (c *Components) Preprocessor(req *http.Request) Preprocessor {
 	return c.preprocessor(req)
 }
 
-// SetPostprocessor registers a postprocessor to an URL pattern
-func (c *Components) SetPostprocessor(methods []string, urlPattern string, post postprocessor) {
+// SetPostprocessor registers a Postprocessor to an URL pattern
+func (c *Components) SetPostprocessor(methods []string, urlPattern string, post Postprocessor) {
 	c.setPostprocessor(methods, urlPattern, post)
 }
 
-// Postprocessor returns a postprocessor for this request
-func (c *Components) Postprocessor(req *http.Request) postprocessor {
+// Postprocessor returns a Postprocessor for this request
+func (c *Components) Postprocessor(req *http.Request) Postprocessor {
 	return c.postprocessor(req)
 }
 
-// SetHijacker registers a hijacker to an URL pattern
-func (c *Components) SetHijacker(methods []string, urlPattern string, h hijacker) {
+// SetHijacker registers a Hijacker to an URL pattern
+func (c *Components) SetHijacker(methods []string, urlPattern string, h Hijacker) {
 	c.setHijacker(methods, urlPattern, h)
 }
 
-// Hijacker returns a hijacker for this request
-func (c *Components) Hijacker(req *http.Request) hijacker {
+// Hijacker returns a Hijacker for this request
+func (c *Components) Hijacker(req *http.Request) Hijacker {
 	return c.hijacker(req)
 }
 
-// RegisterMessageFieldConvertor registers a convertor on a type
+// RegisterMessageFieldConvertor registers a Convertor on a type
 // usage: RegisterMessageFieldConvertor(new(SomeInterface), convertorFunc)
-func (c *Components) RegisterMessageFieldConvertor(field interface{}, convertorFunc convertor) {
+func (c *Components) RegisterMessageFieldConvertor(field string, convertorFunc Convertor) {
 	c.registerMessageFieldConvertor(field, convertorFunc)
 }
 
-// MessageFieldConvertor returns the convertor for this type
-func (c *Components) MessageFieldConvertor(theType reflect.Type) convertor {
+// MessageFieldConvertor returns the Convertor for this type
+func (c *Components) MessageFieldConvertor(theType string) Convertor {
 	return c.messageFieldConvertor(theType)
 }

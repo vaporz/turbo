@@ -85,7 +85,7 @@ func doPreprocessor(s *Server, resp http.ResponseWriter, req *http.Request) erro
 }
 
 func doPostprocessor(s *Server, resp http.ResponseWriter, req *http.Request, serviceResponse interface{}, err error) {
-	// 1, run postprocessor, if any
+	// 1, run Postprocessor, if any
 	post := s.Components.Postprocessor(req)
 	if post != nil {
 		post(resp, req, serviceResponse, err)
@@ -215,7 +215,7 @@ func BuildStruct(s *Server, theType reflect.Type, theValue reflect.Value, req *h
 		fieldName := theType.Field(i).Name
 		fieldValue := theValue.FieldByName(fieldName)
 		if fieldValue.Kind() == reflect.Ptr && fieldValue.Type().Elem().Kind() == reflect.Struct {
-			convertor := s.Components.MessageFieldConvertor(fieldValue.Type().Elem())
+			convertor := s.Components.MessageFieldConvertor(fieldValue.Type().Elem().Name())
 			if convertor != nil {
 				fieldValue.Set(convertor(req))
 				continue
@@ -264,7 +264,7 @@ func BuildArgs(s *Server, argsType reflect.Type, argsValue reflect.Value, req *h
 		fieldName := field.Name
 		valueType := argsValue.FieldByName(fieldName).Type()
 		if field.Type.Kind() == reflect.Ptr && valueType.Elem().Kind() == reflect.Struct {
-			convertor := s.Components.MessageFieldConvertor(valueType.Elem())
+			convertor := s.Components.MessageFieldConvertor(valueType.Elem().Name())
 			if convertor != nil {
 				params[i] = convertor(req)
 				continue

@@ -24,6 +24,10 @@ type Server struct {
 	tClient      *thriftClient
 }
 
+func (s *Server) RegisterComponent(name string, component interface{}) {
+	s.Components.RegisterComponent(name, component)
+}
+
 func (s *Server) watchConfig() {
 	s.Config.WatchConfig()
 	s.Config.OnConfigChange(func(e fsnotify.Event) {
