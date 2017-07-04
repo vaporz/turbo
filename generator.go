@@ -10,6 +10,7 @@ import (
 	"text/template"
 )
 
+// TODO split into creator and generator
 // Generator generates new projects or proto/thrift code
 type Generator struct {
 	RpcType        string

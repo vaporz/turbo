@@ -38,6 +38,7 @@ func (s *GrpcServer) StartGRPC(clientCreator grpcClientCreator, sw switcher,
 	go s.startGrpcServiceInternal(registerServer, false)
 	<-s.chans[serviceStarted]
 	go s.StartGrpcHTTPServer(clientCreator, sw)
+	// TODO wait for exit here
 	s.waitForQuit()
 	log.Info("Turbo exit, bye!")
 }
@@ -52,11 +53,13 @@ func (s *GrpcServer) StartGrpcHTTPServer(clientCreator grpcClientCreator, sw swi
 	}
 	defer s.gClient.close()
 	s.startHTTPServer()
+	// TODO wait for exit here
 }
 
 // StartGrpcService starts a GRPC service
 func (s *GrpcServer) StartGrpcService(registerServer func(s *grpc.Server)) {
 	s.startGrpcServiceInternal(registerServer, true)
+	// TODO wait for exit here
 }
 
 func (s *GrpcServer) startGrpcServiceInternal(registerServer func(s *grpc.Server), alone bool) {
