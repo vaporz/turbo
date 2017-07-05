@@ -1,14 +1,12 @@
 package turbo
 
 import (
-	"context"
 	"github.com/fsnotify/fsnotify"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 )
 
 // Server holds the data for a server
@@ -110,14 +108,6 @@ func (s *Server) loadComponents() *Components {
 		log.Info("errorhandler:", s.Config.errorhandler)
 	}
 	return c
-}
-
-func (s *Server) shutDownHTTP(hs *http.Server) {
-	log.Info("HTTP Server is shutting down...")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-	hs.Shutdown(ctx)
-	log.Info("HTTP Server stopped")
 }
 
 // Stop stops the server gracefully

@@ -55,12 +55,11 @@ func (s *ThriftServer) StartThriftService(registerTProcessor func() thrift.TProc
 }
 
 func (s *ThriftServer) waitForQuit(httpServer *http.Server, thriftServer *thrift.TSimpleServer) {
-	exit := make(chan os.Signal, 1)
-	signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
+	signal.Notify(s.exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
 	// TODO split http server and grpc/thrift server
 Wait:
 	select {
-	case <-exit:
+	case <-s.exit:
 		log.Info("Received CTRL-C, Service is stopping...")
 		if httpServer != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)

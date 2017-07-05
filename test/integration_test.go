@@ -152,6 +152,7 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 	overwriteServiceYamlWithGrpcComponents(httpPort, "50055", "development")
 
 	s := turbo.NewGrpcServer("testservice/service.yaml")
+	assert.Nil(t, s.Component("test"))
 	registerComponents(s.Server)
 	go s.StartGrpcService(gimpl.RegisterServer)
 	time.Sleep(time.Second)
@@ -305,7 +306,7 @@ func generate(t *testing.T, rpc string) {
 	}
 
 	cmd.RootCmd.SetArgs([]string{"generate", "github.com/vaporz/turbo/test/testcreateservice", "-r", rpc,
-		"-I", turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice"})
+								 "-I", turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice"})
 	err = cmd.Execute()
 	assert.Nil(t, err)
 
