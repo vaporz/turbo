@@ -277,14 +277,8 @@ func BuildArgs(s *Server, argsType reflect.Type, argsValue reflect.Value, req *h
 			params[i] = v
 			continue
 		}
-		v, ok := findValue(fieldName, req)
-		if !ok {
-			log.Info("value not found! key[" + fieldName + "], use default value[" + v + "]")
-		}
-		value, err := ReflectValue(argsValue.FieldByName(fieldName), v)
-		if err != nil {
-			log.Info("using default value, error: " + err.Error())
-		}
+		v, _ := findValue(fieldName, req)
+		value, _ := ReflectValue(argsValue.FieldByName(fieldName), v)
 		params[i] = value
 	}
 	return params, nil

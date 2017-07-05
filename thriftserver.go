@@ -1,7 +1,9 @@
 package turbo
 
 import (
+	"context"
 	"git.apache.org/thrift.git/lib/go/thrift"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -33,32 +35,67 @@ type thriftClientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory
 func (s *ThriftServer) StartTHRIFT(clientCreator thriftClientCreator, sw switcher,
 	registerTProcessor func() thrift.TProcessor) {
 	log.Info("Starting Turbo...")
-	go s.startThriftServiceInternal(registerTProcessor, false)
-	<-s.chans[serviceStarted]
+	thriftServer := s.startThriftServiceInternal(registerTProcessor, false)
 	time.Sleep(time.Second * 1)
-	go s.StartThriftHTTPServer(clientCreator, sw)
-	s.waitForQuit()
+	httpServer := s.startThriftHTTPServerInternal(clientCreator, sw)
+	s.waitForQuit(httpServer, thriftServer)
 	log.Info("Turbo exit, bye!")
 }
 
 // StartThriftHTTPServer starts a HTTP server which sends requests via Thrift
 func (s *ThriftServer) StartThriftHTTPServer(clientCreator thriftClientCreator, sw switcher) {
+	httpServer := s.startThriftHTTPServerInternal(clientCreator, sw)
+	s.waitForQuit(httpServer, nil)
+}
+
+// StartThriftService starts a Thrift service
+func (s *ThriftServer) StartThriftService(registerTProcessor func() thrift.TProcessor) {
+	thriftServer := s.startThriftServiceInternal(registerTProcessor, true)
+	s.waitForQuit(nil, thriftServer)
+}
+
+func (s *ThriftServer) waitForQuit(httpServer *http.Server, thriftServer *thrift.TSimpleServer) {
+	exit := make(chan os.Signal, 1)
+	signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
+	// TODO split http server and grpc/thrift server
+Wait:
+	select {
+	case <-exit:
+		log.Info("Received CTRL-C, Service is stopping...")
+		if httpServer != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+			defer cancel()
+			httpServer.Shutdown(ctx)
+			log.Info("Http Server stopped")
+		}
+		if thriftServer != nil {
+			s.tClient.close()
+			thriftServer.Stop()
+			log.Info("Grpc Server stopped")
+		}
+	case <-s.chans[reloadConfig]:
+		if httpServer == nil {
+			goto Wait
+		}
+		log.Info("Reloading configuration...")
+		httpServer.Handler = router(s.Server)
+		log.Info("Router reloaded")
+		s.Components = s.loadComponentsNoPanic()
+		log.Info("Configuration reloaded")
+	}
+}
+
+func (s *ThriftServer) startThriftHTTPServerInternal(clientCreator thriftClientCreator, sw switcher) *http.Server {
 	log.Info("Starting HTTP Server...")
 	s.switcherFunc = sw
 	err := s.tClient.init(s.Config.ThriftServiceHost()+":"+s.Config.ThriftServicePort(), clientCreator)
 	if err != nil {
 		log.Panic(err.Error())
 	}
-	defer s.tClient.close()
-	s.startHTTPServer()
+	return s.startHTTPServer()
 }
 
-// StartThriftService starts a Thrift service
-func (s *ThriftServer) StartThriftService(registerTProcessor func() thrift.TProcessor) {
-	s.startThriftServiceInternal(registerTProcessor, true)
-}
-
-func (s *ThriftServer) startThriftServiceInternal(registerTProcessor func() thrift.TProcessor, alone bool) {
+func (s *ThriftServer) startThriftServiceInternal(registerTProcessor func() thrift.TProcessor, alone bool) *thrift.TSimpleServer {
 	port := s.Config.ThriftServicePort()
 	log.Infof("Starting Thrift Service at :%d...", port)
 	transport, err := thrift.NewTServerSocket(":" + port)
@@ -69,29 +106,5 @@ func (s *ThriftServer) startThriftServiceInternal(registerTProcessor func() thri
 		thrift.NewTTransportFactory(), thrift.NewTBinaryProtocolFactoryDefault())
 	go server.Serve()
 	log.Info("Thrift Service started")
-	s.chans[serviceStarted] <- true
-
-	if alone {
-		//wait for exit
-		exit := make(chan os.Signal, 1)
-		signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
-		select {
-		case <-s.chans[stopService]:
-			log.Info("stop, Thrift Service is stopping...")
-			server.Stop()
-			log.Info("Thrift Service stop")
-		case <-exit:
-			log.Info("Received CTRL-C, Thrift Service is stopping...")
-			server.Stop()
-			log.Info("Thrift Service stopped")
-		}
-		close(s.chans[serviceQuit])
-	} else {
-		<-s.chans[stopService]
-		<-s.chans[httpServerQuit] // wait for http server quit
-		log.Info("Stopping Thrift Service...")
-		server.Stop()
-		log.Info("Thrift Service stopped")
-		close(s.chans[serviceQuit])
-	}
+	return server
 }

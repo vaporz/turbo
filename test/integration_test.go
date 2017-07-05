@@ -171,7 +171,6 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 	changeServiceYamlWithGrpcComponents(httpPort, "50055", "development")
 	time.Sleep(time.Millisecond * 100)
 	testGet(t, "http://localhost:"+httpPort+"/hello", "test1_intercepted:preprocessor:postprocessor:[grpc server]Hello, ")
-
 	s.Stop()
 }
 
