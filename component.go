@@ -68,9 +68,6 @@ func (c *Components) commonInterceptor() Interceptors {
 func (i Interceptors) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
 func (c *Components) intercept(methods []string, urlPattern string, list ...Interceptor) {
-	if c.routers == nil {
-		c.routers = make(map[int]*mux.Router)
-	}
 	c.routers[rInterceptor] = setComponent(c.routers[rInterceptor], methods, urlPattern, Interceptors(list))
 }
 
@@ -88,9 +85,6 @@ type Preprocessor func(http.ResponseWriter, *http.Request) error
 func (p Preprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
 func (c *Components) setPreprocessor(methods []string, urlPattern string, pre Preprocessor) {
-	if c.routers == nil {
-		c.routers = make(map[int]*mux.Router)
-	}
 	c.routers[rPreprocessor] = setComponent(c.routers[rPreprocessor], methods, urlPattern, pre)
 }
 
@@ -108,9 +102,6 @@ type Postprocessor func(http.ResponseWriter, *http.Request, interface{}, error)
 func (p Postprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
 func (c *Components) setPostprocessor(methods []string, urlPattern string, post Postprocessor) {
-	if c.routers == nil {
-		c.routers = make(map[int]*mux.Router)
-	}
 	c.routers[rPostprocessor] = setComponent(c.routers[rPostprocessor], methods, urlPattern, post)
 }
 
@@ -128,9 +119,6 @@ type Hijacker func(http.ResponseWriter, *http.Request)
 func (h Hijacker) ServeHTTP(http.ResponseWriter, *http.Request) {}
 
 func (c *Components) setHijacker(methods []string, urlPattern string, h Hijacker) {
-	if c.routers == nil {
-		c.routers = make(map[int]*mux.Router)
-	}
 	c.routers[rHijacker] = setComponent(c.routers[rHijacker], methods, urlPattern, h)
 }
 

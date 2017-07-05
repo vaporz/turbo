@@ -7,6 +7,12 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"os/signal"
+	"time"
+	"git.apache.org/thrift.git/lib/go/thrift"
+	"google.golang.org/grpc"
+	"context"
+	"github.com/gorilla/mux"
 )
 
 // Server holds the data for a server
@@ -14,10 +20,10 @@ type Server struct {
 	Config               *Config
 	Components           *Components
 	switcherFunc         switcher
-	chans                map[int]chan bool
 	gClient              *grpcClient
 	tClient              *thriftClient
 	registeredComponents map[string]interface{}
+	reloadConfig         chan bool
 	exit                 chan os.Signal
 }
 
@@ -39,16 +45,12 @@ func (s *Server) watchConfig() {
 	s.Config.WatchConfig()
 	s.Config.OnConfigChange(func(e fsnotify.Event) {
 		s.Config.loadServiceConfig(s.Config.File)
-		s.chans[reloadConfig] <- true
+		s.reloadConfig <- true
 	})
 }
 
-const (
-	reloadConfig = iota
-)
-
 func (s *Server) initChans() {
-	s.chans[reloadConfig] = make(chan bool)
+	s.reloadConfig = make(chan bool)
 	s.exit = make(chan os.Signal, 1)
 }
 
@@ -77,7 +79,7 @@ func (s *Server) loadComponentsNoPanic() *Components {
 }
 
 func (s *Server) loadComponents() *Components {
-	c := &Components{}
+	c := &Components{routers: make(map[int]*mux.Router)}
 	for _, m := range s.Config.interceptors {
 		names := strings.Split(m[2], ",")
 		components := make([]Interceptor, 0)
@@ -108,6 +110,40 @@ func (s *Server) loadComponents() *Components {
 		log.Info("errorhandler:", s.Config.errorhandler)
 	}
 	return c
+}
+
+func (s *Server) waitForQuit(httpServer *http.Server, grpcServer *grpc.Server, thriftServer *thrift.TSimpleServer) {
+	signal.Notify(s.exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
+Wait:
+	select {
+	case <-s.exit:
+		log.Info("Received CTRL-C, Service is stopping...")
+		if httpServer != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+			defer cancel()
+			httpServer.Shutdown(ctx)
+			log.Info("Http Server stopped")
+		}
+		if grpcServer != nil {
+			s.gClient.close()
+			grpcServer.GracefulStop()
+			log.Info("Grpc Server stopped")
+		}
+		if thriftServer != nil {
+			s.tClient.close()
+			thriftServer.Stop()
+			log.Info("Grpc Server stopped")
+		}
+	case <-s.reloadConfig:
+		if httpServer == nil {
+			goto Wait
+		}
+		log.Info("Reloading configuration...")
+		httpServer.Handler = router(s)
+		log.Info("Router reloaded")
+		s.Components = s.loadComponentsNoPanic()
+		log.Info("Configuration reloaded")
+	}
 }
 
 // Stop stops the server gracefully

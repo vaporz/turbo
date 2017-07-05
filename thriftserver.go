@@ -1,12 +1,8 @@
 package turbo
 
 import (
-	"context"
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 )
 
@@ -17,10 +13,10 @@ type ThriftServer struct {
 func NewThriftServer(configFilePath string) *ThriftServer {
 	s := &ThriftServer{
 		Server: &Server{
-			Config:     NewConfig("thrift", configFilePath),
-			Components: new(Components),
-			chans:      make(map[int]chan bool),
-			tClient:    new(thriftClient),
+			Config:       NewConfig("thrift", configFilePath),
+			Components:   new(Components),
+			reloadConfig: make(chan bool),
+			tClient:      new(thriftClient),
 		},
 	}
 	s.initChans()
@@ -38,50 +34,20 @@ func (s *ThriftServer) StartTHRIFT(clientCreator thriftClientCreator, sw switche
 	thriftServer := s.startThriftServiceInternal(registerTProcessor, false)
 	time.Sleep(time.Second * 1)
 	httpServer := s.startThriftHTTPServerInternal(clientCreator, sw)
-	s.waitForQuit(httpServer, thriftServer)
+	s.waitForQuit(httpServer, nil, thriftServer)
 	log.Info("Turbo exit, bye!")
 }
 
 // StartThriftHTTPServer starts a HTTP server which sends requests via Thrift
 func (s *ThriftServer) StartThriftHTTPServer(clientCreator thriftClientCreator, sw switcher) {
 	httpServer := s.startThriftHTTPServerInternal(clientCreator, sw)
-	s.waitForQuit(httpServer, nil)
+	s.waitForQuit(httpServer, nil, nil)
 }
 
 // StartThriftService starts a Thrift service
 func (s *ThriftServer) StartThriftService(registerTProcessor func() thrift.TProcessor) {
 	thriftServer := s.startThriftServiceInternal(registerTProcessor, true)
-	s.waitForQuit(nil, thriftServer)
-}
-
-func (s *ThriftServer) waitForQuit(httpServer *http.Server, thriftServer *thrift.TSimpleServer) {
-	signal.Notify(s.exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
-	// TODO split http server and grpc/thrift server
-Wait:
-	select {
-	case <-s.exit:
-		log.Info("Received CTRL-C, Service is stopping...")
-		if httpServer != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-			defer cancel()
-			httpServer.Shutdown(ctx)
-			log.Info("Http Server stopped")
-		}
-		if thriftServer != nil {
-			s.tClient.close()
-			thriftServer.Stop()
-			log.Info("Grpc Server stopped")
-		}
-	case <-s.chans[reloadConfig]:
-		if httpServer == nil {
-			goto Wait
-		}
-		log.Info("Reloading configuration...")
-		httpServer.Handler = router(s.Server)
-		log.Info("Router reloaded")
-		s.Components = s.loadComponentsNoPanic()
-		log.Info("Configuration reloaded")
-	}
+	s.waitForQuit(nil, nil, thriftServer)
 }
 
 func (s *ThriftServer) startThriftHTTPServerInternal(clientCreator thriftClientCreator, sw switcher) *http.Server {
