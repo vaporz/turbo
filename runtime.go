@@ -28,9 +28,10 @@ func handler(s *Server, methodName string) func(http.ResponseWriter, *http.Reque
 		ParseRequestForm(req)
 		interceptors := getInterceptors(s, req)
 		req, err := doBefore(&interceptors, resp, req)
-		// TODO handle this err with errorHandler?
 		if err == nil {
 			doRequest(s, methodName, resp, req)
+		} else {
+			s.Components.errorHandlerFunc()(resp, req, err)
 		}
 		doAfter(interceptors, resp, req)
 	}

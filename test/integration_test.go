@@ -161,7 +161,7 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 	time.Sleep(time.Second)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", "{\"message\":\"[grpc server]Hello, testtest\"}")
 	testGet(t, "http://localhost:"+httpPort+"/hello", "intercepted:{\"message\":\"[grpc server]Hello, \"}")
-	testGet(t, "http://localhost:"+httpPort+"/hellointerceptor", "interceptor_error:")
+	testGet(t, "http://localhost:"+httpPort+"/hellointerceptor", "interceptor_error:from errorHandler:error!")
 	testGet(t, "http://localhost:"+httpPort+"/hello_preprocessor", "preprocessor:{\"message\":\"[grpc server]Hello, \"}")
 	testGet(t, "http://localhost:"+httpPort+"/hello_postprocessor", "postprocessor:[grpc server]Hello, ")
 	testGet(t, "http://localhost:"+httpPort+"/hello_hijacker", "hijacker")
@@ -345,13 +345,13 @@ func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
 	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("BeforeErrorInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"interceptor_error:")
+		"interceptor_error:error!\n")
 
 	s.Components.Reset()
 	list := turbo.Interceptors{s.Component("BaseInterceptor").(turbo.Interceptor), s.Component("BeforeErrorInterceptor").(turbo.Interceptor)}
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", list...)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"interceptor_error:")
+		"interceptor_error:error!\n")
 
 	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor))
@@ -370,7 +370,7 @@ func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
 	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor), s.Component("BeforeErrorInterceptor").(turbo.Interceptor), s.Component("Test1Interceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"intercepted:interceptor_error:")
+		"intercepted:interceptor_error:error!\n")
 
 	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor))

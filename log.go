@@ -56,6 +56,7 @@ func setupLoggerFile(c *Config) {
 		logPath = "log"
 	}
 	if !path.IsAbs(logPath) {
+		// TODO service root may be blank
 		logPath = c.ServiceRootPath() + "/" + logPath
 	}
 	logPath = path.Clean(logPath)
