@@ -21,12 +21,12 @@ func TestUnknownType(t *testing.T) {
 }
 
 func TestValidateServiceRootPath(t *testing.T) {
-	g := &Generator{PkgPath: "a"}
+	g := &Creator{PkgPath: "a"}
 	var r io.Reader
 	r = strings.NewReader("y\n")
 	g.validateServiceRootPath(r)
 
-	g = &Generator{PkgPath: "github.com/vaporz/turbo/test/a"}
+	g = &Creator{PkgPath: "github.com/vaporz/turbo/test/a"}
 	p := GOPATH() + "/src/github.com/vaporz/turbo/test/a"
 	os.MkdirAll(p, 0755)
 	g.validateServiceRootPath(r)
@@ -42,6 +42,6 @@ func TestInvalidPkgPath(t *testing.T) {
 			t.Errorf("The code did not panic")
 		}
 	}()
-	g := &Generator{}
+	g := &Creator{}
 	g.validateServiceRootPath(nil)
 }

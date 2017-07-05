@@ -19,7 +19,7 @@ var createCmd = &cobra.Command{
 		if turbo.IsNotCamelCase(args[1]) {
 			return errors.New("[" + args[1] + "] is not a CamelCase string")
 		}
-		g := turbo.Generator{
+		g := turbo.Creator{
 			RpcType: RpcType,
 			PkgPath: args[0],
 		}

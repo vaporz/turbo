@@ -306,7 +306,7 @@ func generate(t *testing.T, rpc string) {
 	}
 
 	cmd.RootCmd.SetArgs([]string{"generate", "github.com/vaporz/turbo/test/testcreateservice", "-r", rpc,
-								 "-I", turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice"})
+		"-I", turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice"})
 	err = cmd.Execute()
 	assert.Nil(t, err)
 

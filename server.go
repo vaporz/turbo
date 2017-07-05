@@ -1,18 +1,18 @@
 package turbo
 
 import (
+	"context"
+	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/fsnotify/fsnotify"
+	"github.com/gorilla/mux"
+	"google.golang.org/grpc"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
 	"syscall"
-	"os/signal"
 	"time"
-	"git.apache.org/thrift.git/lib/go/thrift"
-	"google.golang.org/grpc"
-	"context"
-	"github.com/gorilla/mux"
 )
 
 // Server holds the data for a server
