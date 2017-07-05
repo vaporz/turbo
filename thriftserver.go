@@ -9,12 +9,12 @@ import (
 )
 
 type ThriftServer struct {
-	Server
+	*Server
 }
 
 func NewThriftServer(configFilePath string) *ThriftServer {
 	s := &ThriftServer{
-		Server: Server{
+		Server: &Server{
 			Config:     NewConfig("thrift", configFilePath),
 			Components: new(Components),
 			chans:      make(map[int]chan bool),

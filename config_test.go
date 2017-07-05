@@ -51,6 +51,13 @@ func TestConfig(t *testing.T) {
 	assert.Equal(t, "GET", c.urlServiceMaps[1][0])
 	assert.Equal(t, "/eat_apple/{num:[0-9]+}", c.urlServiceMaps[1][1])
 	assert.Equal(t, "EatApple", c.urlServiceMaps[1][2])
+	assert.Equal(t, "LogInterceptor", c.interceptors[0][2])
+	assert.Equal(t, "preprocessor", c.preprocessors[0][2])
+	assert.Equal(t, "postprocessor", c.postprocessors[0][2])
+	assert.Equal(t, "hijacker", c.hijackers[0][2])
+	assert.Equal(t, "convertor", c.convertors[0][1])
+	assert.Equal(t, "error_handler", c.errorhandler)
+
 	c.loadFieldMapping()
 	assert.Equal(t, "CommonValues values", c.fieldMappings["SayHelloRequest"][0])
 }

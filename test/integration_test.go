@@ -51,21 +51,21 @@ func TestGrpcService(t *testing.T) {
 	overwriteServiceYaml("8081", "50051", "development")
 
 	s := turbo.NewGrpcServer("testservice/service.yaml")
-	registerComponents(s.Components)
+	registerComponents(s.Server)
 	go s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 	time.Sleep(time.Second * 1)
 
-	runCommonTests(t, s.Components, httpPort, "grpc")
+	runCommonTests(t, s.Server, httpPort, "grpc")
 
 	testGet(t, "http://localhost:"+httpPort+"/hello/error",
 		"rpc error: code = Unknown desc = grpc error\n")
 
-	s.Components.WithErrorHandler(s.Components.Component("errorHandler").(turbo.ErrorHandlerFunc))
+	s.Components.WithErrorHandler(s.Component("errorHandler").(turbo.ErrorHandlerFunc))
 	testGet(t, "http://localhost:"+httpPort+"/hello/error",
 		"from errorHandler:rpc error: code = Unknown desc = grpc error")
 	s.Components.Reset()
 
-	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Components.Component("ContextValueInterceptor").(turbo.Interceptor))
+	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("ContextValueInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"test1_intercepted:{\"message\":\"{\\\"values\\\":{},\\\"yourName\\\":\\\"testtest\\\",\\\"int64Value\\\":1234567,\\\"boolValue\\\":true,\\\"float64Value\\\":1.23}\"}")
 	s.Components.Reset()
@@ -73,7 +73,7 @@ func TestGrpcService(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?int64_value=64&bool_value=true&float64_value=0.123&uint64_value=123",
 		"{\"message\":\"{\\\"values\\\":{},\\\"yourName\\\":\\\"testtest\\\",\\\"int64Value\\\":64,\\\"boolValue\\\":true,\\\"float64Value\\\":0.123,\\\"uint64Value\\\":123}\"}")
 
-	s.Components.RegisterMessageFieldConvertor("CommonValues", s.Components.Component("convertProtoCommonValues").(turbo.Convertor))
+	s.Components.SetMessageFieldConvertor("CommonValues", s.Component("convertProtoCommonValues").(turbo.Convertor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?bool_value=true",
 		"{\"message\":\"{\\\"values\\\":{\\\"someId\\\":1111111},\\\"yourName\\\":\\\"testtest\\\",\\\"boolValue\\\":true}\"}")
 	s.Stop()
@@ -84,22 +84,22 @@ func TestThriftService(t *testing.T) {
 	overwriteServiceYaml(httpPort, "50052", "production")
 
 	s := turbo.NewThriftServer("testservice/service.yaml")
-	registerComponents(s.Components)
+	registerComponents(s.Server)
 	go s.StartTHRIFT(tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 	time.Sleep(time.Second * 2)
 	turbo.SetOutput(os.Stdout)
 
-	runCommonTests(t, s.Components, httpPort, "thrift")
+	runCommonTests(t, s.Server, httpPort, "thrift")
 
 	testGet(t, "http://localhost:"+httpPort+"/hello/error",
 		"Internal error processing sayHello: thrift error\n")
 
-	s.Components.WithErrorHandler(s.Components.Component("errorHandler").(turbo.ErrorHandlerFunc))
+	s.Components.WithErrorHandler(s.Component("errorHandler").(turbo.ErrorHandlerFunc))
 	testGet(t, "http://localhost:"+httpPort+"/hello/error",
 		"from errorHandler:Internal error processing sayHello: thrift error")
 	s.Components.Reset()
 
-	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Components.Component("ContextValueInterceptor").(turbo.Interceptor))
+	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("ContextValueInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"test1_intercepted:{\"message\":\"[thrift server]values.TransactionId=0, yourName=testtest,int64Value=1234567, boolValue=true, float64Value=1.230000, uint64Value=0, int32Value=0, int16Value=0\"}")
 	s.Components.Reset()
@@ -107,7 +107,7 @@ func TestThriftService(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?transaction_id=111&int64_value=64&bool_value=true&float64_value=0.123&uint64_value=123&int32_value=32&int16_value=16",
 		"{\"message\":\"[thrift server]values.TransactionId=111, yourName=testtest,int64Value=64, boolValue=true, float64Value=0.123000, uint64Value=123, int32Value=32, int16Value=16\"}")
 
-	s.Components.RegisterMessageFieldConvertor("CommonValues", s.Components.Component("convertThriftCommonValues").(turbo.Convertor))
+	s.Components.SetMessageFieldConvertor("CommonValues", s.Component("convertThriftCommonValues").(turbo.Convertor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?bool_value=true",
 		"{\"message\":\"[thrift server]values.TransactionId=222222, yourName=testtest,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0\"}")
 	s.Stop()
@@ -118,7 +118,7 @@ func TestHTTPGrpcService(t *testing.T) {
 	overwriteServiceYaml(httpPort, "50053", "development")
 
 	s := turbo.NewGrpcServer("testservice/service.yaml")
-	registerComponents(s.Components)
+	registerComponents(s.Server)
 	go s.StartGrpcService(gimpl.RegisterServer)
 	time.Sleep(time.Second)
 
@@ -135,7 +135,7 @@ func TestHTTPThriftService(t *testing.T) {
 	overwriteServiceYaml(httpPort, "50054", "development")
 
 	s := turbo.NewThriftServer("testservice/service.yaml")
-	registerComponents(s.Components)
+	registerComponents(s.Server)
 	go s.StartThriftService(timpl.TProcessor)
 	time.Sleep(time.Second)
 
@@ -147,7 +147,33 @@ func TestHTTPThriftService(t *testing.T) {
 	s.Stop()
 }
 
-// todo test component register on config change
+func TestLoadComponentsFromConfig(t *testing.T) {
+	httpPort := "8085"
+	overwriteServiceYamlWithGrpcComponents(httpPort, "50055", "development")
+
+	s := turbo.NewGrpcServer("testservice/service.yaml")
+	registerComponents(s.Server)
+	go s.StartGrpcService(gimpl.RegisterServer)
+	time.Sleep(time.Second)
+
+	go s.StartGrpcHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Second)
+	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", "{\"message\":\"[grpc server]Hello, testtest\"}")
+	testGet(t, "http://localhost:"+httpPort+"/hello", "intercepted:{\"message\":\"[grpc server]Hello, \"}")
+	testGet(t, "http://localhost:"+httpPort+"/hellointerceptor", "interceptor_error:")
+	testGet(t, "http://localhost:"+httpPort+"/hello_preprocessor", "preprocessor:{\"message\":\"[grpc server]Hello, \"}")
+	testGet(t, "http://localhost:"+httpPort+"/hello_postprocessor", "postprocessor:[grpc server]Hello, ")
+	testGet(t, "http://localhost:"+httpPort+"/hello_hijacker", "hijacker")
+	testGet(t, "http://localhost:"+httpPort+"/hello_convertor?bool_value=true", "{\"message\":\"{\\\"values\\\":{\\\"someId\\\":1111111},\\\"boolValue\\\":true}\"}")
+	testGet(t, "http://localhost:"+httpPort+"/hello_hijacker", "hijacker")
+	testGet(t, "http://localhost:"+httpPort+"/hello/error", "from errorHandler:rpc error: code = Unknown desc = grpc error")
+
+	changeServiceYamlWithGrpcComponents(httpPort, "50055", "development")
+	time.Sleep(time.Millisecond * 100)
+	testGet(t, "http://localhost:"+httpPort+"/hello", "test1_intercepted:preprocessor:postprocessor:[grpc server]Hello, ")
+
+	s.Stop()
+}
 
 func overwriteProto() {
 	writeFileWithTemplate(
@@ -288,7 +314,7 @@ func generate(t *testing.T, rpc string) {
 	cmd.FilePaths = []string{}
 }
 
-func runCommonTests(t *testing.T, c *turbo.Components, httpPort, rpcType string) {
+func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
 	testGet(t, "http://localhost:"+httpPort+"/hello",
 		"{\"message\":\"["+rpcType+" server]Hello, \"}")
 	testGet(t, "http://localhost:"+httpPort+"/hello?your_name=turbo&yourname=xxx",
@@ -302,74 +328,74 @@ func runCommonTests(t *testing.T, c *turbo.Components, httpPort, rpcType string)
 	testPost(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"404 page not found\n")
 
-	c.SetCommonInterceptor(c.Component("Test1Interceptor").(turbo.Interceptor))
+	s.Components.SetCommonInterceptor(s.Component("Test1Interceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"test1_intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
-	c.Reset()
-	c.Intercept([]string{"GET"}, "/", c.Component("TestInterceptor").(turbo.Interceptor))
+	s.Components.Reset()
+	s.Components.Intercept([]string{"GET"}, "/", s.Component("TestInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?yourName=testname",
 		"intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
-	c.Reset()
-	c.Intercept([]string{"GET"}, "/", c.Component("TestInterceptor").(turbo.Interceptor))
+	s.Components.Reset()
+	s.Components.Intercept([]string{"GET"}, "/", s.Component("TestInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
-	c.Reset()
-	c.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", c.Component("BeforeErrorInterceptor").(turbo.Interceptor))
+	s.Components.Reset()
+	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("BeforeErrorInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"interceptor_error:")
 
-	c.Reset()
-	list := turbo.Interceptors{c.Component("BaseInterceptor").(turbo.Interceptor), c.Component("BeforeErrorInterceptor").(turbo.Interceptor)}
-	c.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", list...)
+	s.Components.Reset()
+	list := turbo.Interceptors{s.Component("BaseInterceptor").(turbo.Interceptor), s.Component("BeforeErrorInterceptor").(turbo.Interceptor)}
+	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", list...)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"interceptor_error:")
 
-	c.Reset()
-	c.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", c.Component("TestInterceptor").(turbo.Interceptor))
+	s.Components.Reset()
+	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
-	c.Reset()
-	c.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", c.Component("TestInterceptor").(turbo.Interceptor), c.Component("Test1Interceptor").(turbo.Interceptor))
+	s.Components.Reset()
+	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor), s.Component("Test1Interceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:test1_intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
-	c.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", c.Component("TestInterceptor").(turbo.Interceptor), c.Component("AfterErrorInterceptor").(turbo.Interceptor), c.Component("Test1Interceptor").(turbo.Interceptor))
+	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor), s.Component("AfterErrorInterceptor").(turbo.Interceptor), s.Component("Test1Interceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:test1_intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
-	c.Reset()
-	c.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", c.Component("TestInterceptor").(turbo.Interceptor), c.Component("BeforeErrorInterceptor").(turbo.Interceptor), c.Component("Test1Interceptor").(turbo.Interceptor))
+	s.Components.Reset()
+	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor), s.Component("BeforeErrorInterceptor").(turbo.Interceptor), s.Component("Test1Interceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:interceptor_error:")
 
-	c.Reset()
-	c.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", c.Component("TestInterceptor").(turbo.Interceptor))
-	c.SetPreprocessor([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", c.Component("errorPreProcessor").(turbo.Preprocessor))
+	s.Components.Reset()
+	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor))
+	s.Components.SetPreprocessor([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("errorPreProcessor").(turbo.Preprocessor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:error_preprocessor:error in preprocessor\n")
 
-	c.Reset()
-	c.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", c.Component("TestInterceptor").(turbo.Interceptor))
-	c.SetPreprocessor([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", c.Component("preProcessor").(turbo.Preprocessor))
+	s.Components.Reset()
+	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor))
+	s.Components.SetPreprocessor([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("preProcessor").(turbo.Preprocessor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:preprocessor:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
 	if rpcType == "thrift" {
-		c.SetPostprocessor([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", c.Component("thriftPostProcessor").(turbo.Postprocessor))
+		s.Components.SetPostprocessor([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("thriftPostProcessor").(turbo.Postprocessor))
 	} else {
-		c.SetPostprocessor([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", c.Component("postProcessor").(turbo.Postprocessor))
+		s.Components.SetPostprocessor([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("postProcessor").(turbo.Postprocessor))
 	}
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:preprocessor:postprocessor:["+rpcType+" server]Hello, testtest")
 
-	c.SetHijacker([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", c.Component("hijacker").(turbo.Hijacker))
+	s.Components.SetHijacker([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("hijacker").(turbo.Hijacker))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:hijacker")
-	c.Reset()
+	s.Components.Reset()
 }
 
 func testPost(t *testing.T, url, expected string) {
@@ -398,21 +424,21 @@ func testGet(t *testing.T, url, expected string) {
 	assert.Equal(t, expected, readResp(resp))
 }
 
-func registerComponents(c *turbo.Components) {
-	c.RegisterComponent("BaseInterceptor", &turbo.BaseInterceptor{})
-	c.RegisterComponent("BeforeErrorInterceptor", &BeforeErrorInterceptor{})
-	c.RegisterComponent("AfterErrorInterceptor", &AfterErrorInterceptor{})
-	c.RegisterComponent("TestInterceptor", &TestInterceptor{})
-	c.RegisterComponent("Test1Interceptor", &Test1Interceptor{})
-	c.RegisterComponent("ContextValueInterceptor", &ContextValueInterceptor{})
-	c.RegisterComponent("preProcessor", preProcessor)
-	c.RegisterComponent("errorPreProcessor", errorPreProcessor)
-	c.RegisterComponent("postProcessor", postProcessor)
-	c.RegisterComponent("thriftPostProcessor", thriftPostProcessor)
-	c.RegisterComponent("hijacker", hijacker)
-	c.RegisterComponent("errorHandler", errorHandler)
-	c.RegisterComponent("convertProtoCommonValues", convertProtoCommonValues)
-	c.RegisterComponent("convertThriftCommonValues", convertThriftCommonValues)
+func registerComponents(s *turbo.Server) {
+	s.RegisterComponent("BaseInterceptor", &turbo.BaseInterceptor{})
+	s.RegisterComponent("BeforeErrorInterceptor", &BeforeErrorInterceptor{})
+	s.RegisterComponent("AfterErrorInterceptor", &AfterErrorInterceptor{})
+	s.RegisterComponent("TestInterceptor", &TestInterceptor{})
+	s.RegisterComponent("Test1Interceptor", &Test1Interceptor{})
+	s.RegisterComponent("ContextValueInterceptor", &ContextValueInterceptor{})
+	s.RegisterComponent("preProcessor", preProcessor)
+	s.RegisterComponent("errorPreProcessor", errorPreProcessor)
+	s.RegisterComponent("postProcessor", postProcessor)
+	s.RegisterComponent("thriftPostProcessor", thriftPostProcessor)
+	s.RegisterComponent("hijacker", hijacker)
+	s.RegisterComponent("errorHandler", errorHandler)
+	s.RegisterComponent("convertProtoCommonValues", convertProtoCommonValues)
+	s.RegisterComponent("convertThriftCommonValues", convertThriftCommonValues)
 }
 
 type BeforeErrorInterceptor struct {
@@ -517,26 +543,15 @@ var convertThriftCommonValues turbo.Convertor = func(req *http.Request) reflect.
 }
 
 func overwriteServiceYaml(httpPort, servicePort, env string) {
+	type serviceYamlValues struct {
+		HttpPort    string
+		ServiceName string
+		ServicePort string
+		Env         string
+	}
 	writeFileWithTemplate(
 		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml",
-		serviceYamlFile,
-		serviceYamlValues{
-			HttpPort:    httpPort,
-			ServiceName: "TestService",
-			ServicePort: servicePort,
-			Env:         env,
-		},
-	)
-}
-
-type serviceYamlValues struct {
-	HttpPort    string
-	ServiceName string
-	ServicePort string
-	Env         string
-}
-
-var serviceYamlFile string = `config:
+		`config:
   http_port: {{.HttpPort}}
   environment: {{.Env}}
   turbo_log_path: log
@@ -550,7 +565,111 @@ var serviceYamlFile string = `config:
 urlmapping:
   - GET /hello/{your_name:[a-zA-Z0-9]+} SayHello
   - GET /hello SayHello
-`
+`,
+		serviceYamlValues{
+			HttpPort:    httpPort,
+			ServiceName: "TestService",
+			ServicePort: servicePort,
+			Env:         env,
+		},
+	)
+}
+
+func overwriteServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
+	type serviceYamlValues struct {
+		HttpPort    string
+		ServiceName string
+		ServicePort string
+		Env         string
+	}
+	writeFileWithTemplate(
+		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml",
+		`config:
+  http_port: {{.HttpPort}}
+  environment: {{.Env}}
+  turbo_log_path: log
+  grpc_service_name: {{.ServiceName}}
+  grpc_service_host: 127.0.0.1
+  grpc_service_port: {{.ServicePort}}
+  thrift_service_name: {{.ServiceName}}
+  thrift_service_host: 127.0.0.1
+  thrift_service_port: {{.ServicePort}}
+
+urlmapping:
+  - GET /hello/{your_name:[a-zA-Z0-9]+} SayHello
+  - GET /hello SayHello
+  - GET /hellointerceptor SayHello
+  - GET /hello_preprocessor SayHello
+  - GET /hello_postprocessor SayHello
+  - GET /hello_hijacker SayHello
+  - GET /hello_convertor SayHello
+
+interceptor:
+  - GET /hello TestInterceptor
+  - GET /hellointerceptor BeforeErrorInterceptor,Test1Interceptor
+preprocessor:
+  - GET /hello_preprocessor preProcessor
+postprocessor:
+  - GET /hello_postprocessor postProcessor
+hijacker:
+  - GET /hello_hijacker hijacker
+convertor:
+  - CommonValues convertProtoCommonValues
+errorhandler: errorHandler
+`,
+		serviceYamlValues{
+			HttpPort:    httpPort,
+			ServiceName: "TestService",
+			ServicePort: servicePort,
+			Env:         env,
+		},
+	)
+}
+
+func changeServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
+	type serviceYamlValues struct {
+		HttpPort    string
+		ServiceName string
+		ServicePort string
+		Env         string
+	}
+	writeFileWithTemplate(
+		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml",
+		`config:
+  http_port: {{.HttpPort}}
+  environment: {{.Env}}
+  turbo_log_path: log
+  grpc_service_name: {{.ServiceName}}
+  grpc_service_host: 127.0.0.1
+  grpc_service_port: {{.ServicePort}}
+  thrift_service_name: {{.ServiceName}}
+  thrift_service_host: 127.0.0.1
+  thrift_service_port: {{.ServicePort}}
+
+urlmapping:
+  - GET /hello/{your_name:[a-zA-Z0-9]+} SayHello
+  - GET /hello SayHello
+  - GET /hellointerceptor SayHello
+  - GET /hello_preprocessor SayHello
+  - GET /hello_postprocessor SayHello
+  - GET /hello_hijacker SayHello
+  - GET /hello_convertor SayHello
+
+interceptor:
+  - GET /hello Test1Interceptor
+preprocessor:
+  - GET /hello preProcessor
+postprocessor:
+  - GET /hello postProcessor
+`,
+		serviceYamlValues{
+			HttpPort:    httpPort,
+			ServiceName: "TestService",
+			ServicePort: servicePort,
+			Env:         env,
+		},
+	)
+}
 
 func writeFileWithTemplate(filePath, text string, data interface{}) {
 	f, err := os.Create(filePath)

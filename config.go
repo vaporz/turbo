@@ -43,6 +43,13 @@ type Config struct {
 	configs        map[string]string
 	urlServiceMaps [][3]string
 	fieldMappings  map[string][]string
+
+	interceptors   [][3]string
+	preprocessors  [][3]string
+	postprocessors [][3]string
+	hijackers      [][3]string
+	convertors     [][2]string
+	errorhandler   string
 }
 
 func NewConfig(rpcType, configFilePath string) *Config {
@@ -60,22 +67,49 @@ func (c *Config) loadServiceConfig(p string) {
 	c.File = p
 	c.loadUrlMap()
 	c.loadConfigs()
+	c.loadComponents()
+}
+
+func (c *Config) loadComponents() {
+	c.interceptors = c.loadMappings("interceptor")
+	c.preprocessors = c.loadMappings("preprocessor")
+	c.postprocessors = c.loadMappings("postprocessor")
+	c.hijackers = c.loadMappings("hijacker")
+	c.convertors = c.loadConvertor()
+	c.errorhandler = c.GetString("errorhandler")
 }
 
 func (c *Config) loadUrlMap() {
-	c.urlServiceMaps = make([][3]string, 0)
-	urlMap := c.GetStringSlice("urlmapping")
-	for _, line := range urlMap {
-		c.appendUrlServiceMap(strings.TrimSpace(line))
-	}
+	c.urlServiceMaps = c.loadMappings("urlmapping")
 }
 
-func (c *Config) appendUrlServiceMap(line string) {
+func (c *Config) loadMappings(key string) [][3]string {
+	mapping := make([][3]string, 0)
+	lines := c.GetStringSlice(key)
+	for _, line := range lines {
+		mapping = appendMap(mapping, strings.TrimSpace(line))
+	}
+	return mapping
+}
+
+func appendMap(mapping [][3]string, line string) [][3]string {
 	values := strings.Split(line, " ")
 	HTTPMethod := strings.TrimSpace(values[0])
 	url := strings.TrimSpace(values[1])
-	methodName := strings.TrimSpace(values[2])
-	c.urlServiceMaps = append(c.urlServiceMaps, [3]string{HTTPMethod, url, methodName})
+	value := strings.TrimSpace(values[2])
+	return append(mapping, [3]string{HTTPMethod, url, value})
+}
+
+func (c *Config) loadConvertor() [][2]string {
+	mapping := make([][2]string, 0)
+	lines := c.GetStringSlice("convertor")
+	for _, line := range lines {
+		values := strings.Split(strings.TrimSpace(line), " ")
+		name := strings.TrimSpace(values[0])
+		convertorName := strings.TrimSpace(values[1])
+		mapping = append(mapping, [2]string{name, convertorName})
+	}
+	return mapping
 }
 
 func (c *Config) loadConfigs() {

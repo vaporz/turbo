@@ -13,9 +13,11 @@ config:
   filter_proto_json_emit_zerovalues: true
   filter_proto_json_int64_as_number: true
 
+# for test
 grpc-fieldmapping:
   - SayHelloRequest [CommonValues values]
 
+# for test
 thrift-fieldmapping:
   - CommonValues
   - HelloValues
@@ -23,3 +25,15 @@ thrift-fieldmapping:
 urlmapping:
   - GET,POST /hello SayHello
   - GET /eat_apple/{num:[0-9]+} EatApple
+
+interceptor:
+  - GET,POST /hello LogInterceptor
+preprocessor:
+  - GET,POST /hello preprocessor
+postprocessor:
+  - GET,POST /hello postprocessor
+hijacker:
+  - GET,POST /hello hijacker
+convertor:
+  - CommonValues convertor
+errorhandler: error_handler

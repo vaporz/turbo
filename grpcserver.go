@@ -11,12 +11,12 @@ import (
 )
 
 type GrpcServer struct {
-	Server
+	*Server
 }
 
 func NewGrpcServer(configFilePath string) *GrpcServer {
 	s := &GrpcServer{
-		Server: Server{
+		Server: &Server{
 			Config:     NewConfig("grpc", configFilePath),
 			Components: new(Components),
 			chans:      make(map[int]chan bool),

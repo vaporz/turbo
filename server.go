@@ -7,25 +7,34 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 )
 
-type TurboServer interface {
-}
-
-// Client holds the data for a server
+// Server holds the data for a server
 type Server struct {
-	Config       *Config
-	Components   *Components
-	switcherFunc switcher
-	chans        map[int]chan bool
-	gClient      *grpcClient
-	tClient      *thriftClient
+	Config               *Config
+	Components           *Components
+	switcherFunc         switcher
+	chans                map[int]chan bool
+	gClient              *grpcClient
+	tClient              *thriftClient
+	registeredComponents map[string]interface{}
 }
 
 func (s *Server) RegisterComponent(name string, component interface{}) {
-	s.Components.RegisterComponent(name, component)
+	if s.registeredComponents == nil {
+		s.registeredComponents = make(map[string]interface{})
+	}
+	s.registeredComponents[name] = component
+}
+
+func (s *Server) Component(name string) interface{} {
+	if s.registeredComponents == nil {
+		return nil
+	}
+	return s.registeredComponents[name]
 }
 
 func (s *Server) watchConfig() {
@@ -61,6 +70,7 @@ func (s *Server) waitForQuit() {
 }
 
 func (s *Server) startHTTPServer() {
+	s.Components = s.loadComponents()
 	hs := &http.Server{
 		Addr:    ":" + strconv.FormatInt(s.Config.HTTPPort(), 10),
 		Handler: router(s),
@@ -84,11 +94,56 @@ func (s *Server) startHTTPServer() {
 			s.chans[stopService] <- true
 			return
 		case <-s.chans[reloadConfig]:
-			log.Info("Config file changed!")
+			log.Info("Reloading configuration...")
 			hs.Handler = router(s)
-			log.Info("HTTP Server ServeMux reloaded")
+			log.Info("Router reloaded")
+			s.Components = s.loadComponentsNoPanic()
+			log.Info("Configuration reloaded")
 		}
 	}
+}
+
+func (s *Server) loadComponentsNoPanic() *Components {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Error("reload components failed, err=", err)
+		}
+	}()
+	return s.loadComponents()
+}
+
+func (s *Server) loadComponents() *Components {
+	c := &Components{}
+	for _, m := range s.Config.interceptors {
+		names := strings.Split(m[2], ",")
+		components := make([]Interceptor, 0)
+		for _, name := range names {
+			components = append(components, s.Component(name).(Interceptor))
+		}
+		c.Intercept(strings.Split(m[0], ","), m[1], components...)
+		log.Info("interceptor:", m)
+	}
+	for _, m := range s.Config.preprocessors {
+		c.SetPreprocessor(strings.Split(m[0], ","), m[1], s.Component(m[2]).(Preprocessor))
+		log.Info("preprocessor:", m)
+	}
+	for _, m := range s.Config.postprocessors {
+		c.SetPostprocessor(strings.Split(m[0], ","), m[1], s.Component(m[2]).(Postprocessor))
+		log.Info("postprocessor:", m)
+	}
+	for _, m := range s.Config.hijackers {
+		c.SetHijacker(strings.Split(m[0], ","), m[1], s.Component(m[2]).(Hijacker))
+		log.Info("hijacker:", m)
+	}
+	for _, m := range s.Config.convertors {
+		c.SetMessageFieldConvertor(m[0], s.Component(m[1]).(Convertor))
+		log.Info("convertor:", m)
+	}
+	if len(s.Config.errorhandler) > 0 {
+		c.WithErrorHandler(s.Component(s.Config.errorhandler).(ErrorHandlerFunc))
+		log.Info("errorhandler:", s.Config.errorhandler)
+	}
+	return c
 }
 
 func (s *Server) shutDownHTTP(hs *http.Server) {

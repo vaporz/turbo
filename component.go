@@ -9,25 +9,10 @@ import (
 
 // Components holds all component mappings
 type Components struct {
-	commonInterceptors   Interceptors
-	routers              map[int]*mux.Router
-	convertorMap         map[string]Convertor
-	errorHandler         ErrorHandlerFunc
-	RegisteredComponents map[string]interface{}
-}
-
-func (c *Components) RegisterComponent(name string, component interface{}) {
-	if c.RegisteredComponents == nil {
-		c.RegisteredComponents = make(map[string]interface{})
-	}
-	c.RegisteredComponents[name] = component
-}
-
-func (c *Components) Component(name string) interface{} {
-	if c.RegisteredComponents == nil {
-		return nil
-	}
-	return c.RegisteredComponents[name]
+	commonInterceptors Interceptors
+	routers            map[int]*mux.Router
+	convertorMap       map[string]Convertor
+	errorHandler       ErrorHandlerFunc
 }
 
 // Reset resets all component mappings
@@ -45,8 +30,6 @@ const (
 	rHijacker
 )
 
-// TODO setup component mappings via service.yaml
-// TODO reload mappings on config change
 // Interceptor -----------------
 
 // Interceptor intercepts requests, can run a func before and after a request
@@ -268,9 +251,9 @@ func (c *Components) Hijacker(req *http.Request) Hijacker {
 	return c.hijacker(req)
 }
 
-// RegisterMessageFieldConvertor registers a Convertor on a type
-// usage: RegisterMessageFieldConvertor(new(SomeInterface), convertorFunc)
-func (c *Components) RegisterMessageFieldConvertor(field string, convertorFunc Convertor) {
+// SetMessageFieldConvertor registers a Convertor on a type
+// usage: SetMessageFieldConvertor(new(SomeInterface), convertorFunc)
+func (c *Components) SetMessageFieldConvertor(field string, convertorFunc Convertor) {
 	c.registerMessageFieldConvertor(field, convertorFunc)
 }
 
