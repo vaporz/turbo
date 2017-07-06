@@ -134,6 +134,7 @@ Wait:
 			thriftServer.Stop()
 			log.Info("Grpc Server stopped")
 		}
+		Initializer.StopService()
 	case <-s.reloadConfig:
 		if httpServer == nil {
 			goto Wait
@@ -149,4 +150,27 @@ Wait:
 // Stop stops the server gracefully
 func (s *Server) Stop() {
 	s.exit <- syscall.SIGQUIT
+}
+
+// Initializable defines funcs run before service started and after service stopped
+type Initializable interface {
+	// InitService is run before the service is started, do initializing staffs for your service here.
+	InitService() error
+
+	// StopService is run after both grpc server and http server are stopped,
+	// do your cleaning up work here.
+	StopService()
+}
+
+// Initializer implements Initializable
+var Initializer Initializable = &defaultInitializer{}
+
+type defaultInitializer struct {
+}
+
+func (d *defaultInitializer) InitService() error {
+	return nil
+}
+
+func (d *defaultInitializer) StopService() {
 }

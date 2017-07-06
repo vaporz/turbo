@@ -252,9 +252,9 @@ func (c *Creator) generateGrpcServiceImpl() {
 		`package impl
 
 import (
-	"golanc.org/x/net/context"
+	"golang.org/x/net/context"
 	"{{.PkgPath}}/gen/proto"
-	"google.golanc.org/grpc"
+	"google.golang.org/grpc"
 )
 
 // RegisterServer registers a service struct to a server
@@ -349,7 +349,7 @@ func (c *Creator) generateGrpcHTTPComponent() {
 
 import (
 	"{{.PkgPath}}/gen/proto"
-	"google.golanc.org/grpc"
+	"google.golang.org/grpc"
 	"github.com/vaporz/turbo"
 )
 

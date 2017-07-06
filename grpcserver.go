@@ -32,6 +32,7 @@ type grpcClientCreator func(conn *grpc.ClientConn) interface{}
 func (s *GrpcServer) StartGRPC(clientCreator grpcClientCreator, sw switcher,
 	registerServer func(s *grpc.Server)) {
 	log.Info("Starting Turbo...")
+	Initializer.InitService()
 	grpcServer := s.startGrpcServiceInternal(registerServer, false)
 	httpServer := s.startGrpcHTTPServerInternal(clientCreator, sw)
 	s.waitForQuit(httpServer, grpcServer, nil)
@@ -40,12 +41,14 @@ func (s *GrpcServer) StartGRPC(clientCreator grpcClientCreator, sw switcher,
 
 // StartGrpcHTTPServer starts a HTTP server which sends requests via grpc
 func (s *GrpcServer) StartGrpcHTTPServer(clientCreator grpcClientCreator, sw switcher) {
+	Initializer.InitService()
 	httpServer := s.startGrpcHTTPServerInternal(clientCreator, sw)
 	s.waitForQuit(httpServer, nil, nil)
 }
 
 // StartGrpcService starts a GRPC service
 func (s *GrpcServer) StartGrpcService(registerServer func(s *grpc.Server)) {
+	Initializer.InitService()
 	grpcServer := s.startGrpcServiceInternal(registerServer, true)
 	s.waitForQuit(nil, grpcServer, nil)
 }

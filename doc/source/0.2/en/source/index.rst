@@ -5,6 +5,8 @@ Turbo
 
 A lightweight microservice framework.
 
+Golang version: >= 1.8.x
+
 Features
 --------
 
