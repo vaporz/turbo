@@ -31,6 +31,9 @@ type Server struct {
 	Initializer          Initializable
 }
 
+// RegisterComponent registers a component,
+// The convention is to register with the name of that component,
+// the name is used in config file to look up for a component.
 func (s *Server) RegisterComponent(name string, component interface{}) {
 	if s.registeredComponents == nil {
 		s.registeredComponents = make(map[string]interface{})
@@ -38,6 +41,7 @@ func (s *Server) RegisterComponent(name string, component interface{}) {
 	s.registeredComponents[name] = component
 }
 
+// Component returns a component by name.
 func (s *Server) Component(name string) interface{} {
 	if s.registeredComponents == nil {
 		return nil
@@ -144,9 +148,11 @@ Wait:
 			goto Wait
 		}
 		log.Info("Reloading configuration...")
-		httpServer.Handler = router(s)
+		newComponents := s.loadComponentsNoPanic()
+		newRouter := router(s)
+		httpServer.Handler = newRouter
 		log.Info("Router reloaded")
-		s.Components = s.loadComponentsNoPanic()
+		s.Components = newComponents
 		log.Info("Configuration reloaded")
 	}
 }
@@ -189,9 +195,11 @@ type Initializable interface {
 type defaultInitializer struct {
 }
 
+// InitService from defaultInitializer does nothing
 func (d *defaultInitializer) InitService(s *Server) error {
 	return nil
 }
 
+// StopService from defaultInitializer does nothing
 func (d *defaultInitializer) StopService(s *Server) {
 }

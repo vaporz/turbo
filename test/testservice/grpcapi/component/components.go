@@ -11,6 +11,7 @@ func GrpcClient(conn *grpc.ClientConn) interface{} {
 	return proto.NewTestServiceClient(conn)
 }
 
-// InitComponents inits turbo components, such as interceptors, pre/postprocessors, errorHandlers, etc.
-func InitComponents(s *turbo.GrpcServer) {
+// RegisterComponents inits turbo components, such as interceptors, pre/postprocessors, errorHandlers, etc.
+func RegisterComponents(s *turbo.GrpcServer) {
+	 //s.RegisterComponent("name", component)
 }

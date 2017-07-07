@@ -8,6 +8,6 @@ import (
 
 func main() {
 	s := turbo.NewGrpcServer(turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testservice/service.yaml")
-	component.InitComponents(s)
+	component.RegisterComponents(s)
 	s.StartGrpcHTTPServer(component.GrpcClient, gen.GrpcSwitcher)
 }

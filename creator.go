@@ -67,6 +67,7 @@ func (c *Creator) createGrpcProject(serviceName string) {
 	c.generateGrpcServiceMain()
 	c.generateGrpcServiceImpl()
 	c.generateGrpcHTTPMain()
+	// TODO create Initializer struct
 	c.generateGrpcHTTPComponent()
 	c.generateServiceMain("grpc")
 
@@ -330,7 +331,7 @@ import (
 
 func main() {
 	s := turbo.NewGrpcServer("{{.ConfigFilePath}}")
-	component.InitComponents(s)
+	component.RegisterComponents(s)
 	s.StartGrpcHTTPServer(component.GrpcClient, gen.GrpcSwitcher)
 }
 `,
@@ -358,8 +359,9 @@ func GrpcClient(conn *grpc.ClientConn) interface{} {
 	return proto.New{{.ServiceName}}Client(conn)
 }
 
-// InitComponents inits turbo components, such as Interceptors, pre/postprocessors, errorHandlers, etc.
-func InitComponents(s *turbo.GrpcServer) {
+// RegisterComponents inits turbo components, such as Interceptors, pre/postprocessors, errorHandlers, etc.
+func RegisterComponents(s *turbo.GrpcServer) {
+	// s.RegisterComponent("name", component)
 }
 `,
 	)
@@ -386,8 +388,9 @@ func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) interface{
 	return t.New{{.ServiceName}}ClientFactory(trans, f)
 }
 
-// InitComponents inits turbo components, such as Interceptors, pre/postprocessors, errorHandlers, etc.
-func InitComponents(s *turbo.ThriftServer) {
+// RegisterComponents inits turbo components, such as Interceptors, pre/postprocessors, errorHandlers, etc.
+func RegisterComponents(s *turbo.ThriftServer) {
+	// s.RegisterComponent("name", component)
 }
 `,
 	)
@@ -416,7 +419,7 @@ import (
 
 func main() {
 	s := turbo.NewThriftServer("{{.ConfigFilePath}}")
-	component.InitComponents(s)
+	component.RegisterComponents(s)
 	s.StartThriftHTTPServer(component.ThriftClient, gen.ThriftSwitcher)
 }
 `,
@@ -456,11 +459,11 @@ import (
 
 func main() {
 	s := turbo.NewGrpcServer("{{.ConfigFilePath}}")
-	gcomponent.InitComponents(s)
+	gcomponent.RegisterComponents(s)
 	s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
 	//s := turbo.NewThriftServer("{{.ConfigFilePath}}")
-	//tcompoent.InitComponents(s)
+	//tcompoent.RegisterComponents(s)
 	//s.StartTHRIFT(tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 }
 `
@@ -478,11 +481,11 @@ import (
 
 func main() {
 	//s := turbo.NewGrpcServer("{{.ConfigFilePath}}")
-	//gcomponent.InitComponents(s)
+	//gcomponent.RegisterComponents(s)
 	//s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
 	s := turbo.NewThriftServer("{{.ConfigFilePath}}")
-	tcompoent.InitComponents(s)
+	tcompoent.RegisterComponents(s)
 	s.StartTHRIFT(tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 }
 `

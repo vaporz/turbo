@@ -11,10 +11,10 @@ import (
 
 func main() {
 	s := turbo.NewGrpcServer(turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testservice/service.yaml")
-	gcomponent.InitComponents(s)
+	gcomponent.RegisterComponents(s)
 	s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
 	//s := turbo.NewThriftServer("thrift", turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml")
-	//tcompoent.InitComponents(s)
+	//tcompoent.RegisterComponents(s)
 	//s.StartTHRIFT(tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 }
