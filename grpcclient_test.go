@@ -28,5 +28,6 @@ func TestGrpcService(t *testing.T) {
 			t.Errorf("The code did not panic")
 		}
 	}()
-	GrpcService(nil)
+	s := &Server{gClient: new(grpcClient)}
+	s.GrpcService()
 }

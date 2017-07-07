@@ -20,7 +20,7 @@ var GrpcSwitcher = func(s *turbo.Server, methodName string, resp http.ResponseWr
 		if err != nil {
 			return nil, err
 		}
-		return turbo.GrpcService(s).(g.TestServiceClient).SayHello(req.Context(), request)
+		return s.GrpcService().(g.TestServiceClient).SayHello(req.Context(), request)
 	default:
 		return nil, errors.New("No such method[" + methodName + "]")
 	}

@@ -28,5 +28,6 @@ func TestThriftService(t *testing.T) {
 			t.Errorf("The code did not panic")
 		}
 	}()
-	ThriftService(nil)
+	s := &Server{tClient: new(thriftClient)}
+	s.ThriftService()
 }

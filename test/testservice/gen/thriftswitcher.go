@@ -19,7 +19,7 @@ var ThriftSwitcher = func(s *turbo.Server, methodName string, resp http.Response
 		if err != nil {
 			return nil, err
 		}
-		return turbo.ThriftService(s).(*gen.TestServiceClient).SayHello(
+		return s.ThriftService().(*gen.TestServiceClient).SayHello(
 			params[0].Interface().(*gen.CommonValues),
 			params[1].Interface().(string),
 			params[2].Interface().(int64),

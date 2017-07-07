@@ -17,7 +17,9 @@ import (
 
 // Server holds the data for a server
 type Server struct {
+	// Config holds data read from config file
 	Config               *Config
+	// Components holds the mappings of url to component
 	Components           *Components
 	switcherFunc         switcher
 	gClient              *grpcClient
@@ -25,6 +27,8 @@ type Server struct {
 	registeredComponents map[string]interface{}
 	reloadConfig         chan bool
 	exit                 chan os.Signal
+	// Initializer implements Initializable
+	Initializer          Initializable
 }
 
 func (s *Server) RegisterComponent(name string, component interface{}) {
@@ -134,7 +138,7 @@ Wait:
 			thriftServer.Stop()
 			log.Info("Grpc Server stopped")
 		}
-		Initializer.StopService(s.Config)
+		s.Initializer.StopService(s)
 	case <-s.reloadConfig:
 		if httpServer == nil {
 			goto Wait
@@ -152,25 +156,42 @@ func (s *Server) Stop() {
 	s.exit <- syscall.SIGQUIT
 }
 
+// GrpcService returns a grpc client instance,
+// example: client := turbo.GrpcService().(proto.YourServiceClient)
+func (s *Server)GrpcService() interface{} {
+	if s == nil || s.gClient == nil || s.gClient.grpcService == nil {
+		log.Panic("grpc connection not initiated!")
+	}
+	return s.gClient.grpcService
+}
+
+// ThriftService returns a Thrift client instance,
+// example: client := turbo.ThriftService().(proto.YourServiceClient)
+func (s *Server)ThriftService() interface{} {
+	if s == nil || s.tClient == nil || s.tClient.thriftService == nil {
+		log.Panic("thrift connection not initiated!")
+	}
+	return s.tClient.thriftService
+}
+
 // Initializable defines funcs run before service started and after service stopped
 type Initializable interface {
-	// InitService is run before the service is started, do initializing staffs for your service here.
-	InitService(c *Config) error
+	// InitService is run before the service is started, do initializing staffs for your service here,
+	// such as registering turbo components with Server.RegisterComponent(), etc.
+	InitService(s *Server) error
 
 	// StopService is run after both grpc server and http server are stopped,
 	// do your cleaning up work here.
-	StopService(c *Config)
+	StopService(s *Server)
 }
 
-// Initializer implements Initializable
-var Initializer Initializable = &defaultInitializer{}
 
 type defaultInitializer struct {
 }
 
-func (d *defaultInitializer) InitService(c *Config) error {
+func (d *defaultInitializer) InitService(s *Server) error {
 	return nil
 }
 
-func (d *defaultInitializer) StopService(c *Config) {
+func (d *defaultInitializer) StopService(s *Server) {
 }

@@ -51,7 +51,7 @@ func TestGrpcService(t *testing.T) {
 	overwriteServiceYaml("8081", "50051", "development")
 
 	s := turbo.NewGrpcServer("testservice/service.yaml")
-	registerComponents(s.Server)
+	s.Initializer = &testInitializer{}
 	go s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 	time.Sleep(time.Second * 1)
 
@@ -84,7 +84,7 @@ func TestThriftService(t *testing.T) {
 	overwriteServiceYaml(httpPort, "50052", "production")
 
 	s := turbo.NewThriftServer("testservice/service.yaml")
-	registerComponents(s.Server)
+	s.Initializer = &testInitializer{}
 	go s.StartTHRIFT(tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 	time.Sleep(time.Second * 2)
 	turbo.SetOutput(os.Stdout)
@@ -118,7 +118,7 @@ func TestHTTPGrpcService(t *testing.T) {
 	overwriteServiceYaml(httpPort, "50053", "development")
 
 	s := turbo.NewGrpcServer("testservice/service.yaml")
-	registerComponents(s.Server)
+	s.Initializer = &testInitializer{}
 	go s.StartGrpcService(gimpl.RegisterServer)
 	time.Sleep(time.Second)
 
@@ -135,7 +135,7 @@ func TestHTTPThriftService(t *testing.T) {
 	overwriteServiceYaml(httpPort, "50054", "development")
 
 	s := turbo.NewThriftServer("testservice/service.yaml")
-	registerComponents(s.Server)
+	s.Initializer = &testInitializer{}
 	go s.StartThriftService(timpl.TProcessor)
 	time.Sleep(time.Second)
 
@@ -153,7 +153,7 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 
 	s := turbo.NewGrpcServer("testservice/service.yaml")
 	assert.Nil(t, s.Component("test"))
-	registerComponents(s.Server)
+	s.Initializer = &testInitializer{}
 	go s.StartGrpcService(gimpl.RegisterServer)
 	time.Sleep(time.Second)
 
@@ -424,7 +424,11 @@ func testGet(t *testing.T, url, expected string) {
 	assert.Equal(t, expected, readResp(resp))
 }
 
-func registerComponents(s *turbo.Server) {
+type testInitializer struct {
+
+}
+
+func (t *testInitializer) InitService(s *turbo.Server) error {
 	s.RegisterComponent("BaseInterceptor", &turbo.BaseInterceptor{})
 	s.RegisterComponent("BeforeErrorInterceptor", &BeforeErrorInterceptor{})
 	s.RegisterComponent("AfterErrorInterceptor", &AfterErrorInterceptor{})
@@ -439,7 +443,12 @@ func registerComponents(s *turbo.Server) {
 	s.RegisterComponent("errorHandler", errorHandler)
 	s.RegisterComponent("convertProtoCommonValues", convertProtoCommonValues)
 	s.RegisterComponent("convertThriftCommonValues", convertThriftCommonValues)
+	return nil
 }
+
+func (t *testInitializer) StopService(s *turbo.Server) {
+}
+
 
 type BeforeErrorInterceptor struct {
 	turbo.BaseInterceptor

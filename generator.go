@@ -97,7 +97,7 @@ var GrpcSwitcher = func(s *turbo.Server, methodName string, resp http.ResponseWr
 		if err != nil {
 			return nil, err
 		}
-		return turbo.GrpcService(s).(g.{{$.ServiceName}}Client).{{$MethodName}}(req.Context(), request)
+		return s.GrpcService().(g.{{$.ServiceName}}Client).{{$MethodName}}(req.Context(), request)
 {{end}}
 	default:
 		return nil, errors.New("No such method[" + methodName + "]")
@@ -380,7 +380,7 @@ var ThriftSwitcher = func(s *turbo.Server, methodName string, resp http.Response
 		if err != nil {
 			return nil, err
 		}{{end}}
-		return turbo.ThriftService(s).(*gen.{{$.ServiceName}}Client).{{$MethodName}}({{index $.Parameters $i}})
+		return s.ThriftService().(*gen.{{$.ServiceName}}Client).{{$MethodName}}({{index $.Parameters $i}})
 {{end}}
 	default:
 		return nil, errors.New("No such method[" + methodName + "]")

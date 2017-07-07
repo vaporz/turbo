@@ -34,12 +34,3 @@ func (g *grpcClient) close() error {
 	}
 	return g.conn.Close()
 }
-
-// GrpcService returns a grpc client instance,
-// example: client := turbo.GrpcService().(proto.YourServiceClient)
-func GrpcService(s *Server) interface{} {
-	if s == nil || s.gClient == nil || s.gClient.grpcService == nil {
-		log.Panic("grpc connection not initiated!")
-	}
-	return s.gClient.grpcService
-}

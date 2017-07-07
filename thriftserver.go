@@ -17,6 +17,7 @@ func NewThriftServer(configFilePath string) *ThriftServer {
 			Components:   new(Components),
 			reloadConfig: make(chan bool),
 			tClient:      new(thriftClient),
+			Initializer:  &defaultInitializer{},
 		},
 	}
 	s.initChans()
@@ -31,7 +32,7 @@ type thriftClientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory
 func (s *ThriftServer) StartTHRIFT(clientCreator thriftClientCreator, sw switcher,
 	registerTProcessor func() thrift.TProcessor) {
 	log.Info("Starting Turbo...")
-	Initializer.InitService(s.Config)
+	s.Initializer.InitService(s.Server)
 	thriftServer := s.startThriftServiceInternal(registerTProcessor, false)
 	time.Sleep(time.Second * 1)
 	httpServer := s.startThriftHTTPServerInternal(clientCreator, sw)
@@ -41,14 +42,14 @@ func (s *ThriftServer) StartTHRIFT(clientCreator thriftClientCreator, sw switche
 
 // StartThriftHTTPServer starts a HTTP server which sends requests via Thrift
 func (s *ThriftServer) StartThriftHTTPServer(clientCreator thriftClientCreator, sw switcher) {
-	Initializer.InitService(s.Config)
+	s.Initializer.InitService(s.Server)
 	httpServer := s.startThriftHTTPServerInternal(clientCreator, sw)
 	s.waitForQuit(httpServer, nil, nil)
 }
 
 // StartThriftService starts a Thrift service
 func (s *ThriftServer) StartThriftService(registerTProcessor func() thrift.TProcessor) {
-	Initializer.InitService(s.Config)
+	s.Initializer.InitService(s.Server)
 	thriftServer := s.startThriftServiceInternal(registerTProcessor, true)
 	s.waitForQuit(nil, nil, thriftServer)
 }
