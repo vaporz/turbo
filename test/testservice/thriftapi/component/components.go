@@ -12,3 +12,15 @@ func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) interface{
 
 func RegisterComponents(s *turbo.ThriftServer) {
 }
+
+type ServiceInitializer struct {
+}
+
+// InitService from defaultInitializer does nothing
+func (i *ServiceInitializer) InitService(s *turbo.Server) error {
+	return nil
+}
+
+// StopService from defaultInitializer does nothing
+func (i *ServiceInitializer) StopService(s *turbo.Server) {
+}

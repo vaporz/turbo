@@ -15,3 +15,15 @@ func GrpcClient(conn *grpc.ClientConn) interface{} {
 func RegisterComponents(s *turbo.GrpcServer) {
 	 //s.RegisterComponent("name", component)
 }
+
+type ServiceInitializer struct {
+}
+
+// InitService from defaultInitializer does nothing
+func (i *ServiceInitializer) InitService(s *turbo.Server) error {
+	return nil
+}
+
+// StopService from defaultInitializer does nothing
+func (i *ServiceInitializer) StopService(s *turbo.Server) {
+}

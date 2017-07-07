@@ -67,7 +67,6 @@ func (c *Creator) createGrpcProject(serviceName string) {
 	c.generateGrpcServiceMain()
 	c.generateGrpcServiceImpl()
 	c.generateGrpcHTTPMain()
-	// TODO create Initializer struct
 	c.generateGrpcHTTPComponent()
 	c.generateServiceMain("grpc")
 
@@ -332,6 +331,7 @@ import (
 func main() {
 	s := turbo.NewGrpcServer("{{.ConfigFilePath}}")
 	component.RegisterComponents(s)
+	s.Initializer = &component.ServiceInitializer{}
 	s.StartGrpcHTTPServer(component.GrpcClient, gen.GrpcSwitcher)
 }
 `,
@@ -361,7 +361,23 @@ func GrpcClient(conn *grpc.ClientConn) interface{} {
 
 // RegisterComponents inits turbo components, such as Interceptors, pre/postprocessors, errorHandlers, etc.
 func RegisterComponents(s *turbo.GrpcServer) {
+	// TODO
 	// s.RegisterComponent("name", component)
+}
+
+type ServiceInitializer struct {
+}
+
+// InitService is run before the service is started, do initializing staffs for your service here
+func (i *ServiceInitializer) InitService(s *turbo.Server) error {
+	// TODO
+	return nil
+}
+
+// StopService is run after both grpc server and http server are stopped,
+// do your cleaning up work here.
+func (i *ServiceInitializer) StopService(s *turbo.Server) {
+	// TODO
 }
 `,
 	)
@@ -390,7 +406,23 @@ func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) interface{
 
 // RegisterComponents inits turbo components, such as Interceptors, pre/postprocessors, errorHandlers, etc.
 func RegisterComponents(s *turbo.ThriftServer) {
+	// TODO
 	// s.RegisterComponent("name", component)
+}
+
+type ServiceInitializer struct {
+}
+
+// InitService is run before the service is started, do initializing staffs for your service here
+func (i *ServiceInitializer) InitService(s *turbo.Server) error {
+	// TODO
+	return nil
+}
+
+// StopService is run after both grpc server and http server are stopped,
+// do your cleaning up work here.
+func (i *ServiceInitializer) StopService(s *turbo.Server) {
+	// TODO
 }
 `,
 	)
@@ -420,6 +452,7 @@ import (
 func main() {
 	s := turbo.NewThriftServer("{{.ConfigFilePath}}")
 	component.RegisterComponents(s)
+	s.Initializer = &component.ServiceInitializer{}
 	s.StartThriftHTTPServer(component.ThriftClient, gen.ThriftSwitcher)
 }
 `,

@@ -182,15 +182,13 @@ func (s *Server)ThriftService() interface{} {
 
 // Initializable defines funcs run before service started and after service stopped
 type Initializable interface {
-	// InitService is run before the service is started, do initializing staffs for your service here,
-	// such as registering turbo components with Server.RegisterComponent(), etc.
+	// InitService is run before the service is started, do initializing staffs for your service here
 	InitService(s *Server) error
 
 	// StopService is run after both grpc server and http server are stopped,
 	// do your cleaning up work here.
 	StopService(s *Server)
 }
-
 
 type defaultInitializer struct {
 }
