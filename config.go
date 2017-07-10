@@ -52,6 +52,7 @@ type Config struct {
 	errorhandler   string
 }
 
+// NewConfig loads the config file at 'configFilePath', and returns a Config struct ptr
 func NewConfig(rpcType, configFilePath string) *Config {
 	c := &Config{Viper: *viper.New(), RpcType: rpcType, GOPATH: GOPATH()}
 	c.loadServiceConfig(configFilePath)
@@ -121,7 +122,7 @@ var matchSlice = regexp.MustCompile("\\[(.+)\\]")
 
 func (c *Config) loadFieldMapping() {
 	c.SetConfigName(c.RpcType + "fields")
-	c.AddConfigPath(c.ServiceRootPath() + "/gen")
+	c.AddConfigPath(c.ServiceRootPathAbsolute() + "/gen")
 	err := c.ReadInConfig()
 	if err != nil {
 		panic(err)
@@ -157,8 +158,16 @@ func (c *Config) Env() string {
 	return c.configs[environment]
 }
 
-// TODO should return raw value
+// ServiceRootPath returns "service_root_path" in config file,
+// "service_root_path" can be either an absolute path, or the package path of the service, e.g. github.com/xxx/yyy
 func (c *Config) ServiceRootPath() string {
+	return c.configs[serviceRootPath]
+}
+
+// ServiceRootPathAbsolute returns the absolute path to service's root,
+// if "service_root_path" in config file is an absolute path, it's returned directly,
+// if "service_root_path" is a relative path, $GOPATH+"/src/"+[service_root_path] is returned.
+func (c *Config) ServiceRootPathAbsolute() string {
 	p := c.configs[serviceRootPath]
 	if path.IsAbs(p) {
 		return p

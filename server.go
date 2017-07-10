@@ -18,7 +18,7 @@ import (
 // Server holds the data for a server
 type Server struct {
 	// Config holds data read from config file
-	Config               *Config
+	Config *Config
 	// Components holds the mappings of url to component
 	Components           *Components
 	switcherFunc         switcher
@@ -28,7 +28,7 @@ type Server struct {
 	reloadConfig         chan bool
 	exit                 chan os.Signal
 	// Initializer implements Initializable
-	Initializer          Initializable
+	Initializer Initializable
 }
 
 // RegisterComponent registers a component,
@@ -164,7 +164,7 @@ func (s *Server) Stop() {
 
 // GrpcService returns a grpc client instance,
 // example: client := turbo.GrpcService().(proto.YourServiceClient)
-func (s *Server)GrpcService() interface{} {
+func (s *Server) GrpcService() interface{} {
 	if s == nil || s.gClient == nil || s.gClient.grpcService == nil {
 		log.Panic("grpc connection not initiated!")
 	}
@@ -173,7 +173,7 @@ func (s *Server)GrpcService() interface{} {
 
 // ThriftService returns a Thrift client instance,
 // example: client := turbo.ThriftService().(proto.YourServiceClient)
-func (s *Server)ThriftService() interface{} {
+func (s *Server) ThriftService() interface{} {
 	if s == nil || s.tClient == nil || s.tClient.thriftService == nil {
 		log.Panic("thrift connection not initiated!")
 	}

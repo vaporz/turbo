@@ -425,7 +425,6 @@ func testGet(t *testing.T, url, expected string) {
 }
 
 type testInitializer struct {
-
 }
 
 func (t *testInitializer) InitService(s *turbo.Server) error {
@@ -448,7 +447,6 @@ func (t *testInitializer) InitService(s *turbo.Server) error {
 
 func (t *testInitializer) StopService(s *turbo.Server) {
 }
-
 
 type BeforeErrorInterceptor struct {
 	turbo.BaseInterceptor

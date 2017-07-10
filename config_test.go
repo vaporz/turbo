@@ -10,7 +10,7 @@ func TestConfig(t *testing.T) {
 	c := NewConfig("grpc", "test/service_test.yaml")
 	assert.Equal(t, "production", c.Env())
 	assert.Equal(t, "grpc", c.RpcType)
-	assert.Equal(t, c.GOPATH+"/src/"+"github.com/vaporz/turbo/test", c.ServiceRootPath())
+	assert.Equal(t, c.GOPATH+"/src/"+"github.com/vaporz/turbo/test", c.ServiceRootPathAbsolute())
 
 	assert.Equal(t, int64(8081), c.HTTPPort())
 

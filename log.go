@@ -55,15 +55,14 @@ func setupLoggerFile(c *Config) {
 	if len(strings.TrimSpace(logPath)) == 0 {
 		logPath = "log"
 	}
-	if !path.IsAbs(logPath) {
-		// TODO service root may be blank
-		logPath = c.ServiceRootPath() + "/" + logPath
+	if !path.IsAbs(logPath) && len(strings.TrimSpace(c.ServiceRootPath())) != 0 {
+		logPath = c.ServiceRootPathAbsolute() + "/" + logPath
 	}
 	logPath = path.Clean(logPath)
 	if err := os.MkdirAll(logPath, 0755); err == nil {
 		logFile := path.Clean(logPath + "/turbo.log")
-		file, errf := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-		if errf == nil {
+		file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err == nil {
 			logger.SetOutput(file)
 		} else {
 			panic("Failed to setup log path, please check your service.yaml config.")
