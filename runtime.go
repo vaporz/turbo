@@ -8,6 +8,9 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"github.com/golang/protobuf/jsonpb"
+	"github.com/golang/protobuf/proto"
+	"fmt"
 )
 
 type switcher func(s *Server, methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
@@ -240,8 +243,12 @@ func BuildStruct(s *Server, theType reflect.Type, theValue reflect.Value, req *h
 }
 
 func findValue(fieldName string, req *http.Request) (string, bool) {
+	v, ok := req.Form[strings.ToLower(fieldName)]
+	if ok && len(v) > 0 {
+		return v[0], true
+	}
 	snakeCaseName := ToSnakeCase(fieldName)
-	v, ok := req.Form[snakeCaseName]
+	v, ok = req.Form[snakeCaseName]
 	if ok && len(v) > 0 {
 		return v[0], true
 	}
@@ -283,4 +290,57 @@ func BuildArgs(s *Server, argsType reflect.Type, argsValue reflect.Value, req *h
 		params[i] = value
 	}
 	return params, nil
+}
+
+func SetPathParams(s *Server, theType reflect.Type, theValue reflect.Value, req *http.Request) error {
+	fieldNum := theType.NumField()
+	pathParams := mux.Vars(req)
+	for i := 0; i < fieldNum; i++ {
+		fieldName := theType.Field(i).Name
+		fieldValue := theValue.FieldByName(fieldName)
+		if fieldValue.Kind() == reflect.Ptr && fieldValue.Type().Elem().Kind() == reflect.Struct {
+			err := SetPathParams(s, fieldValue.Type().Elem(), fieldValue.Elem(), req)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		v, ok := findPathParamValue(fieldName, pathParams)
+		if !ok {
+			continue
+		}
+		err := SetValue(fieldValue, v)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	return nil
+}
+
+func findPathParamValue(fieldName string, pathParams map[string]string) (string, bool) {
+	v, ok := pathParams[fieldName]
+	if ok && len(v) > 0 {
+		return v, true
+	}
+	snakeCaseName := ToSnakeCase(fieldName)
+	v, ok = pathParams[snakeCaseName]
+	if ok && len(v) > 0 {
+		return v, true
+	}
+	return "", false
+}
+
+func BuildRequest(s *Server, v proto.Message, req *http.Request) error {
+	var err error
+	if contentTypes, ok := req.Header["Content-Type"]; ok && contentTypes[0] == "application/json" {
+		unmarshaler := &jsonpb.Unmarshaler{AllowUnknownFields: true}
+		err = unmarshaler.Unmarshal(req.Body, v)
+		if err != nil {
+			return err
+		}
+		SetPathParams(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
+	} else {
+		err = BuildStruct(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
+	}
+	return err
 }

@@ -5,7 +5,6 @@ import (
 	"github.com/vaporz/turbo"
 	g "github.com/vaporz/turbo/test/testservice/gen/proto"
 	"net/http"
-	"reflect"
 )
 
 /*
@@ -16,7 +15,7 @@ var GrpcSwitcher = func(s *turbo.Server, methodName string, resp http.ResponseWr
 	switch methodName {
 	case "SayHello":
 		request := &g.SayHelloRequest{Values: &g.CommonValues{}}
-		err = turbo.BuildStruct(s, reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
+		err := turbo.BuildRequest(s, request, req)
 		if err != nil {
 			return nil, err
 		}
