@@ -126,23 +126,6 @@ Wait:
 	select {
 	case <-s.exit:
 		log.Info("Received CTRL-C, Service is stopping...")
-		if httpServer != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-			defer cancel()
-			httpServer.Shutdown(ctx)
-			log.Info("Http Server stopped")
-		}
-		if grpcServer != nil {
-			s.gClient.close()
-			grpcServer.GracefulStop()
-			log.Info("Grpc Server stopped")
-		}
-		if thriftServer != nil {
-			s.tClient.close()
-			thriftServer.Stop()
-			log.Info("Grpc Server stopped")
-		}
-		s.Initializer.StopService(s)
 	case <-s.reloadConfig:
 		if httpServer == nil {
 			goto Wait
@@ -154,7 +137,29 @@ Wait:
 		log.Info("Router reloaded")
 		s.Components = newComponents
 		log.Info("Configuration reloaded")
+		goto Wait
 	}
+	s.quit(httpServer, grpcServer, thriftServer)
+}
+
+func (s *Server) quit(httpServer *http.Server, grpcServer *grpc.Server, thriftServer *thrift.TSimpleServer) {
+	if httpServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+		httpServer.Shutdown(ctx)
+		log.Info("Http Server stopped")
+	}
+	if grpcServer != nil {
+		s.gClient.close()
+		grpcServer.GracefulStop()
+		log.Info("Grpc Server stopped")
+	}
+	if thriftServer != nil {
+		s.tClient.close()
+		thriftServer.Stop()
+		log.Info("Grpc Server stopped")
+	}
+	s.Initializer.StopService(s)
 }
 
 // Stop stops the server gracefully

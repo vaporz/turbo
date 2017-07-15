@@ -25,7 +25,7 @@ func router(s *Server) *mux.Router {
 
 func handler(s *Server, methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
-		ParseRequestForm(req)
+		parseRequestForm(req)
 		interceptors := getInterceptors(s, req)
 		req, err := doBefore(&interceptors, resp, req)
 		if err == nil {

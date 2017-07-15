@@ -45,6 +45,7 @@ func (s *GrpcServer) StartGrpcHTTPServer(clientCreator grpcClientCreator, sw swi
 	s.Initializer.InitService(s.Server)
 	httpServer := s.startGrpcHTTPServerInternal(clientCreator, sw)
 	s.waitForQuit(httpServer, nil, nil)
+	log.Info("Grpc HttpServer exit, bye!")
 }
 
 // StartGrpcService starts a GRPC service
@@ -52,6 +53,7 @@ func (s *GrpcServer) StartGrpcService(registerServer func(s *grpc.Server)) {
 	s.Initializer.InitService(s.Server)
 	grpcServer := s.startGrpcServiceInternal(registerServer, true)
 	s.waitForQuit(nil, grpcServer, nil)
+	log.Info("Grpc Service exit, bye!")
 }
 
 func (s *GrpcServer) startGrpcHTTPServerInternal(clientCreator grpcClientCreator, sw switcher) *http.Server {

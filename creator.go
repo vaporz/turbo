@@ -486,18 +486,20 @@ import (
 	"{{.PkgPath}}/gen"
 	gcomponent "{{.PkgPath}}/grpcapi/component"
 	gimpl "{{.PkgPath}}/grpcservice/impl"
-	//tcompoent "{{.PkgPath}}/thriftapi/component"
+	//tcomponent "{{.PkgPath}}/thriftapi/component"
 	//timpl "{{.PkgPath}}/thriftservice/impl"
 )
 
 func main() {
 	s := turbo.NewGrpcServer("{{.ConfigFilePath}}")
 	gcomponent.RegisterComponents(s)
+	s.Initializer = &gcomponent.ServiceInitializer{}
 	s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
 	//s := turbo.NewThriftServer("{{.ConfigFilePath}}")
-	//tcompoent.RegisterComponents(s)
-	//s.StartTHRIFT(tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
+	//tcomponent.RegisterComponents(s)
+	//s.Initializer = &tcomponent.ServiceInitializer{}
+	//s.StartTHRIFT(tcomponent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 }
 `
 
@@ -508,17 +510,19 @@ import (
 	"{{.PkgPath}}/gen"
 	//gcomponent "{{.PkgPath}}/grpcapi/component"
 	//gimpl "{{.PkgPath}}/grpcservice/impl"
-	tcompoent "{{.PkgPath}}/thriftapi/component"
+	tcomponent "{{.PkgPath}}/thriftapi/component"
 	timpl "{{.PkgPath}}/thriftservice/impl"
 )
 
 func main() {
 	//s := turbo.NewGrpcServer("{{.ConfigFilePath}}")
 	//gcomponent.RegisterComponents(s)
+	//s.Initializer = &gcomponent.ServiceInitializer{}
 	//s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
 	s := turbo.NewThriftServer("{{.ConfigFilePath}}")
-	tcompoent.RegisterComponents(s)
-	s.StartTHRIFT(tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
+	tcomponent.RegisterComponents(s)
+	s.Initializer = &tcomponent.ServiceInitializer{}
+	s.StartTHRIFT(tcomponent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 }
 `

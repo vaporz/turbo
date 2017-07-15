@@ -45,6 +45,7 @@ func (s *ThriftServer) StartThriftHTTPServer(clientCreator thriftClientCreator, 
 	s.Initializer.InitService(s.Server)
 	httpServer := s.startThriftHTTPServerInternal(clientCreator, sw)
 	s.waitForQuit(httpServer, nil, nil)
+	log.Info("Thrift HttpServer exit, bye!")
 }
 
 // StartThriftService starts a Thrift service
@@ -52,6 +53,7 @@ func (s *ThriftServer) StartThriftService(registerTProcessor func() thrift.TProc
 	s.Initializer.InitService(s.Server)
 	thriftServer := s.startThriftServiceInternal(registerTProcessor, true)
 	s.waitForQuit(nil, nil, thriftServer)
+	log.Info("Thrift Service exit, bye!")
 }
 
 func (s *ThriftServer) startThriftHTTPServerInternal(clientCreator thriftClientCreator, sw switcher) *http.Server {
