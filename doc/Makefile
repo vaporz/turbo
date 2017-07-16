@@ -26,6 +26,7 @@ clean:
 .PHONY: html
 html: clean
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
+	cd $(BUILDDIR)/html && touch .nojekyll
 	cd source/0.1/en && make html VERSION=0.1 LANG=en
 	cd source/0.1/zh && make html VERSION=0.1 LANG=zh
 	cd source/0.2/en && make html VERSION=0.2 LANG=en
