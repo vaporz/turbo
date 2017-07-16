@@ -20,10 +20,10 @@ Let's check the value of 'num' with a preprocessor:
 
 .. code-block:: diff
 
- func InitComponents() {
- +	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", preEatApple)
+ func RegisterComponents(s *turbo.GrpcServer) {
+ +	 s.RegisterComponent("preEatApple", preEatApple)
  }
- 
+
  +func preEatApple(resp http.ResponseWriter, req *http.Request) error {
  +	num,err := strconv.Atoi(req.Form["num"][0])
  +	if err!=nil {
@@ -36,6 +36,13 @@ Let's check the value of 'num' with a preprocessor:
  +	}
  +	return nil
  +}
+
+Edit "yourservice/service.yaml":
+
+.. code-block:: diff
+
+ +preprocessor:
+ +  - GET /eat_apple/{num:[0-9]+} preEatApple
 
 As usual, restart HTTP server, and test::
 

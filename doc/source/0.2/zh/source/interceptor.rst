@@ -64,10 +64,17 @@ Interceptor
  func GrpcClient(conn *grpc.ClientConn) interface{} {
  	return proto.NewTestServiceClient(conn)
  }
- 
- func InitComponents() {
- +	turbo.Intercept([]string{"GET"}, "/hello", i.LogInterceptor{})
+
+ func RegisterComponents(s *turbo.GrpcServer) {
+ +	 s.RegisterComponent("LogInterceptor", i.LogInterceptor{})
  }
+
+编辑 "yourservice/service.yaml":
+
+.. code-block:: diff
+
+ +interceptor:
+ +  - GET /hello LogInterceptor
 
 最后，重启服务并测试::
 

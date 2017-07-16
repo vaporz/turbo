@@ -13,14 +13,21 @@ Postprocessor用来处理后端返回的对象（当然你也可以顺便干点�
 
 .. code-block:: diff
 
- func InitComponents() {
- +	turbo.SetPostprocessor("/eat_apple/{num:[0-9]+}", postEatApple)
+ func RegisterComponents(s *turbo.GrpcServer) {
+ +	 s.RegisterComponent("preEatApple", preEatApple)
  }
  
  +func postEatApple(resp http.ResponseWriter, req *http.Request, serviceResp interface{}) {
  +	sr := serviceResp.(*proto.EatAppleResponse)
  +	resp.Write([]byte("this is from postprocesser, message=" + sr.Message))
  +}
+
+编辑 "yourservice/service.yaml":
+
+.. code-block:: diff
+
+ +postprocessor:
+ +  - GET /eat_apple/{num:[0-9]+} postEatApple
 
 重启服务并测试::
 

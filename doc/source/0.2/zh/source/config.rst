@@ -60,4 +60,24 @@
  urlmapping:
    - GET,POST /hello SayHello
    - GET /eat_apple/{num:[0-9]+} EatApple
-  
+
+ # 通过方法 turbo.Server.RegisterComponent("name", component) 来注册一个组件。
+ # 习惯上，"name" 是被注册的组件struct的名字 (比如 "LogInterceptor")。
+
+ # 注册拦截器
+ interceptor:
+   - GET,POST /hello TestInterceptor,LogInterceptor
+ # 注册预处理器
+ preprocessor:
+   - GET /hello registeredPreProcessor
+ # 注册后处理器
+ postprocessor:
+   - GET /hello registeredPostProcessor
+ # 注册Hijacker
+ hijacker:
+   - GET /hello registeredHijacker
+ # 注册Message转换器
+ convertor:
+   - CommonValues registeredConvertor
+ # 注册 Error Handler
+ errorhandler: registeredErrorHandler

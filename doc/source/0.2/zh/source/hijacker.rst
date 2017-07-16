@@ -15,8 +15,8 @@ Hijacker跟preprocessor类型，区别在于，hijacker接管了整个request处
 
 .. code-block:: diff
 
- func InitComponents() {
- +	turbo.SetHijacker("/eat_apple/{num:[0-9]+}", hijackEatApple)
+ func RegisterComponents(s *turbo.GrpcServer) {
+ +	 s.RegisterComponent("hijackEatApple", hijackEatApple)
  }
  
  +func hijackEatApple(resp http.ResponseWriter, req *http.Request) {
@@ -30,6 +30,13 @@ Hijacker跟preprocessor类型，区别在于，hijacker接管了整个request处
  +		resp.Write([]byte(err.Error() + "\n"))
  +	}
  +}
+
+编辑 "yourservice/service.yaml":
+
+.. code-block:: diff
+
+ +hijacker:
+ +  - GET /eat_apple/{num:[0-9]+} hijackEatApple
 
 重启服务并测试::
 

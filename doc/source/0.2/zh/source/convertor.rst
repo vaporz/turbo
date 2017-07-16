@@ -10,8 +10,8 @@ Turbo 也允许你"手动"组装一个struct对象，举个例子：
 
 .. code-block:: diff
 
- func InitComponents() {
- +	turbo.RegisterMessageFieldConvertor(new(proto.CommonValues), convertCommonValues)
+ func RegisterComponents(s *turbo.GrpcServer) {
+ +	 s.RegisterComponent("CommonValues", convertCommonValues)
  }
  
  +func convertCommonValues(req *http.Request) reflect.Value {
@@ -19,6 +19,13 @@ Turbo 也允许你"手动"组装一个struct对象，举个例子：
  +	result.SomeId = 123456789
  +	return reflect.ValueOf(result)
  +}
+
+编辑 "yourservice/service.yaml":
+
+.. code-block:: diff
+
+ +convertor:
+ +  - CommonValues convertCommonValues
 
 OK了, 方法 "convertCommonValues" 被注册给了类型 "proto.CommonValues"，在方法里面，"SomeId"被修改为"123456789"，不管之前是什么值。
 

@@ -15,6 +15,7 @@ turbo create package_path ServiceName -r (grpc|thrift)
  $ tree
  .
  |-- gen
+ |   |-- grpcfields.yaml
  |   |-- grpcswitcher.go
  |   `-- proto
  |       `-- yourservice.pb.go

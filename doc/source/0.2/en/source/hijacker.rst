@@ -13,10 +13,10 @@ In this example, URL "/eat_apple/{num:[0-9]+}" is hijacked, no matter what the v
 
 .. code-block:: diff
 
- func InitComponents() {
- +	turbo.SetHijacker("/eat_apple/{num:[0-9]+}", hijackEatApple)
+ func RegisterComponents(s *turbo.GrpcServer) {
+ +	 s.RegisterComponent("hijackEatApple", hijackEatApple)
  }
- 
+
  +func hijackEatApple(resp http.ResponseWriter, req *http.Request) {
  +	client := turbo.GrpcService().(gen.YourServiceClient)
  +	r := new(gen.EatAppleRequest)
@@ -28,6 +28,13 @@ In this example, URL "/eat_apple/{num:[0-9]+}" is hijacked, no matter what the v
  +		resp.Write([]byte(err.Error() + "\n"))
  +	}
  +}
+
+Edit "yourservice/service.yaml":
+
+.. code-block:: diff
+
+ +hijacker:
+ +  - GET /eat_apple/{num:[0-9]+} hijackEatApple
 
 Restart and test::
 

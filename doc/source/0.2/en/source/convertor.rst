@@ -11,8 +11,8 @@ Edit "yourservice/grpcapi/component/components.go":
 
 .. code-block:: diff
 
- func InitComponents() {
- +	turbo.RegisterMessageFieldConvertor(new(proto.CommonValues), convertCommonValues)
+ func RegisterComponents(s *turbo.GrpcServer) {
+ +	 s.RegisterComponent("convertCommonValues", convertCommonValues)
  }
  
  +func convertCommonValues(req *http.Request) reflect.Value {
@@ -20,6 +20,13 @@ Edit "yourservice/grpcapi/component/components.go":
  +	result.SomeId = 123456789
  +	return reflect.ValueOf(result)
  +}
+
+Edit "yourservice/service.yaml":
+
+.. code-block:: diff
+
+ +convertor:
+ +  - CommonValues convertCommonValues
 
 OK, func "convertCommonValues" is registered on type "proto.CommonValues" and "SomeId" is changed into "123456789".
 

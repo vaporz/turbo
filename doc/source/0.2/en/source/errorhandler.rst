@@ -9,13 +9,19 @@ You can customize this behavior via ErrorHandler:
 
 .. code-block:: diff
 
- func InitComponents() {
- +	turbo.WithErrorHandler(errorHandler)
+ func RegisterComponents(s *turbo.GrpcServer) {
+ +	 s.RegisterComponent("errorHandler", errorHandler)
  }
- 
+
  +func errorHandler(resp http.ResponseWriter, req *http.Request, err error) {
  +  	resp.Write([]byte("from errorHandler:" + err.Error()))
  +}
+
+Edit "yourservice/service.yaml":
+
+.. code-block:: diff
+
+ +errorhandler: errorHandler
 
 Restart and test(Modify "SayHello" to make it return an error)::
 

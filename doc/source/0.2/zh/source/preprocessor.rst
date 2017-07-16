@@ -11,8 +11,8 @@ Preprocessor可以用来执行一些某个API特有的逻辑，比如，参数�
 
 .. code-block:: diff
 
- func InitComponents() {
- +	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", preEatApple)
+ func RegisterComponents(s *turbo.GrpcServer) {
+ +	 s.RegisterComponent("preEatApple", preEatApple)
  }
  
  +func preEatApple(resp http.ResponseWriter, req *http.Request) error {
@@ -27,6 +27,13 @@ Preprocessor可以用来执行一些某个API特有的逻辑，比如，参数�
  +	}
  +	return nil
  +}
+
+编辑 "yourservice/service.yaml":
+
+.. code-block:: diff
+
+ +preprocessor:
+ +  - GET /eat_apple/{num:[0-9]+} preEatApple
 
 重启服务并测试::
 

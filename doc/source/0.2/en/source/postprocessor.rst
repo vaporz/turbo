@@ -13,14 +13,21 @@ Edit "yourservice/grpcapi/component/components.go":
 
 .. code-block:: diff
 
- func InitComponents() {
- +	turbo.SetPostprocessor("/eat_apple/{num:[0-9]+}", postEatApple)
+ func RegisterComponents(s *turbo.GrpcServer) {
+ +	 s.RegisterComponent("postEatApple", postEatApple)
  }
- 
+
  +func postEatApple(resp http.ResponseWriter, req *http.Request, serviceResp interface{}) {
  +	sr := serviceResp.(*proto.EatAppleResponse)
  +	resp.Write([]byte("this is from postprocesser, message=" + sr.Message))
  +}
+
+Edit "yourservice/service.yaml":
+
+.. code-block:: diff
+
+ +postprocessor:
+ +  - GET /eat_apple/{num:[0-9]+} postEatApple
 
 Restart HTTP server and test::
 

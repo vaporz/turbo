@@ -64,11 +64,18 @@ Edit "yourservice/grpcapi/component/components.go":
  func GrpcClient(conn *grpc.ClientConn) interface{} {
  	return proto.NewTestServiceClient(conn)
  }
- 
- func InitComponents() {
- +	turbo.Intercept([]string{"GET"}, "/hello", i.LogInterceptor{})
+
+ func RegisterComponents(s *turbo.GrpcServer) {
+ +	 s.RegisterComponent("LogInterceptor", i.LogInterceptor{})
  }
 
+Edit "yourservice/service.yaml":
+
+.. code-block:: diff
+
+ +interceptor:
+ +  - GET /hello LogInterceptor
+ 
 Lastly, restart HTTP server and test::
 
  $ curl -w "\n" -X GET "http://localhost:8081/hello?your_name=Alice"

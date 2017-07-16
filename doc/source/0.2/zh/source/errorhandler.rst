@@ -9,13 +9,19 @@ ErrorHandler
 
 .. code-block:: diff
 
- func InitComponents() {
- +	turbo.WithErrorHandler(errorHandler)
+ func RegisterComponents(s *turbo.GrpcServer) {
+ +	 s.RegisterComponent("errorHandler", errorHandler)
  }
  
  +func errorHandler(resp http.ResponseWriter, req *http.Request, err error) {
  +  	resp.Write([]byte("from errorHandler:" + err.Error()))
  +}
+
+编辑 "yourservice/service.yaml":
+
+.. code-block:: diff
+
+ +errorhandler: errorHandler
 
 重启并测试(修改 "SayHello" 方法的代码，让它返回了一个error)::
 

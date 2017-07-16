@@ -17,6 +17,7 @@ Project structure::
  $ tree
  .
  |-- gen
+ |   |-- grpcfields.yaml
  |   |-- grpcswitcher.go
  |   `-- proto
  |       `-- yourservice.pb.go

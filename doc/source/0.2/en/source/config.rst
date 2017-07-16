@@ -60,4 +60,24 @@ Configs in service.yaml
  urlmapping:
    - GET,POST /hello SayHello
    - GET /eat_apple/{num:[0-9]+} EatApple
-  
+
+ # Register Turbo components via turbo.Server.RegisterComponent("name", component)
+ # As a convention, "name" is the same with the component struct|func's name (e.g. "LogInterceptor").
+
+ # Register interceptors
+ interceptor:
+   - GET,POST /hello TestInterceptor,LogInterceptor
+ # Register preprocessors
+ preprocessor:
+   - GET /hello registeredPreProcessor
+ # Register postprocessors
+ postprocessor:
+   - GET /hello registeredPostProcessor
+ # Register hijackers
+ hijacker:
+   - GET /hello registeredHijacker
+ # Register convertors
+ convertor:
+   - CommonValues registeredConvertor
+ # Register error handler
+ errorhandler: registeredErrorHandler
