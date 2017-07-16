@@ -1,6 +1,6 @@
 # Turbo  [![Build Status](https://travis-ci.org/vaporz/turbo.svg?branch=master)](https://travis-ci.org/vaporz/turbo) [![Coverage Status](https://coveralls.io/repos/github/vaporz/turbo/badge.svg?branch=master)](https://coveralls.io/github/vaporz/turbo?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/vaporz/turbo)](https://goreportcard.com/report/github.com/vaporz/turbo) [![codebeat badge](https://codebeat.co/badges/7a166e48-dae1-454c-b925-4fbcd3f1f461)](https://codebeat.co/projects/github-com-vaporz-turbo-master)
 
-<b>WORK IN PROGRESS! There may be many bugs, and the README may not be synced in time as the codes changed.</b>  
+最新版本 | Latest Release: 0.2
 
 文档地址 | Documentation: https://vaporz.github.io
 
@@ -101,6 +101,7 @@ $ cd $GOPATH/src/package/path/to/yourservice
 $ tree
 .
 |-- gen
+|   |-- grpcfields.yaml
 |   |-- grpcswitcher.go
 |   `-- proto
 |       `-- yourservice.pb.go
@@ -297,9 +298,14 @@ func GrpcClient(conn *grpc.ClientConn) interface{} {
 	return proto.NewTestServiceClient(conn)
 }
 
-func InitComponents() {
-+	turbo.Intercept([]string{"GET"}, "/hello", i.LogInterceptor{})
+func RegisterComponents(s *turbo.GrpcServer) {
++	 s.RegisterComponent("LogInterceptor", i.LogInterceptor{})
 }
+```
+Edit "yourservice/service.yaml":
+```diff
+ +interceptor:
+ +  - GET /hello LogInterceptor
 ```
 Lastly, restart HTTP server and test:
 ```sh
@@ -341,8 +347,9 @@ setting default values, parsing values, logging, etc.
 
 Let's check the value of 'num' with a preprocessor:
 ```diff
-func InitComponents() {
-+	turbo.SetPreprocessor("/eat_apple/{num:[0-9]+}", preEatApple)
+
+func RegisterComponents(s *turbo.GrpcServer) {
++	 s.RegisterComponent("preEatApple", preEatApple)
 }
 
 +func preEatApple(resp http.ResponseWriter, req *http.Request) error {
@@ -358,6 +365,11 @@ func InitComponents() {
 +	return nil
 +}
 ```
+Edit "yourservice/service.yaml":
+```diff
+ +preprocessor:
+ +  - GET /eat_apple/{num:[0-9]+} preEatApple
+```
 As usual, restart HTTP server, and test:
 ```sh
 $ curl -w "\n" "http://localhost:8081/eat_apple/5"
@@ -372,14 +384,19 @@ Postprocessors handle responses from backend service. You can change default beh
 Let's change the response of API "/eat_apple/{num:[0-9]+}":  
 Edit "yourservice/grpcapi/component/components.go":
 ```diff
-func InitComponents() {
-+	turbo.SetPostprocessor("/eat_apple/{num:[0-9]+}", postEatApple)
+func RegisterComponents(s *turbo.GrpcServer) {
++	 s.RegisterComponent("postEatApple", postEatApple)
 }
 
 +func postEatApple(resp http.ResponseWriter, req *http.Request, serviceResp interface{}) {
 +	sr := serviceResp.(*proto.EatAppleResponse)
 +	resp.Write([]byte("this is from postprocesser, message=" + sr.Message))
 +}
+```
+Edit "yourservice/service.yaml":
+```diff
+ +postprocessor:
+ +  - GET /eat_apple/{num:[0-9]+} postEatApple
 ```
 Restart HTTP server and test:
 ```sh
@@ -395,8 +412,8 @@ You can do everything, which means you also have to call gRPC method yourself.
 In this example, URL "/eat_apple/{num:[0-9]+}" is hijacked, no matter what the value is in query string,
 the value of parameter "num" is set to "999".
 ```diff
-func InitComponents() {
-+	turbo.SetHijacker("/eat_apple/{num:[0-9]+}", hijackEatApple)
+func RegisterComponents(s *turbo.GrpcServer) {
++	 s.RegisterComponent("hijackEatApple", hijackEatApple)
 }
 
 +func hijackEatApple(resp http.ResponseWriter, req *http.Request) {
@@ -411,6 +428,11 @@ func InitComponents() {
 +	}
 +}
 ```
+Edit "yourservice/service.yaml":
+```diff
+ +hijacker:
+ +  - GET /eat_apple/{num:[0-9]+} hijackEatApple
+```
 Restart and test:
 ```sh
 $ curl -w "\n" "http://localhost:8081/eat_apple/6"
@@ -422,8 +444,8 @@ Turbo automatically finds from URL route, query string and context.Context, and 
 Turbo also gives you a chance to manually construct a struct.  
 Edit "yourservice/grpcapi/component/components.go":
 ```diff
-func InitComponents() {
-+	turbo.RegisterMessageFieldConvertor(new(proto.CommonValues), convertCommonValues)
+func RegisterComponents(s *turbo.GrpcServer) {
++	 s.RegisterComponent("convertCommonValues", convertCommonValues)
 }
 
 +func convertCommonValues(req *http.Request) reflect.Value {
@@ -431,6 +453,11 @@ func InitComponents() {
 +	result.SomeId = 123456789
 +	return reflect.ValueOf(result)
 +}
+```
+Edit "yourservice/service.yaml":
+```diff
+ +convertor:
+ +  - CommonValues convertCommonValues
 ```
 OK, func "convertCommonValues" is registered on type "proto.CommonValues" and "SomeId" is changed into "123456789".  
 Restart and test:
@@ -442,13 +469,17 @@ $ curl -w "\n" -X GET "http://localhost:8081/hello?your_name=Alice&some_id=123"
 By default, a HTTP code 500 error is returned if any error occurred.  
 You can customize this behavior via ErrorHandler:
 ```diff
-func InitComponents() {
-+	turbo.WithErrorHandler(errorHandler)
+func RegisterComponents(s *turbo.GrpcServer) {
++	 s.RegisterComponent("errorHandler", errorHandler)
 }
 
 +func errorHandler(resp http.ResponseWriter, req *http.Request, err error) {
 +  	resp.Write([]byte("from errorHandler:" + err.Error()))
 +}
+```
+Edit "yourservice/service.yaml":
+```diff
+ +errorhandler: errorHandler
 ```
 Restart and test(Modify "SayHello" to make it return an error):
 ```sh
@@ -516,4 +547,25 @@ config:
 urlmapping:
   - GET,POST /hello SayHello
   - GET /eat_apple/{num:[0-9]+} EatApple
+
+# Register Turbo components via turbo.Server.RegisterComponent("name", component)
+# As a convention, "name" is the same with the component struct|func's name (e.g. "LogInterceptor").
+
+# Register interceptors
+interceptor:
+  - GET,POST /hello TestInterceptor,LogInterceptor
+# Register preprocessors
+preprocessor:
+  - GET /hello registeredPreProcessor
+# Register postprocessors
+postprocessor:
+  - GET /hello registeredPostProcessor
+# Register hijackers
+hijacker:
+  - GET /hello registeredHijacker
+# Register convertors
+convertor:
+  - CommonValues registeredConvertor
+# Register error handler
+errorhandler: registeredErrorHandler
 ```
