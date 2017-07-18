@@ -15,7 +15,7 @@ Preprocessor可以用来执行一些某个API特有的逻辑，比如，参数�
  +	 s.RegisterComponent("preEatApple", preEatApple)
  }
  
- +func preEatApple(resp http.ResponseWriter, req *http.Request) error {
+ +var preEatApple turbo.Preprocessor = func (resp http.ResponseWriter, req *http.Request) error {
  +	num,err := strconv.Atoi(req.Form["num"][0])
  +	if err!=nil {
  +		resp.Write([]byte("'num' is not numberic"))

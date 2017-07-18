@@ -19,7 +19,7 @@ Hijacker跟preprocessor类型，区别在于，hijacker接管了整个request处
  +	 s.RegisterComponent("hijackEatApple", hijackEatApple)
  }
  
- +func hijackEatApple(resp http.ResponseWriter, req *http.Request) {
+ +var hijackEatApple turbo.Hijacker = func (resp http.ResponseWriter, req *http.Request) {
  +	client := turbo.GrpcService().(gen.YourServiceClient)
  +	r := new(gen.EatAppleRequest)
  +	r.Num = "999"

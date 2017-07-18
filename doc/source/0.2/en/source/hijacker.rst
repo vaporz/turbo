@@ -17,7 +17,7 @@ In this example, URL "/eat_apple/{num:[0-9]+}" is hijacked, no matter what the v
  +	 s.RegisterComponent("hijackEatApple", hijackEatApple)
  }
 
- +func hijackEatApple(resp http.ResponseWriter, req *http.Request) {
+ +var hijackEatApple turbo.Hijacker = func (resp http.ResponseWriter, req *http.Request) {
  +	client := turbo.GrpcService().(gen.YourServiceClient)
  +	r := new(gen.EatAppleRequest)
  +	r.Num = "999"

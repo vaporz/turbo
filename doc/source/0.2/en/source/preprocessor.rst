@@ -9,9 +9,6 @@ Preprocessor/Hijacker comes to help!
 
 If both Preprocessors and hijackers are assigned to an URL, only the last hijacker assigned is active.
 
-Preprocessor
-------------
-
 Preprocessors are executed just after all Before() functions from interceptors, and before sending requests to gRPC server.
 
 Preprocessors can be used to do something particularly for an API. For example, parameter value validations, setting default values, parsing values, logging, etc.
@@ -24,7 +21,7 @@ Let's check the value of 'num' with a preprocessor:
  +	 s.RegisterComponent("preEatApple", preEatApple)
  }
 
- +func preEatApple(resp http.ResponseWriter, req *http.Request) error {
+ +var preEatApple turbo.Preprocessor = func (resp http.ResponseWriter, req *http.Request) error {
  +	num,err := strconv.Atoi(req.Form["num"][0])
  +	if err!=nil {
  +		resp.Write([]byte("'num' is not numberic"))

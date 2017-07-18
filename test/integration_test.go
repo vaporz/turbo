@@ -279,6 +279,10 @@ func create(t *testing.T, rpc string) {
 	err = cmd.Execute()
 	assert.Contains(t, err.Error(), "not a CamelCase string")
 
+	cmd.RootCmd.SetArgs([]string{"create", "github.com/vaporz/turbo/test/testcreateservice", "TestCreateService", "-r", "aaa"})
+	err = cmd.Execute()
+	assert.Contains(t, err.Error(), "invalid value for -r, should be grpc or thrift")
+
 	cmd.RootCmd.SetArgs([]string{"create", "github.com/vaporz/turbo/test/testcreateservice", "TestCreateService", "-r", rpc, "-f", "true"})
 	err = cmd.Execute()
 	assert.Nil(t, err)

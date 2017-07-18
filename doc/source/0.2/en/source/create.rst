@@ -6,9 +6,9 @@ Create a service on the fly
 0, Before the start
 -------------------
 
-Obviously, you have to install :ref:`Golang <https://golang.org>` and :ref:`Protocol buffers(v3) <https://developers.google.com/protocol-buffers/>` first.
+Obviously, you have to install `Golang <https://golang.org>`_ and `Protocol buffers(v3) <https://developers.google.com/protocol-buffers/>`_ first.
 
-Download turbo repo with:
+Then download turbo repo with:
 
 .. code-block:: shell
 
@@ -16,7 +16,7 @@ Download turbo repo with:
 
 For dependency management, we provide 2 ways:
 
-(Recommended) Install :ref:`glide <https://github.com/Masterminds/glide>` for dependency management::
+(Recommended) Use `glide <https://github.com/Masterminds/glide>`_ ::
 
     cd github.com/vaporz/turbo/turbo
     glide install
@@ -49,8 +49,6 @@ For dependency management, we provide 2 ways:
 Directory "$GOPATH/src/package/path/to/yourservice" should appear.
 
 There're also some generated files in this folder.
-
-Example project: https://github.com/vaporz/turbo-example/tree/master/yourservice
 
 3, Run
 ------

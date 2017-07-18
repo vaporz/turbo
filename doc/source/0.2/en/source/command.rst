@@ -40,6 +40,7 @@ turbo generate package_path -r (grpc/thrift) -I (absolute_path_to_proto/thrift_f
 
 This command is useful when either service.yaml or [service_name].proto|.thrift is changed. 
 For example, add a new API, change an existing API, change url-grpc mapping, etc.
+
 Example::
 
  $ turbo generate package/path/to/yourservice -r grpc 

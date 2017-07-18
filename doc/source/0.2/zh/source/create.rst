@@ -6,7 +6,8 @@
 0, 开始之前
 -----------
 
-显然，你得先安装 :ref:`Golang <https://golang.org>` and :ref:`Protocol buffers(v3) <https://developers.google.com/protocol-buffers/>`
+显然，你得先安装 `Golang <https://golang.org>`_ 和 `Protocol buffers(v3) <https://developers.google.com/protocol-buffers/>`_ 。
+
 然后下载Turbo代码：
 
 .. code-block:: shell
@@ -15,7 +16,7 @@
 
 至于依赖管理，有两种方式：
 
-(推荐) 安装 :ref:`glide <https://github.com/Masterminds/glide>` ::
+(推荐) 通过 `glide <https://github.com/Masterminds/glide>`_ 安装::
 
     cd github.com/vaporz/turbo/turbo
     glide install
@@ -45,11 +46,9 @@
 
  $ turbo create package/path/to/yourservice YourService -r grpc
 
-文件夹 "$GOPATH/src/package/path/to/yourservice" 会被创建.
+文件夹 "$GOPATH/src/package/path/to/yourservice" 会被创建。
 
 里面有一些生成的代码。
-
-一个例子项目: https://github.com/vaporz/turbo-example/tree/master/yourservice
 
 3, 运行
 -------

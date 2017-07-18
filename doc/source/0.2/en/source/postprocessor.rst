@@ -17,7 +17,7 @@ Edit "yourservice/grpcapi/component/components.go":
  +	 s.RegisterComponent("postEatApple", postEatApple)
  }
 
- +func postEatApple(resp http.ResponseWriter, req *http.Request, serviceResp interface{}) {
+ +var postEatApple turbo.Postprocessor = func (resp http.ResponseWriter, req *http.Request, serviceResp interface{}) {
  +	sr := serviceResp.(*proto.EatAppleResponse)
  +	resp.Write([]byte("this is from postprocesser, message=" + sr.Message))
  +}

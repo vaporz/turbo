@@ -126,8 +126,8 @@ func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Req
 	return nil
 }
 
-// SetValue sets v to fieldValue according to fieldValue's Kind
-func SetValue(fieldValue reflect.Value, v string) error {
+// setValue sets v to fieldValue according to fieldValue's Kind
+func setValue(fieldValue reflect.Value, v string) error {
 	switch k := fieldValue.Kind(); k {
 	case reflect.Int,
 		reflect.Int8,
@@ -165,8 +165,8 @@ func SetValue(fieldValue reflect.Value, v string) error {
 	return nil
 }
 
-// ReflectValue returns a reflect.Value with v according to fieldValue's Kind
-func ReflectValue(fieldValue reflect.Value, v string) (reflect.Value, error) {
+// reflectValue returns a reflect.Value with v according to fieldValue's Kind
+func reflectValue(fieldValue reflect.Value, v string) (reflect.Value, error) {
 	switch k := fieldValue.Kind(); k {
 	case reflect.Int16:
 		i, err := strconv.ParseInt(v, 10, 16)
@@ -231,7 +231,7 @@ func BuildStruct(s *Server, theType reflect.Type, theValue reflect.Value, req *h
 		if !ok {
 			continue
 		}
-		err := SetValue(fieldValue, v)
+		err := setValue(fieldValue, v)
 		if err != nil {
 			log.Error(err)
 		}
@@ -279,7 +279,7 @@ func BuildArgs(s *Server, argsType reflect.Type, argsValue reflect.Value, req *h
 			continue
 		}
 		v, _ := findValue(fieldName, req)
-		value, _ := ReflectValue(argsValue.FieldByName(fieldName), v)
+		value, _ := reflectValue(argsValue.FieldByName(fieldName), v)
 		params[i] = value
 	}
 	return params, nil

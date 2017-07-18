@@ -15,7 +15,7 @@ Edit "yourservice/grpcapi/component/components.go":
  +	 s.RegisterComponent("convertCommonValues", convertCommonValues)
  }
  
- +func convertCommonValues(req *http.Request) reflect.Value {
+ +var convertCommonValues turbo.Convertor = func (req *http.Request) reflect.Value {
  +	result := &proto.CommonValues{}
  +	result.SomeId = 123456789
  +	return reflect.ValueOf(result)

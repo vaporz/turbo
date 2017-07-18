@@ -6,6 +6,7 @@ Message类型转换器
 Turbo 会自动在URL，queryString和context.Context中查询参数，然后根据struct中的字段名设置到request对象中。
 
 Turbo 也允许你"手动"组装一个struct对象，举个例子：
+
 编辑 "yourservice/grpcapi/component/components.go":
 
 .. code-block:: diff
@@ -14,7 +15,7 @@ Turbo 也允许你"手动"组装一个struct对象，举个例子：
  +	 s.RegisterComponent("CommonValues", convertCommonValues)
  }
  
- +func convertCommonValues(req *http.Request) reflect.Value {
+ +var convertCommonValues turbo.Convertor = func(req *http.Request) reflect.Value {
  +	result := &proto.CommonValues{}
  +	result.SomeId = 123456789
  +	return reflect.ValueOf(result)

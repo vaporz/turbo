@@ -13,7 +13,7 @@ ErrorHandler
  +	 s.RegisterComponent("errorHandler", errorHandler)
  }
  
- +func errorHandler(resp http.ResponseWriter, req *http.Request, err error) {
+ +var errorHandler turbo.ErrorHandlerFunc = func (resp http.ResponseWriter, req *http.Request, err error) {
  +  	resp.Write([]byte("from errorHandler:" + err.Error()))
  +}
 
