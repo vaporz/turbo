@@ -23,6 +23,15 @@ const turboLogPath string = "turbo_log_path"
 const environment string = "environment"
 const serviceRootPath string = "service_root_path"
 
+var (
+	urlServiceMaps string = "urlServiceMaps"
+	interceptors   string = "interceptors"
+	preprocessors  string = "preprocessors"
+	postprocessors string = "postprocessors"
+	hijackers      string = "hijackers"
+	convertors     string = "convertors"
+)
+
 // GOPATH inits the GOPATH turbo used.
 func GOPATH() string {
 	goPath := os.Getenv("GOPATH")
@@ -40,23 +49,20 @@ type Config struct {
 	// File is the config file path
 	File string
 
-	configs        map[string]string
-	urlServiceMaps [][3]string
-	fieldMappings  map[string][]string
-
-	interceptors   [][3]string
-	preprocessors  [][3]string
-	postprocessors [][3]string
-	hijackers      [][3]string
-	convertors     [][2]string
-	errorhandler   string
+	configs       map[string]string
+	fieldMappings map[string][]string
+	mappings      map[string][][3]string
 }
 
 // NewConfig loads the config file at 'configFilePath', and returns a Config struct ptr
 func NewConfig(rpcType, configFilePath string) *Config {
-	c := &Config{Viper: *viper.New(), RpcType: rpcType, GOPATH: GOPATH()}
+	c := &Config{Viper: *viper.New(), RpcType: rpcType, GOPATH: GOPATH(), mappings: make(map[string][][3]string)}
 	c.loadServiceConfig(configFilePath)
 	return c
+}
+
+func (c *Config) ErrorHandler() string {
+	return c.GetString("errorhandler")
 }
 
 func (c *Config) loadServiceConfig(p string) {
@@ -72,16 +78,15 @@ func (c *Config) loadServiceConfig(p string) {
 }
 
 func (c *Config) loadComponents() {
-	c.interceptors = c.loadMappings("interceptor")
-	c.preprocessors = c.loadMappings("preprocessor")
-	c.postprocessors = c.loadMappings("postprocessor")
-	c.hijackers = c.loadMappings("hijacker")
-	c.convertors = c.loadConvertor()
-	c.errorhandler = c.GetString("errorhandler")
+	c.mappings[interceptors] = c.loadMappings("interceptor")
+	c.mappings[preprocessors] = c.loadMappings("preprocessor")
+	c.mappings[postprocessors] = c.loadMappings("postprocessor")
+	c.mappings[hijackers] = c.loadMappings("hijacker")
+	c.mappings[convertors] = c.loadConvertor()
 }
 
 func (c *Config) loadUrlMap() {
-	c.urlServiceMaps = c.loadMappings("urlmapping")
+	c.mappings[urlServiceMaps] = c.loadMappings("urlmapping")
 }
 
 func (c *Config) loadMappings(key string) [][3]string {
@@ -101,14 +106,14 @@ func appendMap(mapping [][3]string, line string) [][3]string {
 	return append(mapping, [3]string{HTTPMethod, url, value})
 }
 
-func (c *Config) loadConvertor() [][2]string {
-	mapping := make([][2]string, 0)
+func (c *Config) loadConvertor() [][3]string {
+	mapping := make([][3]string, 0)
 	lines := c.GetStringSlice("convertor")
 	for _, line := range lines {
 		values := strings.Split(strings.TrimSpace(line), " ")
 		name := strings.TrimSpace(values[0])
 		convertorName := strings.TrimSpace(values[1])
-		mapping = append(mapping, [2]string{name, convertorName})
+		mapping = append(mapping, [3]string{name, convertorName})
 	}
 	return mapping
 }

@@ -16,11 +16,6 @@ type Creator struct {
 
 // CreateProject creates a whole new project!
 func (c *Creator) CreateProject(serviceName string, force bool) {
-	defer func() {
-		if err := recover(); err != nil {
-			fmt.Println(err)
-		}
-	}()
 	if !force {
 		c.validateServiceRootPath(nil)
 	}
@@ -75,8 +70,10 @@ func (c *Creator) createGrpcProject(serviceName string) {
 		PkgPath:        c.PkgPath,
 		ConfigFileName: "service",
 	}
+	g.c = NewConfig(g.RpcType, c.c.ServiceRootPathAbsolute()+"/"+g.ConfigFileName+".yaml")
 	g.Options = " -I " + c.c.ServiceRootPathAbsolute() + " " + c.c.ServiceRootPathAbsolute() + "/" + strings.ToLower(serviceName) + ".proto "
 	g.GenerateProtobufStub()
+	g.c.loadFieldMapping()
 	g.GenerateGrpcSwitcher()
 }
 
@@ -94,9 +91,11 @@ func (c *Creator) createThriftProject(serviceName string) {
 		PkgPath:        c.PkgPath,
 		ConfigFileName: "service",
 	}
+	g.c = NewConfig(g.RpcType, c.c.ServiceRootPathAbsolute()+"/"+g.ConfigFileName+".yaml")
 	g.Options = " -I " + c.c.ServiceRootPathAbsolute() + " "
 	g.GenerateThriftStub()
 	g.GenerateBuildThriftParameters()
+	g.c.loadFieldMapping()
 	g.GenerateThriftSwitcher()
 
 }

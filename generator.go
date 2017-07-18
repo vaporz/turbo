@@ -61,7 +61,7 @@ func (g *Generator) GenerateGrpcSwitcher() {
 	if _, err := os.Stat(g.c.ServiceRootPathAbsolute() + "/gen"); os.IsNotExist(err) {
 		os.Mkdir(g.c.ServiceRootPathAbsolute()+"/gen", 0755)
 	}
-	methodNames := methodNames(g.c.urlServiceMaps)
+	methodNames := methodNames(g.c.mappings[urlServiceMaps])
 	structFields := make([]string, len(methodNames))
 	for i, v := range methodNames {
 		structFields[i] = g.structFields(v + "Request")
@@ -150,7 +150,7 @@ func (g *Generator) GenerateBuildThriftParameters() {
 			PkgPath:         g.PkgPath,
 			ServiceName:     g.c.GrpcServiceName(),
 			ServiceRootPath: g.c.ServiceRootPathAbsolute(),
-			MethodNames:     methodNames(g.c.urlServiceMaps)},
+			MethodNames:     methodNames(g.c.mappings[urlServiceMaps])},
 		buildThriftParameters,
 	)
 	g.runBuildThriftFields()
@@ -301,7 +301,7 @@ func (g *Generator) GenerateThriftSwitcher() {
 	if _, err := os.Stat(g.c.ServiceRootPathAbsolute() + "/gen"); os.IsNotExist(err) {
 		os.Mkdir(g.c.ServiceRootPathAbsolute()+"/gen", 0755)
 	}
-	methodNames := methodNames(g.c.urlServiceMaps)
+	methodNames := methodNames(g.c.mappings[urlServiceMaps])
 	parameters := make([]string, 0, len(methodNames))
 	notEmptyParameters := make([]bool, 0, len(methodNames))
 	for _, v := range methodNames {

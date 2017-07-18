@@ -88,7 +88,7 @@ func (s *Server) loadComponentsNoPanic() *Components {
 
 func (s *Server) loadComponents() *Components {
 	c := &Components{routers: make(map[int]*mux.Router)}
-	for _, m := range s.Config.interceptors {
+	for _, m := range s.Config.mappings[interceptors] {
 		names := strings.Split(m[2], ",")
 		components := make([]Interceptor, 0)
 		for _, name := range names {
@@ -97,25 +97,25 @@ func (s *Server) loadComponents() *Components {
 		c.Intercept(strings.Split(m[0], ","), m[1], components...)
 		log.Info("interceptor:", m)
 	}
-	for _, m := range s.Config.preprocessors {
+	for _, m := range s.Config.mappings[preprocessors] {
 		c.SetPreprocessor(strings.Split(m[0], ","), m[1], s.Component(m[2]).(Preprocessor))
 		log.Info("preprocessor:", m)
 	}
-	for _, m := range s.Config.postprocessors {
+	for _, m := range s.Config.mappings[postprocessors] {
 		c.SetPostprocessor(strings.Split(m[0], ","), m[1], s.Component(m[2]).(Postprocessor))
 		log.Info("postprocessor:", m)
 	}
-	for _, m := range s.Config.hijackers {
+	for _, m := range s.Config.mappings[hijackers] {
 		c.SetHijacker(strings.Split(m[0], ","), m[1], s.Component(m[2]).(Hijacker))
 		log.Info("hijacker:", m)
 	}
-	for _, m := range s.Config.convertors {
+	for _, m := range s.Config.mappings[convertors] {
 		c.SetMessageFieldConvertor(m[0], s.Component(m[1]).(Convertor))
 		log.Info("convertor:", m)
 	}
-	if len(s.Config.errorhandler) > 0 {
-		c.WithErrorHandler(s.Component(s.Config.errorhandler).(ErrorHandlerFunc))
-		log.Info("errorhandler:", s.Config.errorhandler)
+	if len(s.Config.ErrorHandler()) > 0 {
+		c.WithErrorHandler(s.Component(s.Config.ErrorHandler()).(ErrorHandlerFunc))
+		log.Info("errorhandler:", s.Config.ErrorHandler())
 	}
 	return c
 }

@@ -19,6 +19,9 @@ var createCmd = &cobra.Command{
 		if turbo.IsNotCamelCase(args[1]) {
 			return errors.New("[" + args[1] + "] is not a CamelCase string")
 		}
+		if len(RpcType) == 0 || (RpcType != "grpc" && RpcType != "thrift") {
+			return errors.New("invalid value for -r, should be grpc or thrift")
+		}
 		g := turbo.Creator{
 			RpcType: RpcType,
 			PkgPath: args[0],
