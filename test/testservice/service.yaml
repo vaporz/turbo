@@ -10,11 +10,17 @@ config:
   thrift_service_port: 50055
 
 urlmapping:
-  - GET,POST /hello/{your_name:[a-zA-Z0-9]+} SayHello
-  - GET,POST /hello SayHello
+  - GET /hello/{your_name:[a-zA-Z0-9]+} SayHello
+  - GET /hello SayHello
   - GET /hellointerceptor SayHello
   - GET /hello_preprocessor SayHello
   - GET /hello_postprocessor SayHello
   - GET /hello_hijacker SayHello
   - GET /hello_convertor SayHello
 
+interceptor:
+  - GET /hello Test1Interceptor
+preprocessor:
+  - GET /hello preProcessor
+postprocessor:
+  - GET /hello postProcessor

@@ -79,7 +79,6 @@ func (g *Generator) GenerateGrpcSwitcher() {
 import (
 	g "{{.PkgPath}}/gen/proto"
 	"github.com/vaporz/turbo"
-	"reflect"
 	"net/http"
 	"errors"
 )
@@ -93,7 +92,7 @@ var GrpcSwitcher = func(s *turbo.Server, methodName string, resp http.ResponseWr
 {{range $i, $MethodName := .MethodNames}}
 	case "{{$MethodName}}":
 		request := &g.{{$MethodName}}Request{ {{index $.StructFields $i}} }
-		err = turbo.BuildStruct(s, reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
+		err := turbo.BuildRequest(s, request, req)
 		if err != nil {
 			return nil, err
 		}

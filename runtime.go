@@ -10,7 +10,6 @@ import (
 	"strings"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
-	"fmt"
 )
 
 type switcher func(s *Server, methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
@@ -129,6 +128,40 @@ func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Req
 	return nil
 }
 
+//BuildStruct finds values from request, and set them to struct fields recursively
+func BuildStruct(s *Server, theType reflect.Type, theValue reflect.Value, req *http.Request) error {
+	if theValue.Kind() == reflect.Invalid {
+		log.Info("value is invalid, please check grpc-fieldmapping")
+		return nil
+	}
+	fieldNum := theType.NumField()
+	for i := 0; i < fieldNum; i++ {
+		fieldName := theType.Field(i).Name
+		fieldValue := theValue.FieldByName(fieldName)
+		if fieldValue.Kind() == reflect.Ptr && fieldValue.Type().Elem().Kind() == reflect.Struct {
+			convertor := s.Components.MessageFieldConvertor(fieldValue.Type().Elem().Name())
+			if convertor != nil {
+				fieldValue.Set(convertor(req))
+				continue
+			}
+			err := BuildStruct(s, fieldValue.Type().Elem(), fieldValue.Elem(), req)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		v, ok := findValue(fieldName, req)
+		if !ok {
+			continue
+		}
+		err := setValue(fieldValue, v)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	return nil
+}
+
 // setValue sets v to fieldValue according to fieldValue's Kind
 func setValue(fieldValue reflect.Value, v string) error {
 	switch k := fieldValue.Kind(); k {
@@ -166,6 +199,35 @@ func setValue(fieldValue reflect.Value, v string) error {
 		return errors.New("not supported kind[" + k.String() + "]")
 	}
 	return nil
+}
+
+// BuildArgs returns a list of reflect.Value for thrift request
+func BuildArgs(s *Server, argsType reflect.Type, argsValue reflect.Value, req *http.Request, buildStructArg func(s *Server, typeName string, req *http.Request) (v reflect.Value, err error)) ([]reflect.Value, error) {
+	fieldNum := argsType.NumField()
+	params := make([]reflect.Value, fieldNum)
+	for i := 0; i < fieldNum; i++ {
+		field := argsType.Field(i)
+		fieldName := field.Name
+		valueType := argsValue.FieldByName(fieldName).Type()
+		if field.Type.Kind() == reflect.Ptr && valueType.Elem().Kind() == reflect.Struct {
+			convertor := s.Components.MessageFieldConvertor(valueType.Elem().Name())
+			if convertor != nil {
+				params[i] = convertor(req)
+				continue
+			}
+			structName := valueType.Elem().Name()
+			v, err := buildStructArg(s, structName, req)
+			if err != nil {
+				return nil, err
+			}
+			params[i] = v
+			continue
+		}
+		v, _ := findValue(fieldName, req)
+		value, _ := reflectValue(argsValue.FieldByName(fieldName), v)
+		params[i] = value
+	}
+	return params, nil
 }
 
 // reflectValue returns a reflect.Value with v according to fieldValue's Kind
@@ -208,51 +270,23 @@ func reflectValue(fieldValue reflect.Value, v string) (reflect.Value, error) {
 	}
 }
 
-//BuildStruct finds values from request, and set them to struct fields recursively
-func BuildStruct(s *Server, theType reflect.Type, theValue reflect.Value, req *http.Request) error {
-	if theValue.Kind() == reflect.Invalid {
-		log.Info("value is invalid, please check grpc-fieldmapping")
-		return nil
-	}
-	fieldNum := theType.NumField()
-	for i := 0; i < fieldNum; i++ {
-		fieldName := theType.Field(i).Name
-		fieldValue := theValue.FieldByName(fieldName)
-		if fieldValue.Kind() == reflect.Ptr && fieldValue.Type().Elem().Kind() == reflect.Struct {
-			convertor := s.Components.MessageFieldConvertor(fieldValue.Type().Elem().Name())
-			if convertor != nil {
-				fieldValue.Set(convertor(req))
-				continue
-			}
-			err := BuildStruct(s, fieldValue.Type().Elem(), fieldValue.Elem(), req)
-			if err != nil {
-				return err
-			}
-			continue
-		}
-		v, ok := findValue(fieldName, req)
-		if !ok {
-			continue
-		}
-		err := setValue(fieldValue, v)
-		if err != nil {
-			log.Error(err)
-		}
-	}
-	return nil
-}
-
 func findValue(fieldName string, req *http.Request) (string, bool) {
-	v, ok := req.Form[strings.ToLower(fieldName)]
+	lowerCasesName := strings.ToLower(fieldName)
+	snakeCaseName := ToSnakeCase(fieldName)
+
+	v, ok := req.Form[lowerCasesName]
 	if ok && len(v) > 0 {
 		return v[0], true
 	}
-	snakeCaseName := ToSnakeCase(fieldName)
 	v, ok = req.Form[snakeCaseName]
 	if ok && len(v) > 0 {
 		return v[0], true
 	}
 	ctxValue := req.Context().Value(fieldName)
+	if ctxValue != nil {
+		return ctxValue.(string), true
+	}
+	ctxValue = req.Context().Value(lowerCasesName)
 	if ctxValue != nil {
 		return ctxValue.(string), true
 	}
@@ -263,43 +297,29 @@ func findValue(fieldName string, req *http.Request) (string, bool) {
 	return "", false
 }
 
-// BuildArgs returns a list of reflect.Value for thrift request
-func BuildArgs(s *Server, argsType reflect.Type, argsValue reflect.Value, req *http.Request, buildStructArg func(s *Server, typeName string, req *http.Request) (v reflect.Value, err error)) ([]reflect.Value, error) {
-	fieldNum := argsType.NumField()
-	params := make([]reflect.Value, fieldNum)
-	for i := 0; i < fieldNum; i++ {
-		field := argsType.Field(i)
-		fieldName := field.Name
-		valueType := argsValue.FieldByName(fieldName).Type()
-		if field.Type.Kind() == reflect.Ptr && valueType.Elem().Kind() == reflect.Struct {
-			convertor := s.Components.MessageFieldConvertor(valueType.Elem().Name())
-			if convertor != nil {
-				params[i] = convertor(req)
-				continue
-			}
-			structName := valueType.Elem().Name()
-			v, err := buildStructArg(s, structName, req)
-			if err != nil {
-				return nil, err
-			}
-			params[i] = v
-			continue
+func BuildRequest(s *Server, v proto.Message, req *http.Request) error {
+	var err error
+	if contentTypes, ok := req.Header["Content-Type"]; ok && contentTypes[0] == "application/json" {
+		unmarshaler := &jsonpb.Unmarshaler{AllowUnknownFields: true}
+		err = unmarshaler.Unmarshal(req.Body, v)
+		if err != nil {
+			return err
 		}
-		v, _ := findValue(fieldName, req)
-		value, _ := reflectValue(argsValue.FieldByName(fieldName), v)
-		params[i] = value
+		setPathParams(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
+	} else {
+		err = BuildStruct(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
 	}
-	return params, nil
+	return err
 }
 
-func SetPathParams(s *Server, theType reflect.Type, theValue reflect.Value, req *http.Request) error {
+func setPathParams(s *Server, theType reflect.Type, theValue reflect.Value, req *http.Request) error {
 	fieldNum := theType.NumField()
 	pathParams := mux.Vars(req)
 	for i := 0; i < fieldNum; i++ {
 		fieldName := theType.Field(i).Name
 		fieldValue := theValue.FieldByName(fieldName)
 		if fieldValue.Kind() == reflect.Ptr && fieldValue.Type().Elem().Kind() == reflect.Struct {
-			err := SetPathParams(s, fieldValue.Type().Elem(), fieldValue.Elem(), req)
+			err := setPathParams(s, fieldValue.Type().Elem(), fieldValue.Elem(), req)
 			if err != nil {
 				return err
 			}
@@ -309,7 +329,7 @@ func SetPathParams(s *Server, theType reflect.Type, theValue reflect.Value, req 
 		if !ok {
 			continue
 		}
-		err := SetValue(fieldValue, v)
+		err := setValue(fieldValue, v)
 		if err != nil {
 			log.Error(err)
 		}
@@ -328,19 +348,4 @@ func findPathParamValue(fieldName string, pathParams map[string]string) (string,
 		return v, true
 	}
 	return "", false
-}
-
-func BuildRequest(s *Server, v proto.Message, req *http.Request) error {
-	var err error
-	if contentTypes, ok := req.Header["Content-Type"]; ok && contentTypes[0] == "application/json" {
-		unmarshaler := &jsonpb.Unmarshaler{AllowUnknownFields: true}
-		err = unmarshaler.Unmarshal(req.Body, v)
-		if err != nil {
-			return err
-		}
-		SetPathParams(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
-	} else {
-		err = BuildStruct(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
-	}
-	return err
 }
