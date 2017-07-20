@@ -87,7 +87,7 @@ func TestThriftService(t *testing.T) {
 	s := turbo.NewThriftServer("testservice/service.yaml")
 	s.Initializer = &testInitializer{}
 	go s.StartTHRIFT(tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
-	time.Sleep(time.Second)
+	time.Sleep(time.Second * 2)
 	turbo.SetOutput(os.Stdout)
 
 	runCommonTests(t, s.Server, httpPort, "thrift")
