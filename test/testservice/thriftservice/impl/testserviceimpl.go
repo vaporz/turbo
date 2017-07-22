@@ -28,3 +28,7 @@ func (s TestService) SayHello(values *gen.CommonValues, yourName string, int64Va
 	}
 	return &gen.SayHelloResponse{Message: "[thrift server]Hello, " + yourName}, nil
 }
+
+func (s TestService) TestJson(request *gen.TestJsonRequest) (r *gen.TestJsonResponse, err error) {
+	return &gen.TestJsonResponse{Message: "[thrift server]json= " + request.String()}, nil
+}

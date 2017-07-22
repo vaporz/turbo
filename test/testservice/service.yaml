@@ -17,6 +17,7 @@ urlmapping:
   - GET /hello_postprocessor SayHello
   - GET /hello_hijacker SayHello
   - GET /hello_convertor SayHello
+  - POST /testjson TestJson
 
 interceptor:
   - GET /hello Test1Interceptor

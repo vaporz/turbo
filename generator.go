@@ -374,8 +374,7 @@ var ThriftSwitcher = func(s *turbo.Server, methodName string, resp http.Response
 	switch methodName {
 {{range $i, $MethodName := .MethodNames}}
 	case "{{$MethodName}}":{{if index $.NotEmptyParameters $i }}
-		args := gen.{{$.ServiceName}}{{$MethodName}}Args{}
-		params, err := turbo.BuildArgs(s, reflect.TypeOf(args), reflect.ValueOf(args), req, buildStructArg)
+		params, err := turbo.BuildThriftRequest(s, gen.{{$.ServiceName}}{{$MethodName}}Args{}, req, buildStructArg)
 		if err != nil {
 			return nil, err
 		}{{end}}

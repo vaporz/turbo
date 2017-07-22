@@ -100,6 +100,236 @@ func (p *SayHelloResponse) String() string {
   return fmt.Sprintf("SayHelloResponse(%+v)", *p)
 }
 
+// Attributes:
+//  - StringValue
+//  - Int32Value
+//  - BoolValue
+type TestJsonRequest struct {
+  StringValue string `thrift:"stringValue,1" db:"stringValue" json:"stringValue"`
+  Int32Value int32 `thrift:"int32Value,2" db:"int32Value" json:"int32Value"`
+  BoolValue bool `thrift:"boolValue,3" db:"boolValue" json:"boolValue"`
+}
+
+func NewTestJsonRequest() *TestJsonRequest {
+  return &TestJsonRequest{}
+}
+
+
+func (p *TestJsonRequest) GetStringValue() string {
+  return p.StringValue
+}
+
+func (p *TestJsonRequest) GetInt32Value() int32 {
+  return p.Int32Value
+}
+
+func (p *TestJsonRequest) GetBoolValue() bool {
+  return p.BoolValue
+}
+func (p *TestJsonRequest) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 1:
+      if err := p.ReadField1(iprot); err != nil {
+        return err
+      }
+    case 2:
+      if err := p.ReadField2(iprot); err != nil {
+        return err
+      }
+    case 3:
+      if err := p.ReadField3(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *TestJsonRequest)  ReadField1(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 1: ", err)
+} else {
+  p.StringValue = v
+}
+  return nil
+}
+
+func (p *TestJsonRequest)  ReadField2(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 2: ", err)
+} else {
+  p.Int32Value = v
+}
+  return nil
+}
+
+func (p *TestJsonRequest)  ReadField3(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBool(); err != nil {
+  return thrift.PrependError("error reading field 3: ", err)
+} else {
+  p.BoolValue = v
+}
+  return nil
+}
+
+func (p *TestJsonRequest) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("TestJsonRequest"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField1(oprot); err != nil { return err }
+    if err := p.writeField2(oprot); err != nil { return err }
+    if err := p.writeField3(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *TestJsonRequest) writeField1(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("stringValue", thrift.STRING, 1); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:stringValue: ", p), err) }
+  if err := oprot.WriteString(string(p.StringValue)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.stringValue (1) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 1:stringValue: ", p), err) }
+  return err
+}
+
+func (p *TestJsonRequest) writeField2(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("int32Value", thrift.I32, 2); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:int32Value: ", p), err) }
+  if err := oprot.WriteI32(int32(p.Int32Value)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.int32Value (2) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 2:int32Value: ", p), err) }
+  return err
+}
+
+func (p *TestJsonRequest) writeField3(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("boolValue", thrift.BOOL, 3); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:boolValue: ", p), err) }
+  if err := oprot.WriteBool(bool(p.BoolValue)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.boolValue (3) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 3:boolValue: ", p), err) }
+  return err
+}
+
+func (p *TestJsonRequest) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("TestJsonRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - Message
+type TestJsonResponse struct {
+  Message string `thrift:"message,1" db:"message" json:"message"`
+}
+
+func NewTestJsonResponse() *TestJsonResponse {
+  return &TestJsonResponse{}
+}
+
+
+func (p *TestJsonResponse) GetMessage() string {
+  return p.Message
+}
+func (p *TestJsonResponse) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 1:
+      if err := p.ReadField1(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *TestJsonResponse)  ReadField1(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 1: ", err)
+} else {
+  p.Message = v
+}
+  return nil
+}
+
+func (p *TestJsonResponse) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("TestJsonResponse"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField1(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *TestJsonResponse) writeField1(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("message", thrift.STRING, 1); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:message: ", p), err) }
+  if err := oprot.WriteString(string(p.Message)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.message (1) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 1:message: ", p), err) }
+  return err
+}
+
+func (p *TestJsonResponse) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("TestJsonResponse(%+v)", *p)
+}
+
 type TestService interface {
   // Parameters:
   //  - Values
@@ -111,6 +341,9 @@ type TestService interface {
   //  - Int32Value
   //  - Int16Value
   SayHello(values *CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64, uint64Value int64, int32Value int32, int16Value int16) (r *SayHelloResponse, err error)
+  // Parameters:
+  //  - Request
+  TestJson(request *TestJsonRequest) (r *TestJsonResponse, err error)
 }
 
 type TestServiceClient struct {
@@ -229,6 +462,82 @@ func (p *TestServiceClient) recvSayHello() (value *SayHelloResponse, err error) 
   return
 }
 
+// Parameters:
+//  - Request
+func (p *TestServiceClient) TestJson(request *TestJsonRequest) (r *TestJsonResponse, err error) {
+  if err = p.sendTestJson(request); err != nil { return }
+  return p.recvTestJson()
+}
+
+func (p *TestServiceClient) sendTestJson(request *TestJsonRequest)(err error) {
+  oprot := p.OutputProtocol
+  if oprot == nil {
+    oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+    p.OutputProtocol = oprot
+  }
+  p.SeqId++
+  if err = oprot.WriteMessageBegin("testJson", thrift.CALL, p.SeqId); err != nil {
+      return
+  }
+  args := TestServiceTestJsonArgs{
+  Request : request,
+  }
+  if err = args.Write(oprot); err != nil {
+      return
+  }
+  if err = oprot.WriteMessageEnd(); err != nil {
+      return
+  }
+  return oprot.Flush()
+}
+
+
+func (p *TestServiceClient) recvTestJson() (value *TestJsonResponse, err error) {
+  iprot := p.InputProtocol
+  if iprot == nil {
+    iprot = p.ProtocolFactory.GetProtocol(p.Transport)
+    p.InputProtocol = iprot
+  }
+  method, mTypeId, seqId, err := iprot.ReadMessageBegin()
+  if err != nil {
+    return
+  }
+  if method != "testJson" {
+    err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "testJson failed: wrong method name")
+    return
+  }
+  if p.SeqId != seqId {
+    err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "testJson failed: out of sequence response")
+    return
+  }
+  if mTypeId == thrift.EXCEPTION {
+    error2 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+    var error3 error
+    error3, err = error2.Read(iprot)
+    if err != nil {
+      return
+    }
+    if err = iprot.ReadMessageEnd(); err != nil {
+      return
+    }
+    err = error3
+    return
+  }
+  if mTypeId != thrift.REPLY {
+    err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "testJson failed: invalid message type")
+    return
+  }
+  result := TestServiceTestJsonResult{}
+  if err = result.Read(iprot); err != nil {
+    return
+  }
+  if err = iprot.ReadMessageEnd(); err != nil {
+    return
+  }
+  value = result.GetSuccess()
+  return
+}
+
 
 type TestServiceProcessor struct {
   processorMap map[string]thrift.TProcessorFunction
@@ -250,9 +559,10 @@ func (p *TestServiceProcessor) ProcessorMap() map[string]thrift.TProcessorFuncti
 
 func NewTestServiceProcessor(handler TestService) *TestServiceProcessor {
 
-  self2 := &TestServiceProcessor{handler:handler, processorMap:make(map[string]thrift.TProcessorFunction)}
-  self2.processorMap["sayHello"] = &testServiceProcessorSayHello{handler:handler}
-return self2
+  self4 := &TestServiceProcessor{handler:handler, processorMap:make(map[string]thrift.TProcessorFunction)}
+  self4.processorMap["sayHello"] = &testServiceProcessorSayHello{handler:handler}
+  self4.processorMap["testJson"] = &testServiceProcessorTestJson{handler:handler}
+return self4
 }
 
 func (p *TestServiceProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -263,12 +573,12 @@ func (p *TestServiceProcessor) Process(iprot, oprot thrift.TProtocol) (success b
   }
   iprot.Skip(thrift.STRUCT)
   iprot.ReadMessageEnd()
-  x3 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function " + name)
+  x5 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function " + name)
   oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-  x3.Write(oprot)
+  x5.Write(oprot)
   oprot.WriteMessageEnd()
   oprot.Flush()
-  return false, x3
+  return false, x5
 
 }
 
@@ -303,6 +613,54 @@ var retval *SayHelloResponse
     result.Success = retval
 }
   if err2 = oprot.WriteMessageBegin("sayHello", thrift.REPLY, seqId); err2 != nil {
+    err = err2
+  }
+  if err2 = result.Write(oprot); err == nil && err2 != nil {
+    err = err2
+  }
+  if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+    err = err2
+  }
+  if err2 = oprot.Flush(); err == nil && err2 != nil {
+    err = err2
+  }
+  if err != nil {
+    return
+  }
+  return true, err
+}
+
+type testServiceProcessorTestJson struct {
+  handler TestService
+}
+
+func (p *testServiceProcessorTestJson) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+  args := TestServiceTestJsonArgs{}
+  if err = args.Read(iprot); err != nil {
+    iprot.ReadMessageEnd()
+    x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+    oprot.WriteMessageBegin("testJson", thrift.EXCEPTION, seqId)
+    x.Write(oprot)
+    oprot.WriteMessageEnd()
+    oprot.Flush()
+    return false, err
+  }
+
+  iprot.ReadMessageEnd()
+  result := TestServiceTestJsonResult{}
+var retval *TestJsonResponse
+  var err2 error
+  if retval, err2 = p.handler.TestJson(args.Request); err2 != nil {
+    x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing testJson: " + err2.Error())
+    oprot.WriteMessageBegin("testJson", thrift.EXCEPTION, seqId)
+    x.Write(oprot)
+    oprot.WriteMessageEnd()
+    oprot.Flush()
+    return true, err2
+  } else {
+    result.Success = retval
+}
+  if err2 = oprot.WriteMessageBegin("testJson", thrift.REPLY, seqId); err2 != nil {
     err = err2
   }
   if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -717,6 +1075,192 @@ func (p *TestServiceSayHelloResult) String() string {
     return "<nil>"
   }
   return fmt.Sprintf("TestServiceSayHelloResult(%+v)", *p)
+}
+
+// Attributes:
+//  - Request
+type TestServiceTestJsonArgs struct {
+  Request *TestJsonRequest `thrift:"request,1" db:"request" json:"request"`
+}
+
+func NewTestServiceTestJsonArgs() *TestServiceTestJsonArgs {
+  return &TestServiceTestJsonArgs{}
+}
+
+var TestServiceTestJsonArgs_Request_DEFAULT *TestJsonRequest
+func (p *TestServiceTestJsonArgs) GetRequest() *TestJsonRequest {
+  if !p.IsSetRequest() {
+    return TestServiceTestJsonArgs_Request_DEFAULT
+  }
+return p.Request
+}
+func (p *TestServiceTestJsonArgs) IsSetRequest() bool {
+  return p.Request != nil
+}
+
+func (p *TestServiceTestJsonArgs) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 1:
+      if err := p.ReadField1(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *TestServiceTestJsonArgs)  ReadField1(iprot thrift.TProtocol) error {
+  p.Request = &TestJsonRequest{}
+  if err := p.Request.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Request), err)
+  }
+  return nil
+}
+
+func (p *TestServiceTestJsonArgs) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("testJson_args"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField1(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *TestServiceTestJsonArgs) writeField1(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:request: ", p), err) }
+  if err := p.Request.Write(oprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Request), err)
+  }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 1:request: ", p), err) }
+  return err
+}
+
+func (p *TestServiceTestJsonArgs) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("TestServiceTestJsonArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+type TestServiceTestJsonResult struct {
+  Success *TestJsonResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
+}
+
+func NewTestServiceTestJsonResult() *TestServiceTestJsonResult {
+  return &TestServiceTestJsonResult{}
+}
+
+var TestServiceTestJsonResult_Success_DEFAULT *TestJsonResponse
+func (p *TestServiceTestJsonResult) GetSuccess() *TestJsonResponse {
+  if !p.IsSetSuccess() {
+    return TestServiceTestJsonResult_Success_DEFAULT
+  }
+return p.Success
+}
+func (p *TestServiceTestJsonResult) IsSetSuccess() bool {
+  return p.Success != nil
+}
+
+func (p *TestServiceTestJsonResult) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 0:
+      if err := p.ReadField0(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *TestServiceTestJsonResult)  ReadField0(iprot thrift.TProtocol) error {
+  p.Success = &TestJsonResponse{}
+  if err := p.Success.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Success), err)
+  }
+  return nil
+}
+
+func (p *TestServiceTestJsonResult) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("testJson_result"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField0(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *TestServiceTestJsonResult) writeField0(oprot thrift.TProtocol) (err error) {
+  if p.IsSetSuccess() {
+    if err := oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err) }
+    if err := p.Success.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Success), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err) }
+  }
+  return err
+}
+
+func (p *TestServiceTestJsonResult) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("TestServiceTestJsonResult(%+v)", *p)
 }
 
 

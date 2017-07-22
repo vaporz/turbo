@@ -98,6 +98,7 @@ var fieldsYaml string = `thrift-fieldmapping:
 
 func buildParameterStr(methodName string) string {
 	switch methodName {
+
 	case "SayHello":
 		var result string
 		args := g.TestServiceSayHelloArgs{}
@@ -109,6 +110,19 @@ func buildParameterStr(methodName string) string {
 				i, at.Field(i).Type.String())
 		}
 		return result
+
+	case "TestJson":
+		var result string
+		args := g.TestServiceTestJsonArgs{}
+		at := reflect.TypeOf(args)
+		num := at.NumField()
+		for i := 0; i < num; i++ {
+			result += fmt.Sprintf(
+				"\n\t\t\tparams[%d].Interface().(%s),",
+				i, at.Field(i).Type.String())
+		}
+		return result
+
 	default:
 		return "error"
 	}

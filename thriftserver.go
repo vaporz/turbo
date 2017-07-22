@@ -68,7 +68,7 @@ func (s *ThriftServer) startThriftHTTPServerInternal(clientCreator thriftClientC
 
 func (s *ThriftServer) startThriftServiceInternal(registerTProcessor func() thrift.TProcessor, alone bool) *thrift.TSimpleServer {
 	port := s.Config.ThriftServicePort()
-	log.Infof("Starting Thrift Service at :%d...", port)
+	log.Infof("Starting Thrift Service at :%s...", port)
 	transport, err := thrift.NewTServerSocket(":" + port)
 	if err != nil {
 		log.Panic("socket error")

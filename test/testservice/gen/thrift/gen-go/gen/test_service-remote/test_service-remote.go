@@ -22,6 +22,7 @@ func Usage() {
   flag.PrintDefaults()
   fmt.Fprintln(os.Stderr, "\nFunctions:")
   fmt.Fprintln(os.Stderr, "  SayHelloResponse sayHello(CommonValues values, string yourName, i64 int64Value, bool boolValue, double float64Value, i64 uint64Value, i32 int32Value, i16 int16Value)")
+  fmt.Fprintln(os.Stderr, "  TestJsonResponse testJson(TestJsonRequest request)")
   fmt.Fprintln(os.Stderr)
   os.Exit(0)
 }
@@ -121,60 +122,85 @@ func main() {
       fmt.Fprintln(os.Stderr, "SayHello requires 8 args")
       flag.Usage()
     }
-    arg4 := flag.Arg(1)
-    mbTrans5 := thrift.NewTMemoryBufferLen(len(arg4))
-    defer mbTrans5.Close()
-    _, err6 := mbTrans5.WriteString(arg4)
-    if err6 != nil {
+    arg6 := flag.Arg(1)
+    mbTrans7 := thrift.NewTMemoryBufferLen(len(arg6))
+    defer mbTrans7.Close()
+    _, err8 := mbTrans7.WriteString(arg6)
+    if err8 != nil {
       Usage()
       return
     }
-    factory7 := thrift.NewTSimpleJSONProtocolFactory()
-    jsProt8 := factory7.GetProtocol(mbTrans5)
+    factory9 := thrift.NewTSimpleJSONProtocolFactory()
+    jsProt10 := factory9.GetProtocol(mbTrans7)
     argvalue0 := gen.NewCommonValues()
-    err9 := argvalue0.Read(jsProt8)
-    if err9 != nil {
+    err11 := argvalue0.Read(jsProt10)
+    if err11 != nil {
       Usage()
       return
     }
     value0 := argvalue0
     argvalue1 := flag.Arg(2)
     value1 := argvalue1
-    argvalue2, err11 := (strconv.ParseInt(flag.Arg(3), 10, 64))
-    if err11 != nil {
+    argvalue2, err13 := (strconv.ParseInt(flag.Arg(3), 10, 64))
+    if err13 != nil {
       Usage()
       return
     }
     value2 := argvalue2
     argvalue3 := flag.Arg(4) == "true"
     value3 := argvalue3
-    argvalue4, err13 := (strconv.ParseFloat(flag.Arg(5), 64))
-    if err13 != nil {
+    argvalue4, err15 := (strconv.ParseFloat(flag.Arg(5), 64))
+    if err15 != nil {
       Usage()
       return
     }
     value4 := argvalue4
-    argvalue5, err14 := (strconv.ParseInt(flag.Arg(6), 10, 64))
-    if err14 != nil {
+    argvalue5, err16 := (strconv.ParseInt(flag.Arg(6), 10, 64))
+    if err16 != nil {
       Usage()
       return
     }
     value5 := argvalue5
-    tmp6, err15 := (strconv.Atoi(flag.Arg(7)))
-    if err15 != nil {
+    tmp6, err17 := (strconv.Atoi(flag.Arg(7)))
+    if err17 != nil {
       Usage()
       return
     }
     argvalue6 := int32(tmp6)
     value6 := argvalue6
-    tmp7, err16 := (strconv.Atoi(flag.Arg(8)))
-    if err16 != nil {
+    tmp7, err18 := (strconv.Atoi(flag.Arg(8)))
+    if err18 != nil {
       Usage()
       return
     }
     argvalue7 := int16(tmp7)
     value7 := argvalue7
     fmt.Print(client.SayHello(value0, value1, value2, value3, value4, value5, value6, value7))
+    fmt.Print("\n")
+    break
+  case "testJson":
+    if flag.NArg() - 1 != 1 {
+      fmt.Fprintln(os.Stderr, "TestJson requires 1 args")
+      flag.Usage()
+    }
+    arg19 := flag.Arg(1)
+    mbTrans20 := thrift.NewTMemoryBufferLen(len(arg19))
+    defer mbTrans20.Close()
+    _, err21 := mbTrans20.WriteString(arg19)
+    if err21 != nil {
+      Usage()
+      return
+    }
+    factory22 := thrift.NewTSimpleJSONProtocolFactory()
+    jsProt23 := factory22.GetProtocol(mbTrans20)
+    argvalue0 := gen.NewTestJsonRequest()
+    err24 := argvalue0.Read(jsProt23)
+    if err24 != nil {
+      Usage()
+      return
+    }
+    value0 := argvalue0
+    fmt.Print(client.TestJson(value0))
     fmt.Print("\n")
     break
   case "":

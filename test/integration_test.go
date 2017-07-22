@@ -21,6 +21,8 @@ import (
 	"testing"
 	"text/template"
 	"time"
+	"io"
+	"strings"
 )
 
 func TestMain(m *testing.M) {
@@ -53,7 +55,7 @@ func TestGrpcService(t *testing.T) {
 	s := turbo.NewGrpcServer("testservice/service.yaml")
 	s.Initializer = &testInitializer{}
 	go s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
-	time.Sleep(time.Millisecond*500)
+	time.Sleep(time.Millisecond * 500)
 
 	runCommonTests(t, s.Server, httpPort, "grpc")
 
@@ -76,8 +78,14 @@ func TestGrpcService(t *testing.T) {
 	s.Components.SetMessageFieldConvertor("CommonValues", s.Component("convertProtoCommonValues").(turbo.Convertor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?bool_value=true",
 		"{\"message\":\"{\\\"values\\\":{\\\"someId\\\":1111111},\\\"yourName\\\":\\\"testtest\\\",\\\"boolValue\\\":true}\"}")
+	s.Components.Reset()
+
+	body := strings.NewReader("{\"someId\":123, \"yourName\":\"a name\", \"boolValue\":true}")
+	testPostWithContentType(t, "http://localhost:"+httpPort+"/hello", "application/json", body,
+		"{\"message\":\"{\\\"values\\\":{},\\\"yourName\\\":\\\"a name\\\",\\\"boolValue\\\":true}\"}")
+
 	s.Stop()
-	time.Sleep(time.Millisecond*100)
+	time.Sleep(time.Millisecond * 100)
 }
 
 func TestThriftService(t *testing.T) {
@@ -111,8 +119,14 @@ func TestThriftService(t *testing.T) {
 	s.Components.SetMessageFieldConvertor("CommonValues", s.Component("convertThriftCommonValues").(turbo.Convertor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?bool_value=true",
 		"{\"message\":\"[thrift server]values.TransactionId=222222, yourName=testtest,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0\"}")
+	s.Components.Reset()
+
+	body := strings.NewReader("{\"stringValue\":\"123\", \"int32Value\":456, \"boolValue\":true}")
+	testPostWithContentType(t, "http://localhost:"+httpPort+"/testjson", "application/json", body,
+		"{\"message\":\"[thrift server]json= TestJsonRequest({StringValue:123 Int32Value:456 BoolValue:true})\"}")
+
 	s.Stop()
-	time.Sleep(time.Millisecond*100)
+	time.Sleep(time.Millisecond * 100)
 }
 
 func TestHTTPGrpcService(t *testing.T) {
@@ -122,15 +136,15 @@ func TestHTTPGrpcService(t *testing.T) {
 	s := turbo.NewGrpcServer("testservice/service.yaml")
 	s.Initializer = &testInitializer{}
 	go s.StartGrpcService(gimpl.RegisterServer)
-	time.Sleep(time.Millisecond*300)
+	time.Sleep(time.Millisecond * 300)
 
 	go s.StartGrpcHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
-	time.Sleep(time.Millisecond*300)
+	time.Sleep(time.Millisecond * 300)
 
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", "{\"message\":\"[grpc server]Hello, testtest\"}")
 
 	s.Stop()
-	time.Sleep(time.Millisecond*100)
+	time.Sleep(time.Millisecond * 100)
 }
 
 func TestHTTPThriftService(t *testing.T) {
@@ -140,15 +154,15 @@ func TestHTTPThriftService(t *testing.T) {
 	s := turbo.NewThriftServer("testservice/service.yaml")
 	s.Initializer = &testInitializer{}
 	go s.StartThriftService(timpl.TProcessor)
-	time.Sleep(time.Millisecond*300)
+	time.Sleep(time.Millisecond * 500)
 
 	go s.StartThriftHTTPServer(tcompoent.ThriftClient, gen.ThriftSwitcher)
-	time.Sleep(time.Millisecond*300)
+	time.Sleep(time.Millisecond * 500)
 
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", "{\"message\":\"[thrift server]Hello, testtest\"}")
 
 	s.Stop()
-	time.Sleep(time.Millisecond*100)
+	time.Sleep(time.Millisecond * 100)
 }
 
 func TestLoadComponentsFromConfig(t *testing.T) {
@@ -159,10 +173,10 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 	assert.Nil(t, s.Component("test"))
 	s.Initializer = &testInitializer{}
 	go s.StartGrpcService(gimpl.RegisterServer)
-	time.Sleep(time.Millisecond*300)
+	time.Sleep(time.Millisecond * 300)
 
 	go s.StartGrpcHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
-	time.Sleep(time.Millisecond*300)
+	time.Sleep(time.Millisecond * 300)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", "{\"message\":\"[grpc server]Hello, testtest\"}")
 	testGet(t, "http://localhost:"+httpPort+"/hello", "intercepted:{\"message\":\"[grpc server]Hello, \"}")
 	testGet(t, "http://localhost:"+httpPort+"/hellointerceptor", "interceptor_error:from errorHandler:error!")
@@ -177,7 +191,7 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 	time.Sleep(time.Millisecond * 100)
 	testGet(t, "http://localhost:"+httpPort+"/hello", "test1_intercepted:preprocessor:postprocessor:[grpc server]Hello, ")
 	s.Stop()
-	time.Sleep(time.Millisecond*100)
+	time.Sleep(time.Millisecond * 100)
 }
 
 func overwriteProto() {
@@ -409,14 +423,18 @@ func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
 	s.Components.Reset()
 }
 
-func testPost(t *testing.T, url, expected string) {
-	resp, err := http.Post(url, "", nil)
+func testPostWithContentType(t *testing.T, url, contentType string, body io.Reader, expected string) {
+	resp, err := http.Post(url, contentType, body)
 	if err != nil {
 		t.Fail()
 	}
 	defer resp.Body.Close()
 	assert.Nil(t, err)
 	assert.Equal(t, expected, readResp(resp))
+}
+
+func testPost(t *testing.T, url, expected string) {
+	testPostWithContentType(t, url, "", nil, expected)
 }
 
 func readResp(resp *http.Response) string {
@@ -583,7 +601,8 @@ func overwriteServiceYaml(httpPort, servicePort, env string) {
 
 urlmapping:
   - GET /hello/{your_name:[a-zA-Z0-9]+} SayHello
-  - GET /hello SayHello
+  - GET,POST /hello SayHello
+  - POST /testjson TestJson
 `,
 		serviceYamlValues{
 			HttpPort:    httpPort,
@@ -622,6 +641,7 @@ urlmapping:
   - GET /hello_postprocessor SayHello
   - GET /hello_hijacker SayHello
   - GET /hello_convertor SayHello
+  - POST /testjson TestJson
 
 interceptor:
   - GET /hello TestInterceptor
@@ -673,6 +693,7 @@ urlmapping:
   - GET /hello_postprocessor SayHello
   - GET /hello_hijacker SayHello
   - GET /hello_convertor SayHello
+  - POST /testjson TestJson
 
 interceptor:
   - GET /hello Test1Interceptor

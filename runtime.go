@@ -10,6 +10,8 @@ import (
 	"strings"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
+	"bytes"
+	"encoding/json"
 )
 
 type switcher func(s *Server, methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
@@ -310,6 +312,27 @@ func BuildRequest(s *Server, v proto.Message, req *http.Request) error {
 		err = BuildStruct(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
 	}
 	return err
+}
+
+func BuildThriftRequest(s *Server, args interface{}, req *http.Request, buildStructArg func(s *Server, typeName string, req *http.Request) (v reflect.Value, err error)) ([]reflect.Value, error) {
+	var err error
+	var params []reflect.Value
+	if contentTypes, ok := req.Header["Content-Type"]; ok && contentTypes[0] == "application/json" {
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(req.Body)
+		v := reflect.New(reflect.ValueOf(args).Field(0).Type().Elem()).Interface()
+		err := json.Unmarshal(buf.Bytes(), v)
+		if err != nil {
+			// TODO should panic?
+			return params, err
+		}
+		setPathParams(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
+		params = make([]reflect.Value, 1)
+		params[0] = reflect.ValueOf(v)
+	} else {
+		params, err = BuildArgs(s, reflect.TypeOf(args), reflect.ValueOf(args), req, buildStructArg)
+	}
+	return params, err
 }
 
 func setPathParams(s *Server, theType reflect.Type, theValue reflect.Value, req *http.Request) error {

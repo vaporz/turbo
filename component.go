@@ -154,6 +154,7 @@ func component(r *mux.Router, req *http.Request) http.Handler {
 }
 
 // Convertor--------------
+// TODO use convertor for whole request message
 type Convertor func(r *http.Request) reflect.Value
 
 func (c *Components) registerMessageFieldConvertor(field string, convertorFunc Convertor) {

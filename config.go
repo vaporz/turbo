@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"fmt"
 )
 
 const grpcServiceName string = "grpc_service_name"
@@ -174,6 +175,9 @@ func (c *Config) ServiceRootPath() string {
 // if "service_root_path" is a relative path, $GOPATH+"/src/"+[service_root_path] is returned.
 func (c *Config) ServiceRootPathAbsolute() string {
 	p := c.configs[serviceRootPath]
+	if len(strings.TrimSpace(p))==0{
+		fmt.Println("[WARN] 'service_root_path' in config file is not set!")
+	}
 	if path.IsAbs(p) {
 		return p
 	} else {
