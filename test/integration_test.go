@@ -125,6 +125,10 @@ func TestThriftService(t *testing.T) {
 	testPostWithContentType(t, "http://localhost:"+httpPort+"/testjson", "application/json", body,
 		"{\"message\":\"[thrift server]json= TestJsonRequest({StringValue:123 Int32Value:456 BoolValue:true})\"}")
 
+	body = strings.NewReader("{\"boolValue\":true}")
+	testPostWithContentType(t, "http://localhost:"+httpPort+"/testjson/123/456", "application/json", body,
+		"{\"message\":\"[thrift server]json= TestJsonRequest({StringValue:123 Int32Value:456 BoolValue:true})\"}")
+
 	s.Stop()
 	time.Sleep(time.Millisecond * 100)
 }
@@ -134,7 +138,6 @@ func TestHTTPGrpcService(t *testing.T) {
 	overwriteServiceYaml(httpPort, "50053", "development")
 
 	s := turbo.NewGrpcServer("testservice/service.yaml")
-	s.Initializer = &testInitializer{}
 	go s.StartGrpcService(gimpl.RegisterServer)
 	time.Sleep(time.Millisecond * 300)
 
@@ -152,7 +155,6 @@ func TestHTTPThriftService(t *testing.T) {
 	overwriteServiceYaml(httpPort, "50054", "development")
 
 	s := turbo.NewThriftServer("testservice/service.yaml")
-	s.Initializer = &testInitializer{}
 	go s.StartThriftService(timpl.TProcessor)
 	time.Sleep(time.Millisecond * 500)
 
@@ -388,9 +390,10 @@ func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"intercepted:test1_intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
 
+	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor), s.Component("AfterErrorInterceptor").(turbo.Interceptor), s.Component("Test1Interceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"intercepted:test1_intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
+		"intercepted:test1_intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}:after_error:")
 
 	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor), s.Component("BeforeErrorInterceptor").(turbo.Interceptor), s.Component("Test1Interceptor").(turbo.Interceptor))
@@ -492,6 +495,7 @@ type AfterErrorInterceptor struct {
 
 func (l *AfterErrorInterceptor) After(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
 	fmt.Println("[After] Request URL:" + req.URL.Path)
+	resp.Write([]byte(":after_error:"))
 	return req, errors.New("error: after interceptor")
 }
 
@@ -600,9 +604,10 @@ func overwriteServiceYaml(httpPort, servicePort, env string) {
   thrift_service_port: {{.ServicePort}}
 
 urlmapping:
-  - GET /hello/{your_name:[a-zA-Z0-9]+} SayHello
+  - GET /hello/{your_Name:[a-zA-Z0-9]+} SayHello
   - GET,POST /hello SayHello
   - POST /testjson TestJson
+  - POST /testjson/{StringValue:[a-zA-Z0-9]+}/{int32_value:[a-zA-Z0-9]+} TestJson
 `,
 		serviceYamlValues{
 			HttpPort:    httpPort,
@@ -634,7 +639,7 @@ func overwriteServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
   thrift_service_port: {{.ServicePort}}
 
 urlmapping:
-  - GET /hello/{your_name:[a-zA-Z0-9]+} SayHello
+  - GET /hello/{your_Name:[a-zA-Z0-9]+} SayHello
   - GET /hello SayHello
   - GET /hellointerceptor SayHello
   - GET /hello_preprocessor SayHello
@@ -642,6 +647,7 @@ urlmapping:
   - GET /hello_hijacker SayHello
   - GET /hello_convertor SayHello
   - POST /testjson TestJson
+  - POST /testjson/{StringValue:[a-zA-Z0-9]+}/{int32_value:[a-zA-Z0-9]+} TestJson
 
 interceptor:
   - GET /hello TestInterceptor
@@ -686,7 +692,7 @@ func changeServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
   thrift_service_port: {{.ServicePort}}
 
 urlmapping:
-  - GET /hello/{your_name:[a-zA-Z0-9]+} SayHello
+  - GET /hello/{your_Name:[a-zA-Z0-9]+} SayHello
   - GET /hello SayHello
   - GET /hellointerceptor SayHello
   - GET /hello_preprocessor SayHello
@@ -694,6 +700,7 @@ urlmapping:
   - GET /hello_hijacker SayHello
   - GET /hello_convertor SayHello
   - POST /testjson TestJson
+  - POST /testjson/{StringValue:[a-zA-Z0-9]+}/{int32_value:[a-zA-Z0-9]+} TestJson
 
 interceptor:
   - GET /hello Test1Interceptor

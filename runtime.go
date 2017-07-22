@@ -53,7 +53,7 @@ func doBefore(interceptors *[]Interceptor, resp http.ResponseWriter, req *http.R
 	for index, i := range *interceptors {
 		req, err = i.Before(resp, req)
 		if err != nil {
-			log.Errorln("error in interceptor!" + err.Error())
+			log.Errorln("error in Before(): ", err.Error())
 			*interceptors = (*interceptors)[0:index]
 			return req, err
 		}
@@ -124,7 +124,7 @@ func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Req
 	for i := l - 1; i >= 0; i-- {
 		req, err = interceptors[i].After(resp, req)
 		if err != nil {
-			log.Errorln("error in interceptor!")
+			log.Errorln("error in After(): ", err.Error())
 		}
 	}
 	return nil
@@ -322,8 +322,8 @@ func BuildThriftRequest(s *Server, args interface{}, req *http.Request, buildStr
 		buf.ReadFrom(req.Body)
 		v := reflect.New(reflect.ValueOf(args).Field(0).Type().Elem()).Interface()
 		err := json.Unmarshal(buf.Bytes(), v)
+		// TODO should panic?
 		if err != nil {
-			// TODO should panic?
 			return params, err
 		}
 		setPathParams(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
@@ -361,7 +361,8 @@ func setPathParams(s *Server, theType reflect.Type, theValue reflect.Value, req 
 }
 
 func findPathParamValue(fieldName string, pathParams map[string]string) (string, bool) {
-	v, ok := pathParams[fieldName]
+	lowerCasesName := strings.ToLower(fieldName)
+	v, ok := pathParams[lowerCasesName]
 	if ok && len(v) > 0 {
 		return v, true
 	}

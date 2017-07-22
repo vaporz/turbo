@@ -72,14 +72,12 @@ func mergeMuxVars(req *http.Request) {
 	if muxVars == nil {
 		return
 	}
-	for k := range muxVars {
+	for k, v := range muxVars {
 		lowerCased := strings.ToLower(k)
 		if k == lowerCased {
 			continue
 		}
-		if v, ok := muxVars[lowerCased]; !ok {
-			muxVars[lowerCased] = v
-		}
+		muxVars[lowerCased] = v
 		delete(muxVars, k)
 	}
 	for key, valueArr := range req.Form {
