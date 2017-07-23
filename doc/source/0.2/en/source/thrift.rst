@@ -3,7 +3,7 @@
 Thrift support
 ==============
 
-Turbo supports thrift as well.
+Turbo supports thrift(v0.10.0) as well .
 
 Similar with grpc, you can create a thrift project or generate thrift codes with "-r thrift" in command line.
 

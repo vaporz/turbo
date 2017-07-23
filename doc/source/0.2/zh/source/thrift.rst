@@ -3,7 +3,7 @@
 支持Thrift
 ===========
 
-Turbo也支持Thrift。
+Turbo也支持Thrift(版本号0.10.0)。
 
 跟grpc类似，你可以在执行命令行工具时，通过指定"-r thrift"来创建thrift项目或者生成thrift代码。
 

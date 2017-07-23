@@ -15,6 +15,7 @@ Documentation Table of Contents
     Rules and Conventions <rules>
     How to add a new API <add>
     Use a shared struct <shared>
+    Support RESTFUL JSON API <json>
     Components <components>
     Thrift support <thrift>
     Configs in service.yaml <config>

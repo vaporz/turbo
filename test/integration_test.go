@@ -80,9 +80,9 @@ func TestGrpcService(t *testing.T) {
 		"{\"message\":\"{\\\"values\\\":{\\\"someId\\\":1111111},\\\"yourName\\\":\\\"testtest\\\",\\\"boolValue\\\":true}\"}")
 	s.Components.Reset()
 
-	body := strings.NewReader("{\"someId\":123, \"yourName\":\"a name\", \"boolValue\":true}")
+	body := strings.NewReader("{\"values\":{\"someId\":123}, \"yourName\":\"a name\", \"boolValue\":true}")
 	testPostWithContentType(t, "http://localhost:"+httpPort+"/hello", "application/json", body,
-		"{\"message\":\"{\\\"values\\\":{},\\\"yourName\\\":\\\"a name\\\",\\\"boolValue\\\":true}\"}")
+		"{\"message\":\"{\\\"values\\\":{\\\"someId\\\":123},\\\"yourName\\\":\\\"a name\\\",\\\"boolValue\\\":true}\"}")
 
 	s.Stop()
 	time.Sleep(time.Millisecond * 100)
@@ -121,11 +121,11 @@ func TestThriftService(t *testing.T) {
 		"{\"message\":\"[thrift server]values.TransactionId=222222, yourName=testtest,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0\"}")
 	s.Components.Reset()
 
-	body := strings.NewReader("{\"stringValue\":\"123\", \"int32Value\":456, \"boolValue\":true}")
+	body := strings.NewReader("{\"StringValue\":\"123\", \"int32Value\":456, \"boolvalue\":true}")
 	testPostWithContentType(t, "http://localhost:"+httpPort+"/testjson", "application/json", body,
 		"{\"message\":\"[thrift server]json= TestJsonRequest({StringValue:123 Int32Value:456 BoolValue:true})\"}")
 
-	body = strings.NewReader("{\"boolValue\":true}")
+	body = strings.NewReader("{\"BoolValue\":true}")
 	testPostWithContentType(t, "http://localhost:"+httpPort+"/testjson/123/456", "application/json", body,
 		"{\"message\":\"[thrift server]json= TestJsonRequest({StringValue:123 Int32Value:456 BoolValue:true})\"}")
 
