@@ -9,10 +9,10 @@ Features
 --------
 
 * Turbo generates a reverse-proxy server which translates a HTTP request into a grpc/Thrift request.
-* Support gRPC and :ref:`Thrift <thrift>`.
-* Support RESTFUL JSON API ("application/json").
-* :ref:`Interceptor <interceptor>`.
-* :ref:`PreProcessor <preprocessor>` and :ref:`PostProcessor <postprocessor>`: customizable URL-RPC mapping process.
-* :ref:`Hijacker <hijacker>`: Take over requests, do anything you want!
-* :ref:`MessageFieldConvertor <convertor>`: Tell Turbo how to set a struct field.
-* Modify and reload :ref:`configuration <config>` file at runtime! Without restarting service.
+* Support gRPC and `Thrift <thrift>`_.
+* Support `RESTFUL JSON API <json>`_ ("application/json").
+* `Interceptor <interceptor>`_.
+* `PreProcessor <preprocessor>`_ and `PostProcessor <postprocessor>`_: customizable URL-RPC mapping process.
+* `Hijacker <hijacker>`_: Take over requests, do anything you want!
+* `MessageFieldConvertor <convertor>`_: Tell Turbo how to set a struct field.
+* Modify and reload `configuration <config>`_ file at runtime! Without restarting service.

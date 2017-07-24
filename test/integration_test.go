@@ -331,7 +331,7 @@ func generate(t *testing.T, rpc string) {
 	}
 
 	cmd.RootCmd.SetArgs([]string{"generate", "github.com/vaporz/turbo/test/testcreateservice", "-r", rpc,
-		"-I", turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice"})
+								 "-I", turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice"})
 	err = cmd.Execute()
 	assert.Nil(t, err)
 
@@ -620,10 +620,11 @@ urlmapping:
 
 func overwriteServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
 	type serviceYamlValues struct {
-		HttpPort    string
-		ServiceName string
-		ServicePort string
-		Env         string
+		HttpPort        string
+		ServiceName     string
+		ServicePort     string
+		Env             string
+		ServiceRootPath string
 	}
 	writeFileWithTemplate(
 		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml",
@@ -631,6 +632,7 @@ func overwriteServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
   http_port: {{.HttpPort}}
   environment: {{.Env}}
   turbo_log_path:
+  service_root_path: {{.ServiceRootPath}}
   grpc_service_name: {{.ServiceName}}
   grpc_service_host: 127.0.0.1
   grpc_service_port: {{.ServicePort}}
@@ -663,10 +665,11 @@ convertor:
 errorhandler: errorHandler
 `,
 		serviceYamlValues{
-			HttpPort:    httpPort,
-			ServiceName: "TestService",
-			ServicePort: servicePort,
-			Env:         env,
+			HttpPort:        httpPort,
+			ServiceName:     "TestService",
+			ServicePort:     servicePort,
+			Env:             env,
+			ServiceRootPath: "github.com/vaporz/turbo/test/testservice",
 		},
 	)
 }
