@@ -371,6 +371,13 @@ func TestFilterComplexNestedStructWithTags(t *testing.T) {
 		"\"args\":{},\"test_id\":456},{\"Args\":null,\"StringValue\":\"\",\"int_array\":[44,55,66],"+
 		"\"test_id\":789}],\"int_array\":[11,22,33],\"test_id\":456},\"new_name\":[],\"s_value\":"+
 		"\"struct string\"}", string(bytes))
+	bytes, _ = m.FilterJsonWithStruct(bytes, *s)
+	assert.Equal(t, "{\"TestId\":0,\"c_n_v1\":null,\"c_n_v2\":null,\"complex_nested_value\":"+
+		"{\"StringValue\":\"\",\"child_value1\":{\"Args\":null,\"IntArray\":[],\"string_value\":"+
+		"\"a string\",\"test_id\":123},\"child_value_arr\":[{\"IntArray\":[],\"StringValue\":\"\","+
+		"\"args\":{},\"test_id\":456},{\"Args\":null,\"StringValue\":\"\",\"int_array\":[44,55,66],"+
+		"\"test_id\":789}],\"int_array\":[11,22,33],\"test_id\":456},\"new_name\":[],\"s_value\":"+
+		"\"struct string\"}", string(bytes))
 	/*
 		Before filter:
 		{

@@ -1,7 +1,6 @@
 package turbo
 
 import (
-	"fmt"
 	logger "github.com/sirupsen/logrus"
 	"io"
 	"os"
@@ -51,7 +50,6 @@ func (hook ContextHook) Fire(entry *logger.Entry) error {
 }
 
 func setupLoggerFile(c *Config) {
-	//set up log file.
 	logPath := c.configs[turboLogPath]
 	if len(strings.TrimSpace(logPath)) == 0 {
 		logPath = "log"
@@ -60,28 +58,22 @@ func setupLoggerFile(c *Config) {
 		logPath = c.ServiceRootPathAbsolute() + "/" + logPath
 	}
 	logPath = path.Clean(logPath)
-	if err := os.MkdirAll(logPath, 0755); err != nil {
-		panic(fmt.Sprintf("Failed to create log folder at %s, please check your service.yaml config.", logPath))
-	}
+	err := os.MkdirAll(logPath, 0755)
+	panicIf(err)
 	file, err := os.OpenFile(logPath+"/turbo.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to open log file at %s, please check your service.yaml config.", logPath+"/turbo.log"))
-	}
+	panicIf(err)
 	logger.SetOutput(file)
 }
 
 func initLogger(c *Config) {
 	if c.Env() == "production" {
-		//init log file path
 		setupLoggerFile(c)
 		// Log as JSON instead of the default ASCII formatter.
 		logger.SetFormatter(&logger.JSONFormatter{})
-		//set up log level, info level by default.
 		logger.SetLevel(logger.InfoLevel)
 	} else {
 		logger.SetFormatter(&logger.TextFormatter{})
 		logger.SetOutput(os.Stderr)
-		// set logger with debug level in development environment.
 		logger.SetLevel(logger.DebugLevel)
 		logger.AddHook(ContextHook{})
 	}

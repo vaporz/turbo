@@ -15,6 +15,12 @@ import (
 	"strings"
 )
 
+func logErrorIf(err error) {
+	if err != nil {
+		log.Error(err)
+	}
+}
+
 func logPanicIf(err error) {
 	if err != nil {
 		log.Panic(err)

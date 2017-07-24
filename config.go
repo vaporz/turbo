@@ -210,9 +210,7 @@ func (c *Config) HTTPPort() int64 {
 		panic("[http_port] is required!")
 	}
 	i, err := strconv.ParseInt(p, 10, 64)
-	if err != nil {
-		log.Error(err.Error())
-	}
+	logErrorIf(err)
 	return i
 }
 

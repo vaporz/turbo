@@ -157,9 +157,7 @@ func BuildStruct(s *Server, theType reflect.Type, theValue reflect.Value, req *h
 			continue
 		}
 		err := setValue(fieldValue, v)
-		if err != nil {
-			log.Error(err)
-		}
+		logErrorIf(err)
 	}
 	return nil
 }
@@ -346,9 +344,7 @@ func setPathParams(s *Server, theType reflect.Type, theValue reflect.Value, req 
 			continue
 		}
 		err := setValue(fieldValue, v)
-		if err != nil {
-			log.Error(err)
-		}
+		logErrorIf(err)
 	}
 	return nil
 }
