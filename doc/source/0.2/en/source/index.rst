@@ -5,8 +5,6 @@ Turbo
 
 A lightweight microservice framework.
 
-Golang version: >= 1.8.x
-
 Features
 --------
 
@@ -18,6 +16,3 @@ Features
 * :ref:`Hijacker <hijacker>`: Take over requests, do anything you want!
 * :ref:`MessageFieldConvertor <convertor>`: Tell Turbo how to set a struct field.
 * Modify and reload :ref:`configuration <config>` file at runtime! Without restarting service.
-
-
-

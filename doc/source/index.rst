@@ -15,5 +15,3 @@ English:
 	`v0.2 <0.2/en/index>`_
 
 	`v0.1 <0.1/en/index>`_
-
-
