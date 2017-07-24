@@ -15,14 +15,14 @@ import (
 	tcompoent "github.com/vaporz/turbo/test/testservice/thriftapi/component"
 	timpl "github.com/vaporz/turbo/test/testservice/thriftservice/impl"
 	"github.com/vaporz/turbo/turbo/cmd"
+	"io"
 	"net/http"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"text/template"
 	"time"
-	"io"
-	"strings"
 )
 
 func TestMain(m *testing.M) {
@@ -331,7 +331,7 @@ func generate(t *testing.T, rpc string) {
 	}
 
 	cmd.RootCmd.SetArgs([]string{"generate", "github.com/vaporz/turbo/test/testcreateservice", "-r", rpc,
-								 "-I", turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice"})
+		"-I", turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice"})
 	err = cmd.Execute()
 	assert.Nil(t, err)
 
@@ -630,7 +630,7 @@ func overwriteServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
 		`config:
   http_port: {{.HttpPort}}
   environment: {{.Env}}
-  turbo_log_path: log
+  turbo_log_path:
   grpc_service_name: {{.ServiceName}}
   grpc_service_host: 127.0.0.1
   grpc_service_port: {{.ServicePort}}

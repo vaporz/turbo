@@ -1,6 +1,7 @@
 package turbo
 
 import (
+	"fmt"
 	logger "github.com/sirupsen/logrus"
 	"io"
 	"os"
@@ -59,17 +60,14 @@ func setupLoggerFile(c *Config) {
 		logPath = c.ServiceRootPathAbsolute() + "/" + logPath
 	}
 	logPath = path.Clean(logPath)
-	if err := os.MkdirAll(logPath, 0755); err == nil {
-		logFile := path.Clean(logPath + "/turbo.log")
-		file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-		if err == nil {
-			logger.SetOutput(file)
-		} else {
-			panic("Failed to setup log path, please check your service.yaml config.")
-		}
-	} else {
-		panic("Failed to setup log path, please check your service.yaml config.")
+	if err := os.MkdirAll(logPath, 0755); err != nil {
+		panic(fmt.Sprintf("Failed to create log folder at %s, please check your service.yaml config.", logPath))
 	}
+	file, err := os.OpenFile(logPath+"/turbo.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to open log file at %s, please check your service.yaml config.", logPath+"/turbo.log"))
+	}
+	logger.SetOutput(file)
 }
 
 func initLogger(c *Config) {

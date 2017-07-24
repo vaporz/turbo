@@ -9,23 +9,21 @@ type grpcClient struct {
 	conn        *grpc.ClientConn
 }
 
-func (g *grpcClient) init(addr string, clientCreator func(conn *grpc.ClientConn) interface{}) error {
+func (g *grpcClient) init(addr string, clientCreator func(conn *grpc.ClientConn) interface{}) {
 	// ???? support multiple grpc clients
 	// ???? support grpcservice discovery
 	if g.grpcService != nil {
-		return nil
+		return
 	}
 	log.Info("[grpc]connecting addr:", addr)
-	err := g.dial(addr)
-	if err == nil {
-		g.grpcService = clientCreator(g.conn)
-	}
-	return err
+	g.dial(addr)
+	g.grpcService = clientCreator(g.conn)
 }
 
-func (g *grpcClient) dial(address string) (err error) {
+func (g *grpcClient) dial(address string) {
+	var err error
 	g.conn, err = grpc.Dial(address, grpc.WithInsecure())
-	return err
+	logPanicIf(err)
 }
 
 func (g *grpcClient) close() error {

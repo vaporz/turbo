@@ -59,19 +59,14 @@ func (s *GrpcServer) StartGrpcService(registerServer func(s *grpc.Server)) {
 func (s *GrpcServer) startGrpcHTTPServerInternal(clientCreator grpcClientCreator, sw switcher) *http.Server {
 	log.Info("Starting HTTP Server...")
 	s.switcherFunc = sw
-	err := s.gClient.init(s.Config.GrpcServiceHost()+":"+s.Config.GrpcServicePort(), clientCreator)
-	if err != nil {
-		log.Panic(err.Error())
-	}
+	s.gClient.init(s.Config.GrpcServiceHost()+":"+s.Config.GrpcServicePort(), clientCreator)
 	return s.startHTTPServer()
 }
 
 func (s *GrpcServer) startGrpcServiceInternal(registerServer func(s *grpc.Server), alone bool) *grpc.Server {
 	log.Info("Starting GRPC Service...")
 	lis, err := net.Listen("tcp", ":"+s.Config.GrpcServicePort())
-	if err != nil {
-		log.Panic("failed to listen: %v", err)
-	}
+	logPanicIf(err)
 	grpcServer := grpc.NewServer()
 	registerServer(grpcServer)
 	reflection.Register(grpcServer)

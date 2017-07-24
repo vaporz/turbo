@@ -10,32 +10,26 @@ type thriftClient struct {
 	factory       thrift.TProtocolFactory
 }
 
-func (t *thriftClient) init(addr string, clientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}) error {
+func (t *thriftClient) init(addr string, clientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}) {
 	if t.thriftService != nil {
-		return nil
+		return
 	}
 	log.Debugf("connecting thrift addr: %s", addr)
-	err := t.connect(addr)
-	if err == nil {
-		t.thriftService = clientCreator(t.transport, t.factory)
-	}
-	return err
+	t.connect(addr)
+	t.thriftService = clientCreator(t.transport, t.factory)
 }
 
-func (t *thriftClient) connect(hostPort string) (err error) {
+func (t *thriftClient) connect(hostPort string) {
 	tSocket, err := thrift.NewTSocket(hostPort)
-	if err != nil {
-		return err
-	}
+	logPanicIf(err)
+
 	t.transport, err = thrift.NewTTransportFactory().GetTransport(tSocket)
-	if err != nil {
-		return err
-	}
-	if err := t.transport.Open(); err != nil {
-		return err
-	}
+	logPanicIf(err)
+
+	err = t.transport.Open()
+	logPanicIf(err)
+
 	t.factory = thrift.NewTBinaryProtocolFactoryDefault()
-	return nil
 }
 
 func (t *thriftClient) close() error {

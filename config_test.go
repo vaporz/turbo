@@ -37,6 +37,8 @@ func TestConfig(t *testing.T) {
 	assert.Equal(t, false, c.FilterProtoJsonInt64AsNumber())
 	c.configs[filterProtoJson] = strconv.FormatBool(true)
 	assert.Equal(t, true, c.FilterProtoJsonInt64AsNumber())
+	c.configs[filterProtoJsonInt64AsNumber] = strconv.FormatBool(false)
+	assert.Equal(t, false, c.FilterProtoJsonInt64AsNumber())
 
 	c.configs[filterProtoJson] = strconv.FormatBool(false)
 	assert.Equal(t, false, c.FilterProtoJsonEmitZeroValues())
@@ -44,6 +46,8 @@ func TestConfig(t *testing.T) {
 	assert.Equal(t, false, c.FilterProtoJsonEmitZeroValues())
 	c.configs[filterProtoJson] = strconv.FormatBool(true)
 	assert.Equal(t, true, c.FilterProtoJsonEmitZeroValues())
+	c.configs[filterProtoJsonEmitZeroValues] = strconv.FormatBool(false)
+	assert.Equal(t, false, c.FilterProtoJsonEmitZeroValues())
 
 	assert.Equal(t, "GET,POST", c.mappings[urlServiceMaps][0][0])
 	assert.Equal(t, "/hello", c.mappings[urlServiceMaps][0][1])

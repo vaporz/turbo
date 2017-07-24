@@ -37,17 +37,13 @@ func (g *Generator) Generate() {
 
 func writeFileWithTemplate(filePath string, data interface{}, text string) {
 	f, err := os.Create(filePath)
-	if err != nil {
-		panic("fail to create file:" + filePath)
-	}
+	panicIf(err)
+
 	tmpl, err := template.New("").Parse(text)
-	if err != nil {
-		panic(err)
-	}
+	panicIf(err)
+
 	err = tmpl.Execute(f, data)
-	if err != nil {
-		panic(err)
-	}
+	panicIf(err)
 }
 
 // GenerateGrpcSwitcher generates "grpcswither.go"
@@ -161,9 +157,7 @@ func (g *Generator) runBuildThriftFields() {
 	c.Stdin = os.Stdin
 	c.Stderr = os.Stderr
 	c.Stdout = os.Stdout
-	if err := c.Run(); err != nil {
-		panic(err)
-	}
+	panicIf(c.Run())
 }
 
 var buildThriftParameters string = `package main
@@ -338,9 +332,7 @@ func (g *Generator) thriftParameters(methodName string) string {
 	c.Stdin = os.Stdin
 	c.Stderr = os.Stderr
 	c.Stdout = buf
-	if err := c.Run(); err != nil {
-		panic(err)
-	}
+	panicIf(c.Run())
 	return buf.String() + " "
 }
 
@@ -418,7 +410,5 @@ func executeCmd(cmd string, args ...string) {
 	c.Stdin = os.Stdin
 	c.Stderr = os.Stderr
 	c.Stdout = os.Stdout
-	if err := c.Run(); err != nil {
-		panic(err)
-	}
+	panicIf(c.Run())
 }

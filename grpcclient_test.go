@@ -8,10 +8,14 @@ import (
 )
 
 func TestGrpcInit(t *testing.T) {
+	defer func() {
+		if err := recover(); err != nil {
+			assert.Fail(t, "should not panic")
+		}
+	}()
 	s := &Server{gClient: new(grpcClient)}
 	s.gClient.grpcService = ""
-	err := s.gClient.init("", func(*grpc.ClientConn) interface{} { return nil })
-	assert.Nil(t, err)
+	s.gClient.init("", func(*grpc.ClientConn) interface{} { return nil })
 }
 
 func TestGrpcClose(t *testing.T) {

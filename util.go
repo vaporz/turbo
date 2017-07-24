@@ -15,6 +15,18 @@ import (
 	"strings"
 )
 
+func logPanicIf(err error) {
+	if err != nil {
+		log.Panic(err)
+	}
+}
+
+func panicIf(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
 var matchCamelCase = regexp.MustCompile("^([A-Z]+[a-z]*)+$")
 
 // IsCamelCase returns true if name is a CamelCase string
@@ -136,18 +148,14 @@ func (m *Marshaler) FilterJsonWithStruct(jsonBytes []byte, structObj interface{}
 		}
 	}()
 	json, err := sjson.NewJson(jsonBytes)
-	if err != nil {
-		panic(err)
-	}
+	panicIf(err)
 	if reflect.TypeOf(structObj).Kind() == reflect.Ptr {
 		m.filterStruct(json, reflect.TypeOf(structObj).Elem(), reflect.ValueOf(structObj).Elem())
 	} else {
 		m.filterStruct(json, reflect.TypeOf(structObj), reflect.ValueOf(structObj))
 	}
 	result, err := json.MarshalJSON()
-	if err != nil {
-		panic(err)
-	}
+	panicIf(err)
 	return result, nil
 }
 
@@ -183,9 +191,7 @@ func (m *Marshaler) filterOf(kind reflect.Kind) fieldFilterFunc {
 	}
 }
 
-func (m *Marshaler) emptyFilter(*sjson.Json, reflect.StructField, reflect.Value) {
-	// do nothing
-}
+func (m *Marshaler) emptyFilter(*sjson.Json, reflect.StructField, reflect.Value) {}
 
 func (m *Marshaler) boolFieldFilter(structJson *sjson.Json, field reflect.StructField, v reflect.Value) {
 	jsonFieldName, ok := m.jsonFieldName(structJson, field)
@@ -261,9 +267,7 @@ func (m *Marshaler) sliceFieldFilter(structJson *sjson.Json, field reflect.Struc
 	}
 	sliceJson := structJson.Get(jsonFieldName)
 	arr, err := sliceJson.Array()
-	if err != nil {
-		panic(err)
-	}
+	panicIf(err)
 	sliceInnerKind := field.Type.Elem().Kind()
 	l := v.Len()
 	arrLength := len(arr)

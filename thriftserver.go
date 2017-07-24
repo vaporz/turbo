@@ -59,10 +59,7 @@ func (s *ThriftServer) StartThriftService(registerTProcessor func() thrift.TProc
 func (s *ThriftServer) startThriftHTTPServerInternal(clientCreator thriftClientCreator, sw switcher) *http.Server {
 	log.Info("Starting HTTP Server...")
 	s.switcherFunc = sw
-	err := s.tClient.init(s.Config.ThriftServiceHost()+":"+s.Config.ThriftServicePort(), clientCreator)
-	if err != nil {
-		log.Panic(err.Error())
-	}
+	s.tClient.init(s.Config.ThriftServiceHost()+":"+s.Config.ThriftServicePort(), clientCreator)
 	return s.startHTTPServer()
 }
 
@@ -70,9 +67,7 @@ func (s *ThriftServer) startThriftServiceInternal(registerTProcessor func() thri
 	port := s.Config.ThriftServicePort()
 	log.Infof("Starting Thrift Service at :%s...", port)
 	transport, err := thrift.NewTServerSocket(":" + port)
-	if err != nil {
-		log.Panic("socket error")
-	}
+	logPanicIf(err)
 	server := thrift.NewTSimpleServer4(registerTProcessor(), transport,
 		thrift.NewTTransportFactory(), thrift.NewTBinaryProtocolFactoryDefault())
 	go server.Serve()

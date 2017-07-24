@@ -3,15 +3,15 @@ package turbo
 import (
 	"errors"
 	// TODO support logging levels, log file path, etc.
+	"bytes"
+	"encoding/json"
+	"github.com/golang/protobuf/jsonpb"
+	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/mux"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/proto"
-	"bytes"
-	"encoding/json"
 )
 
 type switcher func(s *Server, methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
@@ -166,41 +166,34 @@ func BuildStruct(s *Server, theType reflect.Type, theValue reflect.Value, req *h
 
 // setValue sets v to fieldValue according to fieldValue's Kind
 func setValue(fieldValue reflect.Value, v string) error {
+	var err error
 	switch k := fieldValue.Kind(); k {
 	case reflect.Int,
 		reflect.Int8,
 		reflect.Int16,
 		reflect.Int32,
 		reflect.Int64:
-		i, err := strconv.ParseInt(v, 10, 64)
-		if err != nil {
-			return errors.New("error int")
-		}
+		var i int64
+		i, err = strconv.ParseInt(v, 10, 64)
 		fieldValue.SetInt(i)
 	case reflect.String:
 		fieldValue.SetString(v)
 	case reflect.Bool:
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			return errors.New("error bool")
-		}
+		var b bool
+		b, err = strconv.ParseBool(v)
 		fieldValue.SetBool(b)
 	case reflect.Float32, reflect.Float64:
-		f, err := strconv.ParseFloat(v, 64)
-		if err != nil {
-			return errors.New("error float")
-		}
+		var f float64
+		f, err = strconv.ParseFloat(v, 64)
 		fieldValue.SetFloat(f)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		u, err := strconv.ParseUint(v, 10, 64)
-		if err != nil {
-			return errors.New("error uint")
-		}
+		var u uint64
+		u, err = strconv.ParseUint(v, 10, 64)
 		fieldValue.SetUint(u)
 	default:
 		return errors.New("not supported kind[" + k.String() + "]")
 	}
-	return nil
+	return err
 }
 
 // BuildArgs returns a list of reflect.Value for thrift request

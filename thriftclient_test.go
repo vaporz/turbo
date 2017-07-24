@@ -8,10 +8,14 @@ import (
 )
 
 func TestThriftInit(t *testing.T) {
+	defer func() {
+		if err := recover(); err != nil {
+			assert.Fail(t, "should not panic")
+		}
+	}()
 	s := &Server{tClient: new(thriftClient)}
 	s.tClient.thriftService = ""
-	err := s.tClient.init("", func(thrift.TTransport, thrift.TProtocolFactory) interface{} { return nil })
-	assert.Nil(t, err)
+	s.tClient.init("", func(thrift.TTransport, thrift.TProtocolFactory) interface{} { return nil })
 }
 
 func TestThriftClose(t *testing.T) {

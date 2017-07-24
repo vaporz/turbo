@@ -68,9 +68,7 @@ func (c *Config) ErrorHandler() string {
 func (c *Config) loadServiceConfig(p string) {
 	c.SetConfigFile(p)
 	err := c.ReadInConfig()
-	if err != nil {
-		panic(err)
-	}
+	panicIf(err)
 	c.File = p
 	c.loadUrlMap()
 	c.loadConfigs()
@@ -129,9 +127,7 @@ func (c *Config) loadFieldMapping() {
 	c.SetConfigName(c.RpcType + "fields")
 	c.AddConfigPath(c.ServiceRootPathAbsolute() + "/gen")
 	err := c.ReadInConfig()
-	if err != nil {
-		panic(err)
-	}
+	panicIf(err)
 	c.fieldMappings = make(map[string][]string)
 	mappings := c.GetStringSlice(c.RpcType + "-fieldmapping")
 	for _, m := range mappings {
