@@ -87,7 +87,7 @@ func mergeUpperCaseKeysToLowerCase(req *http.Request) {
 
 func mergeMuxVars(req *http.Request) {
 	muxVars := mux.Vars(req)
-	if muxVars == nil {
+	if muxVars == nil || len(muxVars) == 0 {
 		return
 	}
 	for k, v := range muxVars {

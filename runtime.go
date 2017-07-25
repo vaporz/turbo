@@ -131,10 +131,9 @@ func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Req
 }
 
 //BuildStruct finds values from request, and set them to struct fields recursively
-func BuildStruct(s *Server, theType reflect.Type, theValue reflect.Value, req *http.Request) error {
+func BuildStruct(s *Server, theType reflect.Type, theValue reflect.Value, req *http.Request) {
 	if theValue.Kind() == reflect.Invalid {
 		log.Info("value is invalid, please check grpc-fieldmapping")
-		return nil
 	}
 	fieldNum := theType.NumField()
 	for i := 0; i < fieldNum; i++ {
@@ -146,10 +145,7 @@ func BuildStruct(s *Server, theType reflect.Type, theValue reflect.Value, req *h
 				fieldValue.Set(convertor(req))
 				continue
 			}
-			err := BuildStruct(s, fieldValue.Type().Elem(), fieldValue.Elem(), req)
-			if err != nil {
-				return err
-			}
+			BuildStruct(s, fieldValue.Type().Elem(), fieldValue.Elem(), req)
 			continue
 		}
 		v, ok := findValue(fieldName, req)
@@ -159,7 +155,6 @@ func BuildStruct(s *Server, theType reflect.Type, theValue reflect.Value, req *h
 		err := setValue(fieldValue, v)
 		logErrorIf(err)
 	}
-	return nil
 }
 
 // setValue sets v to fieldValue according to fieldValue's Kind
@@ -300,7 +295,7 @@ func BuildRequest(s *Server, v proto.Message, req *http.Request) error {
 		}
 		setPathParams(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
 	} else {
-		err = BuildStruct(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
+		BuildStruct(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
 	}
 	return err
 }
