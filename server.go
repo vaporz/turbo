@@ -15,6 +15,9 @@ import (
 	"time"
 )
 
+// TODO Make Ctrl+C cancel the context.Context
+// https://medium.com/@matryer/make-ctrl-c-cancel-the-context-context-bd006a8ad6ff
+
 // Server holds the data for a server
 type Server struct {
 	// Config holds data read from config file
@@ -164,7 +167,7 @@ func (s *Server) quit(httpServer *http.Server, grpcServer *grpc.Server, thriftSe
 
 // Stop stops the server gracefully
 func (s *Server) Stop() {
-	s.exit <- syscall.SIGQUIT
+	close(s.exit)
 }
 
 // GrpcService returns a grpc client instance,

@@ -309,6 +309,7 @@ func BuildThriftRequest(s *Server, args interface{}, req *http.Request, buildStr
 		v := reflect.New(reflect.ValueOf(args).Field(0).Type().Elem()).Interface()
 		err := json.Unmarshal(buf.Bytes(), v)
 		// TODO should panic?
+		// TODO refactor error, define own errors?
 		if err != nil {
 			return params, err
 		}

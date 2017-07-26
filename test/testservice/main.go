@@ -9,6 +9,8 @@ import (
 	timpl "github.com/vaporz/turbo/test/testservice/thriftservice/impl"
 )
 
+// TODO go generate: turbo generate
+
 func main() {
 	//s := turbo.NewGrpcServer(turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testservice/service.yaml")
 	//gcomponent.RegisterComponents(s)
