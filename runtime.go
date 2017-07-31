@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"fmt"
 )
 
 type switcher func(s *Server, methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
@@ -83,7 +84,7 @@ func doPreprocessor(s *Server, resp http.ResponseWriter, req *http.Request) erro
 	if pre := s.Components.Preprocessor(req); pre != nil {
 		if err := pre(resp, req); err != nil {
 			log.Println(err.Error())
-			return err
+			return errors.New(fmt.Sprintf("turbo: encounter error in preprocessor for %s, error: %s", req.URL, err))
 		}
 	}
 	return nil
@@ -115,7 +116,8 @@ func doPostprocessor(s *Server, resp http.ResponseWriter, req *http.Request, ser
 		resp.Write(jsonBytes)
 	} else {
 		log.Println(err.Error())
-		resp.Write([]byte(err.Error()))
+		resp.Write([]byte(fmt.Sprintf("turbo: encounter error while converting response to json "+
+			"in doPostprocessor() for %s, error: %s", req.URL, err)))
 	}
 }
 
@@ -124,7 +126,7 @@ func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Req
 	for i := l - 1; i >= 0; i-- {
 		req, err = interceptors[i].After(resp, req)
 		if err != nil {
-			log.Errorln("error in After(): ", err.Error())
+			log.Errorln("turbo: error in After(): ", err.Error())
 		}
 	}
 	return nil
@@ -184,7 +186,7 @@ func setValue(fieldValue reflect.Value, v string) error {
 		u, err = strconv.ParseUint(v, 10, 64)
 		fieldValue.SetUint(u)
 	default:
-		return errors.New("not supported kind[" + k.String() + "]")
+		return errors.New("turbo: not supported kind[" + k.String() + "]")
 	}
 	return err
 }
@@ -206,7 +208,7 @@ func BuildArgs(s *Server, argsType reflect.Type, argsValue reflect.Value, req *h
 			structName := valueType.Elem().Name()
 			v, err := buildStructArg(s, structName, req)
 			if err != nil {
-				return nil, err
+				return nil, errors.New(fmt.Sprintf("turbo: failed to BuildArgs, error:%s", err))
 			}
 			params[i] = v
 			continue
@@ -254,7 +256,7 @@ func reflectValue(fieldValue reflect.Value, v string) (reflect.Value, error) {
 		}
 		return reflect.ValueOf(float64(f)), nil
 	default:
-		return reflect.ValueOf(0), errors.New("not supported kind[" + k.String() + "]")
+		return reflect.ValueOf(0), errors.New("turbo: not supported kind[" + k.String() + "]")
 	}
 }
 
@@ -291,7 +293,8 @@ func BuildRequest(s *Server, v proto.Message, req *http.Request) error {
 		unmarshaler := &jsonpb.Unmarshaler{AllowUnknownFields: true}
 		err = unmarshaler.Unmarshal(req.Body, v)
 		if err != nil {
-			return err
+			return errors.New(fmt.Sprintf("turbo: failed to BuildRequest for json api, "+
+				"request body: %s, error: %s", req.Body, err))
 		}
 		setPathParams(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
 	} else {
@@ -308,10 +311,10 @@ func BuildThriftRequest(s *Server, args interface{}, req *http.Request, buildStr
 		buf.ReadFrom(req.Body)
 		v := reflect.New(reflect.ValueOf(args).Field(0).Type().Elem()).Interface()
 		err := json.Unmarshal(buf.Bytes(), v)
-		// TODO should panic?
 		// TODO refactor error, define own errors?
 		if err != nil {
-			return params, err
+			return params, errors.New(fmt.Sprintf("turbo: failed to BuildThriftRequest for json api, "+
+				"request body: %s, error: %s", req.Body, err))
 		}
 		setPathParams(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
 		params = make([]reflect.Value, 1)
@@ -322,17 +325,14 @@ func BuildThriftRequest(s *Server, args interface{}, req *http.Request, buildStr
 	return params, err
 }
 
-func setPathParams(s *Server, theType reflect.Type, theValue reflect.Value, req *http.Request) error {
+func setPathParams(s *Server, theType reflect.Type, theValue reflect.Value, req *http.Request) {
 	fieldNum := theType.NumField()
 	pathParams := mux.Vars(req)
 	for i := 0; i < fieldNum; i++ {
 		fieldName := theType.Field(i).Name
 		fieldValue := theValue.FieldByName(fieldName)
 		if fieldValue.Kind() == reflect.Ptr && fieldValue.Type().Elem().Kind() == reflect.Struct {
-			err := setPathParams(s, fieldValue.Type().Elem(), fieldValue.Elem(), req)
-			if err != nil {
-				return err
-			}
+			setPathParams(s, fieldValue.Type().Elem(), fieldValue.Elem(), req)
 			continue
 		}
 		v, ok := findPathParamValue(fieldName, pathParams)
@@ -342,7 +342,6 @@ func setPathParams(s *Server, theType reflect.Type, theValue reflect.Value, req 
 		err := setValue(fieldValue, v)
 		logErrorIf(err)
 	}
-	return nil
 }
 
 func findPathParamValue(fieldName string, pathParams map[string]string) (string, bool) {

@@ -404,7 +404,7 @@ func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor))
 	s.Components.SetPreprocessor([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("errorPreProcessor").(turbo.Preprocessor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"intercepted:error_preprocessor:error in preprocessor\n")
+		"intercepted:error_preprocessor:turbo: encounter error in preprocessor for /hello/testtest, error: error in preprocessor\n")
 
 	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor))
