@@ -484,55 +484,55 @@ type BeforeErrorInterceptor struct {
 	turbo.BaseInterceptor
 }
 
-func (l *BeforeErrorInterceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+func (l *BeforeErrorInterceptor) Before(resp http.ResponseWriter, req *http.Request) error {
 	resp.Write([]byte("interceptor_error:"))
-	return req, errors.New("error!")
+	return errors.New("error!")
 }
 
 type AfterErrorInterceptor struct {
 	turbo.BaseInterceptor
 }
 
-func (l *AfterErrorInterceptor) After(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+func (l *AfterErrorInterceptor) After(resp http.ResponseWriter, req *http.Request) error {
 	fmt.Println("[After] Request URL:" + req.URL.Path)
 	resp.Write([]byte(":after_error:"))
-	return req, errors.New("error: after interceptor")
+	return errors.New("error: after interceptor")
 }
 
 type TestInterceptor struct {
 	turbo.BaseInterceptor
 }
 
-func (l *TestInterceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+func (l *TestInterceptor) Before(resp http.ResponseWriter, req *http.Request) error {
 	fmt.Println("TestInterceptor before")
 	resp.Write([]byte("intercepted:"))
-	return req, nil
+	return nil
 }
 
-func (l *TestInterceptor) After(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+func (l *TestInterceptor) After(resp http.ResponseWriter, req *http.Request) error {
 	fmt.Println("[After] Request URL:" + req.URL.Path)
-	return req, nil
+	return nil
 }
 
 type Test1Interceptor struct {
 	turbo.BaseInterceptor
 }
 
-func (l *Test1Interceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+func (l *Test1Interceptor) Before(resp http.ResponseWriter, req *http.Request) error {
 	resp.Write([]byte("test1_intercepted:"))
-	return req, nil
+	return nil
 }
 
-func (l *Test1Interceptor) After(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+func (l *Test1Interceptor) After(resp http.ResponseWriter, req *http.Request) error {
 	fmt.Println("[After] Request URL:" + req.URL.Path)
-	return req, nil
+	return nil
 }
 
 type ContextValueInterceptor struct {
 	turbo.BaseInterceptor
 }
 
-func (l *ContextValueInterceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
+func (l *ContextValueInterceptor) Before(resp http.ResponseWriter, req *http.Request) error {
 	ctx := req.Context()
 	fmt.Println("set context!!")
 	ctx = context.WithValue(ctx, "bool_value", "true")
@@ -540,7 +540,8 @@ func (l *ContextValueInterceptor) Before(resp http.ResponseWriter, req *http.Req
 	ctx = context.WithValue(ctx, "float64_value", "1.23")
 	ctx = context.WithValue(ctx, "uint64value", "456")
 	resp.Write([]byte("test1_intercepted:"))
-	return req.WithContext(ctx), nil
+	*req = *req.WithContext(ctx)
+	return nil
 }
 
 var preProcessor turbo.Preprocessor = func(resp http.ResponseWriter, req *http.Request) error {

@@ -52,7 +52,7 @@ func getInterceptors(s *Server, req *http.Request) []Interceptor {
 
 func doBefore(interceptors *[]Interceptor, resp http.ResponseWriter, req *http.Request) (request *http.Request, err error) {
 	for index, i := range *interceptors {
-		req, err = i.Before(resp, req)
+		err = i.Before(resp, req)
 		if err != nil {
 			log.Errorln("error in Before(): ", err.Error())
 			*interceptors = (*interceptors)[0:index]
@@ -124,7 +124,7 @@ func doPostprocessor(s *Server, resp http.ResponseWriter, req *http.Request, ser
 func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Request) (err error) {
 	l := len(interceptors)
 	for i := l - 1; i >= 0; i-- {
-		req, err = interceptors[i].After(resp, req)
+		err = interceptors[i].After(resp, req)
 		if err != nil {
 			log.Errorln("turbo: error in After(): ", err.Error())
 		}

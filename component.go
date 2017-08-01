@@ -34,21 +34,21 @@ const (
 
 // Interceptor intercepts requests, can run a func before and after a request
 type Interceptor interface {
-	Before(http.ResponseWriter, *http.Request) (*http.Request, error)
-	After(http.ResponseWriter, *http.Request) (*http.Request, error)
+	Before(http.ResponseWriter, *http.Request) error
+	After(http.ResponseWriter, *http.Request) error
 }
 
 // BaseInterceptor implements an empty Before() and After()
 type BaseInterceptor struct{}
 
 // Before will run before a request performs
-func (i *BaseInterceptor) Before(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
-	return req, nil
+func (i *BaseInterceptor) Before(resp http.ResponseWriter, req *http.Request) error {
+	return nil
 }
 
 // After will run after a request performs
-func (i *BaseInterceptor) After(resp http.ResponseWriter, req *http.Request) (*http.Request, error) {
-	return req, nil
+func (i *BaseInterceptor) After(resp http.ResponseWriter, req *http.Request) error {
+	return nil
 }
 
 type Interceptors []Interceptor
