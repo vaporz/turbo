@@ -39,16 +39,14 @@ func GOPATH() string {
 	return paths[0]
 }
 
+// RpcType should be "grpc" or "thrift"
+var RpcType string
+
 // Config holds the info in a config file
 type Config struct {
 	viper.Viper
-	// RpcType should be "grpc" or "thrift"
-	RpcType string
-	// GOPATH is the GOPATH used by Turbo
-	GOPATH string
 	// File is the config file path
-	File string
-
+	File          string
 	configs       map[string]string
 	fieldMappings map[string][]string
 	mappings      map[string][][3]string
@@ -56,8 +54,12 @@ type Config struct {
 
 // NewConfig loads the config file at 'configFilePath', and returns a Config struct ptr
 func NewConfig(rpcType, configFilePath string) *Config {
-	c := &Config{Viper: *viper.New(), RpcType: rpcType, GOPATH: GOPATH(), mappings: make(map[string][][3]string)}
-	c.loadServiceConfig(configFilePath)
+	RpcType = rpcType
+	c := &Config{
+		Viper:    *viper.New(),
+		File:     configFilePath,
+		mappings: make(map[string][][3]string)}
+	c.loadServiceConfig()
 	return c
 }
 
@@ -65,11 +67,10 @@ func (c *Config) ErrorHandler() string {
 	return c.GetString("errorhandler")
 }
 
-func (c *Config) loadServiceConfig(p string) {
-	c.SetConfigFile(p)
+func (c *Config) loadServiceConfig() {
+	c.SetConfigFile(c.File)
 	err := c.ReadInConfig()
 	panicIf(err)
-	c.File = p
 	c.loadUrlMap()
 	c.loadConfigs()
 	c.loadComponents()
@@ -124,12 +125,12 @@ var matchKey = regexp.MustCompile("^(.*)\\[")
 var matchSlice = regexp.MustCompile("\\[(.+)\\]")
 
 func (c *Config) loadFieldMapping() {
-	c.SetConfigName(c.RpcType + "fields")
+	c.SetConfigName(RpcType + "fields")
 	c.AddConfigPath(c.ServiceRootPathAbsolute() + "/gen")
 	err := c.ReadInConfig()
 	panicIf(err)
 	c.fieldMappings = make(map[string][]string)
-	mappings := c.GetStringSlice(c.RpcType + "-fieldmapping")
+	mappings := c.GetStringSlice(RpcType + "-fieldmapping")
 	for _, m := range mappings {
 		keyStr := matchKey.FindStringSubmatch(m)
 		key := m
@@ -176,7 +177,7 @@ func (c *Config) ServiceRootPathAbsolute() string {
 	if path.IsAbs(p) {
 		return p
 	} else {
-		return c.GOPATH + "/src/" + p
+		return GOPATH() + "/src/" + p
 	}
 }
 

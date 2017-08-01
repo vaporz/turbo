@@ -55,7 +55,7 @@ func (s *Server) Component(name string) interface{} {
 func (s *Server) watchConfig() {
 	s.Config.WatchConfig()
 	s.Config.OnConfigChange(func(e fsnotify.Event) {
-		s.Config.loadServiceConfig(s.Config.File)
+		s.Config.loadServiceConfig()
 		s.reloadConfig <- true
 	})
 }

@@ -5,6 +5,7 @@ import (
 	// TODO support logging levels, log file path, etc.
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/mux"
@@ -12,7 +13,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"fmt"
 )
 
 type switcher func(s *Server, methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
