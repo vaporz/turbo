@@ -55,7 +55,7 @@ func TestGrpcService(t *testing.T) {
 	s := turbo.NewGrpcServer("testservice/service.yaml")
 	s.Initializer = &testInitializer{}
 	go s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
-	time.Sleep(time.Millisecond * 500)
+	time.Sleep(time.Millisecond * 1000)
 
 	runCommonTests(t, s.Server, httpPort, "grpc")
 
@@ -464,26 +464,26 @@ func testGet(t *testing.T, url, expected string) {
 type testInitializer struct {
 }
 
-func (t *testInitializer) InitService(s *turbo.Server) error {
-	s.RegisterComponent("BaseInterceptor", &turbo.BaseInterceptor{})
-	s.RegisterComponent("BeforeErrorInterceptor", &BeforeErrorInterceptor{})
-	s.RegisterComponent("AfterErrorInterceptor", &AfterErrorInterceptor{})
-	s.RegisterComponent("TestInterceptor", &TestInterceptor{})
-	s.RegisterComponent("Test1Interceptor", &Test1Interceptor{})
-	s.RegisterComponent("ContextValueInterceptor", &ContextValueInterceptor{})
-	s.RegisterComponent("MetadataInterceptor", &MetadataInterceptor{})
-	s.RegisterComponent("preProcessor", preProcessor)
-	s.RegisterComponent("errorPreProcessor", errorPreProcessor)
-	s.RegisterComponent("postProcessor", postProcessor)
-	s.RegisterComponent("thriftPostProcessor", thriftPostProcessor)
-	s.RegisterComponent("hijacker", hijacker)
-	s.RegisterComponent("errorHandler", errorHandler)
-	s.RegisterComponent("convertProtoCommonValues", convertProtoCommonValues)
-	s.RegisterComponent("convertThriftCommonValues", convertThriftCommonValues)
+func (t *testInitializer) InitService(s turbo.Servable) error {
+	s.ServerField().RegisterComponent("BaseInterceptor", &turbo.BaseInterceptor{})
+	s.ServerField().RegisterComponent("BeforeErrorInterceptor", &BeforeErrorInterceptor{})
+	s.ServerField().RegisterComponent("AfterErrorInterceptor", &AfterErrorInterceptor{})
+	s.ServerField().RegisterComponent("TestInterceptor", &TestInterceptor{})
+	s.ServerField().RegisterComponent("Test1Interceptor", &Test1Interceptor{})
+	s.ServerField().RegisterComponent("ContextValueInterceptor", &ContextValueInterceptor{})
+	s.ServerField().RegisterComponent("MetadataInterceptor", &MetadataInterceptor{})
+	s.ServerField().RegisterComponent("preProcessor", preProcessor)
+	s.ServerField().RegisterComponent("errorPreProcessor", errorPreProcessor)
+	s.ServerField().RegisterComponent("postProcessor", postProcessor)
+	s.ServerField().RegisterComponent("thriftPostProcessor", thriftPostProcessor)
+	s.ServerField().RegisterComponent("hijacker", hijacker)
+	s.ServerField().RegisterComponent("errorHandler", errorHandler)
+	s.ServerField().RegisterComponent("convertProtoCommonValues", convertProtoCommonValues)
+	s.ServerField().RegisterComponent("convertThriftCommonValues", convertThriftCommonValues)
 	return nil
 }
 
-func (t *testInitializer) StopService(s *turbo.Server) {
+func (t *testInitializer) StopService(s turbo.Servable) {
 }
 
 type BeforeErrorInterceptor struct {

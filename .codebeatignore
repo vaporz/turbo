@@ -1,3 +1,4 @@
 test/**
 doc/**
+creator.go
 generator.go

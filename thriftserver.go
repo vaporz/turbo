@@ -8,6 +8,7 @@ import (
 
 type ThriftServer struct {
 	*Server
+	tClient *thriftClient
 }
 
 func NewThriftServer(configFilePath string) *ThriftServer {
@@ -16,9 +17,9 @@ func NewThriftServer(configFilePath string) *ThriftServer {
 			Config:       NewConfig("thrift", configFilePath),
 			Components:   new(Components),
 			reloadConfig: make(chan bool),
-			tClient:      new(thriftClient),
 			Initializer:  &defaultInitializer{},
 		},
+		tClient: new(thriftClient),
 	}
 	s.initChans()
 	s.watchConfig()
@@ -32,35 +33,35 @@ type thriftClientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory
 func (s *ThriftServer) StartTHRIFT(clientCreator thriftClientCreator, sw switcher,
 	registerTProcessor func() thrift.TProcessor) {
 	log.Info("Starting Turbo...")
-	s.Initializer.InitService(s.Server)
+	s.Initializer.InitService(s)
 	thriftServer := s.startThriftServiceInternal(registerTProcessor, false)
 	time.Sleep(time.Second * 1)
 	httpServer := s.startThriftHTTPServerInternal(clientCreator, sw)
-	s.waitForQuit(httpServer, nil, thriftServer)
+	waitForQuit(s, httpServer, nil, thriftServer)
 	log.Info("Turbo exit, bye!")
 }
 
 // StartThriftHTTPServer starts a HTTP server which sends requests via Thrift
 func (s *ThriftServer) StartThriftHTTPServer(clientCreator thriftClientCreator, sw switcher) {
-	s.Initializer.InitService(s.Server)
+	s.Initializer.InitService(s)
 	httpServer := s.startThriftHTTPServerInternal(clientCreator, sw)
-	s.waitForQuit(httpServer, nil, nil)
+	waitForQuit(s, httpServer, nil, nil)
 	log.Info("Thrift HttpServer exit, bye!")
 }
 
 // StartThriftService starts a Thrift service
 func (s *ThriftServer) StartThriftService(registerTProcessor func() thrift.TProcessor) {
-	s.Initializer.InitService(s.Server)
+	s.Initializer.InitService(s)
 	thriftServer := s.startThriftServiceInternal(registerTProcessor, true)
-	s.waitForQuit(nil, nil, thriftServer)
+	waitForQuit(s, nil, nil, thriftServer)
 	log.Info("Thrift Service exit, bye!")
 }
 
 func (s *ThriftServer) startThriftHTTPServerInternal(clientCreator thriftClientCreator, sw switcher) *http.Server {
 	log.Info("Starting HTTP Server...")
-	s.switcherFunc = sw
+	switcherFunc = sw
 	s.tClient.init(s.Config.ThriftServiceHost()+":"+s.Config.ThriftServicePort(), clientCreator)
-	return s.startHTTPServer()
+	return startHTTPServer(s)
 }
 
 func (s *ThriftServer) startThriftServiceInternal(registerTProcessor func() thrift.TProcessor, alone bool) *thrift.TSimpleServer {
@@ -74,3 +75,14 @@ func (s *ThriftServer) startThriftServiceInternal(registerTProcessor func() thri
 	log.Info("Thrift Service started")
 	return server
 }
+
+// ThriftService returns a Thrift client instance,
+// example: client := turbo.ThriftService().(proto.YourServiceClient)
+func (s *ThriftServer) Service() interface{} {
+	if s == nil || s.tClient == nil || s.tClient.thriftService == nil {
+		log.Panic("thrift connection not initiated!")
+	}
+	return s.tClient.thriftService
+}
+
+func (s *ThriftServer) ServerField() *Server { return s.Server }

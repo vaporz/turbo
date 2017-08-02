@@ -368,14 +368,14 @@ type ServiceInitializer struct {
 }
 
 // InitService is run before the service is started, do initializing staffs for your service here
-func (i *ServiceInitializer) InitService(s *turbo.Server) error {
+func (i *ServiceInitializer) InitService(s turbo.Servable) error {
 	// TODO
 	return nil
 }
 
 // StopService is run after both grpc server and http server are stopped,
 // do your cleaning up work here.
-func (i *ServiceInitializer) StopService(s *turbo.Server) {
+func (i *ServiceInitializer) StopService(s turbo.Servable) {
 	// TODO
 }
 `,
@@ -413,14 +413,14 @@ type ServiceInitializer struct {
 }
 
 // InitService is run before the service is started, do initializing staffs for your service here
-func (i *ServiceInitializer) InitService(s *turbo.Server) error {
+func (i *ServiceInitializer) InitService(s turbo.Servable) error {
 	// TODO
 	return nil
 }
 
 // StopService is run after both grpc server and http server are stopped,
 // do your cleaning up work here.
-func (i *ServiceInitializer) StopService(s *turbo.Server) {
+func (i *ServiceInitializer) StopService(s turbo.Servable) {
 	// TODO
 }
 `,

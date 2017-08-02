@@ -13,13 +13,13 @@ func TestGrpcInit(t *testing.T) {
 			assert.Fail(t, "should not panic")
 		}
 	}()
-	s := &Server{gClient: new(grpcClient)}
+	s := &GrpcServer{gClient: new(grpcClient)}
 	s.gClient.grpcService = ""
 	s.gClient.init("", func(*grpc.ClientConn) interface{} { return nil })
 }
 
 func TestGrpcClose(t *testing.T) {
-	s := &Server{gClient: new(grpcClient)}
+	s := &GrpcServer{gClient: new(grpcClient)}
 	err := s.gClient.close()
 	assert.Nil(t, err)
 }
@@ -32,6 +32,6 @@ func TestGrpcService(t *testing.T) {
 			t.Errorf("The code did not panic")
 		}
 	}()
-	s := &Server{gClient: new(grpcClient)}
-	s.GrpcService()
+	s := &GrpcServer{gClient: new(grpcClient)}
+	s.Service()
 }

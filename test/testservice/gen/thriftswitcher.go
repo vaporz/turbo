@@ -12,7 +12,7 @@ import (
 this is a generated file, DO NOT EDIT!
  */
 // ThriftSwitcher is a runtime func with which a server starts.
-var ThriftSwitcher = func(s *turbo.Server, methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
+var ThriftSwitcher = func(s turbo.Servable, methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
 	switch methodName {
 
 	case "SayHello":
@@ -20,7 +20,7 @@ var ThriftSwitcher = func(s *turbo.Server, methodName string, resp http.Response
 		if err != nil {
 			return nil, err
 		}
-		return s.ThriftService().(*gen.TestServiceClient).SayHello(
+		return s.Service().(*gen.TestServiceClient).SayHello(
 			params[0].Interface().(*gen.CommonValues),
 			params[1].Interface().(string),
 			params[2].Interface().(int64),
@@ -35,7 +35,7 @@ var ThriftSwitcher = func(s *turbo.Server, methodName string, resp http.Response
 		if err != nil {
 			return nil, err
 		}
-		return s.ThriftService().(*gen.TestServiceClient).TestJson(
+		return s.Service().(*gen.TestServiceClient).TestJson(
 			params[0].Interface().(*gen.TestJsonRequest), )
 
 	default:
@@ -43,7 +43,7 @@ var ThriftSwitcher = func(s *turbo.Server, methodName string, resp http.Response
 	}
 }
 
-func buildStructArg(s *turbo.Server, typeName string, req *http.Request) (v reflect.Value, err error) {
+func buildStructArg(s turbo.Servable, typeName string, req *http.Request) (v reflect.Value, err error) {
 	switch typeName {
 
 	case "CommonValues":

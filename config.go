@@ -9,27 +9,27 @@ import (
 	"strings"
 )
 
-const grpcServiceName string = "grpc_service_name"
-const grpcServiceHost string = "grpc_service_host"
-const grpcServicePort string = "grpc_service_port"
-const thriftServiceName string = "thrift_service_name"
-const thriftServiceHost string = "thrift_service_host"
-const thriftServicePort string = "thrift_service_port"
-const httpPort string = "http_port"
-const filterProtoJson string = "filter_proto_json"
-const filterProtoJsonEmitZeroValues string = "filter_proto_json_emit_zerovalues"
-const filterProtoJsonInt64AsNumber string = "filter_proto_json_int64_as_number"
-const turboLogPath string = "turbo_log_path"
-const environment string = "environment"
-const serviceRootPath string = "service_root_path"
+const (
+	grpcServiceName               = "grpc_service_name"
+	grpcServiceHost               = "grpc_service_host"
+	grpcServicePort               = "grpc_service_port"
+	thriftServiceName             = "thrift_service_name"
+	thriftServiceHost             = "thrift_service_host"
+	thriftServicePort             = "thrift_service_port"
+	httpPort                      = "http_port"
+	filterProtoJson               = "filter_proto_json"
+	filterProtoJsonEmitZeroValues = "filter_proto_json_emit_zerovalues"
+	filterProtoJsonInt64AsNumber  = "filter_proto_json_int64_as_number"
+	turboLogPath                  = "turbo_log_path"
+	environment                   = "environment"
+	serviceRootPath               = "service_root_path"
 
-var (
-	urlServiceMaps string = "urlServiceMaps"
-	interceptors   string = "interceptors"
-	preprocessors  string = "preprocessors"
-	postprocessors string = "postprocessors"
-	hijackers      string = "hijackers"
-	convertors     string = "convertors"
+	urlServiceMaps = "urlServiceMaps"
+	interceptors   = "interceptors"
+	preprocessors  = "preprocessors"
+	postprocessors = "postprocessors"
+	hijackers      = "hijackers"
+	convertors     = "convertors"
 )
 
 // GOPATH inits the GOPATH turbo used.

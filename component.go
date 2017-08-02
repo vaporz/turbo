@@ -9,10 +9,11 @@ import (
 
 // Components holds all component mappings
 type Components struct {
-	commonInterceptors Interceptors
-	routers            map[int]*mux.Router
-	convertorMap       map[string]Convertor
-	errorHandler       ErrorHandlerFunc
+	commonInterceptors   Interceptors
+	routers              map[int]*mux.Router
+	convertorMap         map[string]Convertor
+	errorHandler         ErrorHandlerFunc
+	registeredComponents map[string]interface{}
 }
 
 // Reset resets all component mappings

@@ -13,13 +13,13 @@ func TestThriftInit(t *testing.T) {
 			assert.Fail(t, "should not panic")
 		}
 	}()
-	s := &Server{tClient: new(thriftClient)}
+	s := &ThriftServer{tClient: new(thriftClient)}
 	s.tClient.thriftService = ""
 	s.tClient.init("", func(thrift.TTransport, thrift.TProtocolFactory) interface{} { return nil })
 }
 
 func TestThriftClose(t *testing.T) {
-	s := &Server{tClient: new(thriftClient)}
+	s := &ThriftServer{tClient: new(thriftClient)}
 	err := s.tClient.close()
 	assert.Nil(t, err)
 }
@@ -32,6 +32,6 @@ func TestThriftService(t *testing.T) {
 			t.Errorf("The code did not panic")
 		}
 	}()
-	s := &Server{tClient: new(thriftClient)}
-	s.ThriftService()
+	s := &ThriftServer{tClient: new(thriftClient)}
+	s.Service()
 }

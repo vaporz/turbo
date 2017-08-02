@@ -17,10 +17,10 @@ type ServiceInitializer struct {
 }
 
 // InitService from defaultInitializer does nothing
-func (i *ServiceInitializer) InitService(s *turbo.Server) error {
+func (i *ServiceInitializer) InitService(s turbo.Servable) error {
 	return nil
 }
 
 // StopService from defaultInitializer does nothing
-func (i *ServiceInitializer) StopService(s *turbo.Server) {
+func (i *ServiceInitializer) StopService(s turbo.Servable) {
 }

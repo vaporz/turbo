@@ -19,11 +19,13 @@ import (
 	"strings"
 )
 
-type switcher func(s *Server, methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
+type switcher func(s Servable, methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
 
-func router(s *Server) *mux.Router {
+var switcherFunc switcher
+
+func router(s Servable) *mux.Router {
 	r := mux.NewRouter()
-	for _, v := range s.Config.mappings[urlServiceMaps] {
+	for _, v := range s.ServerField().Config.mappings[urlServiceMaps] {
 		httpMethods := strings.Split(v[0], ",")
 		path := v[1]
 		methodName := v[2]
@@ -32,7 +34,7 @@ func router(s *Server) *mux.Router {
 	return r
 }
 
-func handler(s *Server, methodName string) func(http.ResponseWriter, *http.Request) {
+func handler(s Servable, methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		parseRequestForm(req)
 		interceptors := getInterceptors(s, req)
@@ -40,16 +42,16 @@ func handler(s *Server, methodName string) func(http.ResponseWriter, *http.Reque
 		if err == nil {
 			doRequest(s, methodName, resp, req)
 		} else {
-			s.Components.errorHandlerFunc()(resp, req, err)
+			s.ServerField().Components.errorHandlerFunc()(resp, req, err)
 		}
 		doAfter(interceptors, resp, req)
 	}
 }
 
-func getInterceptors(s *Server, req *http.Request) []Interceptor {
-	interceptors := s.Components.Interceptors(req)
+func getInterceptors(s Servable, req *http.Request) []Interceptor {
+	interceptors := s.ServerField().Components.Interceptors(req)
 	if len(interceptors) == 0 {
-		interceptors = s.Components.CommonInterceptors()
+		interceptors = s.ServerField().Components.CommonInterceptors()
 	}
 	return interceptors
 }
@@ -66,19 +68,19 @@ func doBefore(interceptors *[]Interceptor, resp http.ResponseWriter, req *http.R
 	return req, nil
 }
 
-func doRequest(s *Server, methodName string, resp http.ResponseWriter, req *http.Request) {
-	if hijack := s.Components.Hijacker(req); hijack != nil {
+func doRequest(s Servable, methodName string, resp http.ResponseWriter, req *http.Request) {
+	if hijack := s.ServerField().Components.Hijacker(req); hijack != nil {
 		hijack(resp, req)
 		return
 	}
 	err := doPreprocessor(s, resp, req)
 	if err != nil {
-		s.Components.errorHandlerFunc()(resp, req, err)
+		s.ServerField().Components.errorHandlerFunc()(resp, req, err)
 		return
 	}
-	serviceResp, err := s.switcherFunc(s, methodName, resp, req)
+	serviceResp, err := switcherFunc(s, methodName, resp, req)
 	if err != nil {
-		s.Components.errorHandlerFunc()(resp, req, err)
+		s.ServerField().Components.errorHandlerFunc()(resp, req, err)
 		return
 	}
 	doPostprocessor(s, resp, req, serviceResp, err)
@@ -94,10 +96,11 @@ var CallOptions = func(methodName string, req *http.Request) ([]grpc.CallOption,
 	header := new(metadata.MD)
 	trailer := new(metadata.MD)
 	peer := &peer.Peer{}
-	callOptions := make([]grpc.CallOption, 0)
-	callOptions = append(callOptions, grpc.Header(header))
-	callOptions = append(callOptions, grpc.Trailer(trailer))
-	callOptions = append(callOptions, grpc.Peer(peer))
+	callOptions := []grpc.CallOption{
+		grpc.Header(header),
+		grpc.Trailer(trailer),
+		grpc.Peer(peer),
+	}
 	return callOptions, header, trailer, peer
 }
 
@@ -124,8 +127,8 @@ func GrpcMetadataPeer(ctx context.Context) *peer.Peer {
 	return ctx.Value(peerKey{}).(*peer.Peer)
 }
 
-func doPreprocessor(s *Server, resp http.ResponseWriter, req *http.Request) error {
-	if pre := s.Components.Preprocessor(req); pre != nil {
+func doPreprocessor(s Servable, resp http.ResponseWriter, req *http.Request) error {
+	if pre := s.ServerField().Components.Preprocessor(req); pre != nil {
 		if err := pre(resp, req); err != nil {
 			log.Println(err.Error())
 			return errors.New(fmt.Sprintf("turbo: encounter error in preprocessor for %s, error: %s", req.URL, err))
@@ -134,9 +137,9 @@ func doPreprocessor(s *Server, resp http.ResponseWriter, req *http.Request) erro
 	return nil
 }
 
-func doPostprocessor(s *Server, resp http.ResponseWriter, req *http.Request, serviceResponse interface{}, err error) {
+func doPostprocessor(s Servable, resp http.ResponseWriter, req *http.Request, serviceResponse interface{}, err error) {
 	// 1, run Postprocessor, if any
-	post := s.Components.Postprocessor(req)
+	post := s.ServerField().Components.Postprocessor(req)
 	if post != nil {
 		post(resp, req, serviceResponse, err)
 		return
@@ -151,9 +154,9 @@ func doPostprocessor(s *Server, resp http.ResponseWriter, req *http.Request, ser
 
 	//3, return as json
 	m := Marshaler{
-		FilterProtoJson: s.Config.FilterProtoJson(),
-		EmitZeroValues:  s.Config.FilterProtoJsonEmitZeroValues(),
-		Int64AsNumber:   s.Config.FilterProtoJsonInt64AsNumber(),
+		FilterProtoJson: s.ServerField().Config.FilterProtoJson(),
+		EmitZeroValues:  s.ServerField().Config.FilterProtoJsonEmitZeroValues(),
+		Int64AsNumber:   s.ServerField().Config.FilterProtoJsonInt64AsNumber(),
 	}
 	jsonBytes, err := m.JSON(serviceResponse)
 	if err == nil {
@@ -177,7 +180,7 @@ func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Req
 }
 
 //BuildStruct finds values from request, and set them to struct fields recursively
-func BuildStruct(s *Server, theType reflect.Type, theValue reflect.Value, req *http.Request) {
+func BuildStruct(s Servable, theType reflect.Type, theValue reflect.Value, req *http.Request) {
 	if theValue.Kind() == reflect.Invalid {
 		log.Info("value is invalid, please check grpc-fieldmapping")
 	}
@@ -186,7 +189,7 @@ func BuildStruct(s *Server, theType reflect.Type, theValue reflect.Value, req *h
 		fieldName := theType.Field(i).Name
 		fieldValue := theValue.FieldByName(fieldName)
 		if fieldValue.Kind() == reflect.Ptr && fieldValue.Type().Elem().Kind() == reflect.Struct {
-			convertor := s.Components.MessageFieldConvertor(fieldValue.Type().Elem().Name())
+			convertor := s.ServerField().Components.MessageFieldConvertor(fieldValue.Type().Elem().Name())
 			if convertor != nil {
 				fieldValue.Set(convertor(req))
 				continue
@@ -236,7 +239,7 @@ func setValue(fieldValue reflect.Value, v string) error {
 }
 
 // BuildArgs returns a list of reflect.Value for thrift request
-func BuildArgs(s *Server, argsType reflect.Type, argsValue reflect.Value, req *http.Request, buildStructArg func(s *Server, typeName string, req *http.Request) (v reflect.Value, err error)) ([]reflect.Value, error) {
+func BuildArgs(s Servable, argsType reflect.Type, argsValue reflect.Value, req *http.Request, buildStructArg func(s Servable, typeName string, req *http.Request) (v reflect.Value, err error)) ([]reflect.Value, error) {
 	fieldNum := argsType.NumField()
 	params := make([]reflect.Value, fieldNum)
 	for i := 0; i < fieldNum; i++ {
@@ -244,7 +247,7 @@ func BuildArgs(s *Server, argsType reflect.Type, argsValue reflect.Value, req *h
 		fieldName := field.Name
 		valueType := argsValue.FieldByName(fieldName).Type()
 		if field.Type.Kind() == reflect.Ptr && valueType.Elem().Kind() == reflect.Struct {
-			convertor := s.Components.MessageFieldConvertor(valueType.Elem().Name())
+			convertor := s.ServerField().Components.MessageFieldConvertor(valueType.Elem().Name())
 			if convertor != nil {
 				params[i] = convertor(req)
 				continue
@@ -331,7 +334,7 @@ func findValue(fieldName string, req *http.Request) (string, bool) {
 	return "", false
 }
 
-func BuildRequest(s *Server, v proto.Message, req *http.Request) error {
+func BuildRequest(s Servable, v proto.Message, req *http.Request) error {
 	var err error
 	if contentTypes, ok := req.Header["Content-Type"]; ok && contentTypes[0] == "application/json" {
 		unmarshaler := &jsonpb.Unmarshaler{AllowUnknownFields: true}
@@ -340,14 +343,14 @@ func BuildRequest(s *Server, v proto.Message, req *http.Request) error {
 			return errors.New(fmt.Sprintf("turbo: failed to BuildRequest for json api, "+
 				"request body: %s, error: %s", req.Body, err))
 		}
-		setPathParams(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
+		setPathParams(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
 	} else {
 		BuildStruct(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
 	}
 	return err
 }
 
-func BuildThriftRequest(s *Server, args interface{}, req *http.Request, buildStructArg func(s *Server, typeName string, req *http.Request) (v reflect.Value, err error)) ([]reflect.Value, error) {
+func BuildThriftRequest(s Servable, args interface{}, req *http.Request, buildStructArg func(s Servable, typeName string, req *http.Request) (v reflect.Value, err error)) ([]reflect.Value, error) {
 	var err error
 	var params []reflect.Value
 	if contentTypes, ok := req.Header["Content-Type"]; ok && contentTypes[0] == "application/json" {
@@ -360,7 +363,7 @@ func BuildThriftRequest(s *Server, args interface{}, req *http.Request, buildStr
 			return params, errors.New(fmt.Sprintf("turbo: failed to BuildThriftRequest for json api, "+
 				"request body: %s, error: %s", req.Body, err))
 		}
-		setPathParams(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
+		setPathParams(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
 		params = make([]reflect.Value, 1)
 		params[0] = reflect.ValueOf(v)
 	} else {
@@ -369,14 +372,14 @@ func BuildThriftRequest(s *Server, args interface{}, req *http.Request, buildStr
 	return params, err
 }
 
-func setPathParams(s *Server, theType reflect.Type, theValue reflect.Value, req *http.Request) {
+func setPathParams(theType reflect.Type, theValue reflect.Value, req *http.Request) {
 	fieldNum := theType.NumField()
 	pathParams := mux.Vars(req)
 	for i := 0; i < fieldNum; i++ {
 		fieldName := theType.Field(i).Name
 		fieldValue := theValue.FieldByName(fieldName)
 		if fieldValue.Kind() == reflect.Ptr && fieldValue.Type().Elem().Kind() == reflect.Struct {
-			setPathParams(s, fieldValue.Type().Elem(), fieldValue.Elem(), req)
+			setPathParams(fieldValue.Type().Elem(), fieldValue.Elem(), req)
 			continue
 		}
 		v, ok := findPathParamValue(fieldName, pathParams)

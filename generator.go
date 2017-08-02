@@ -83,7 +83,7 @@ import (
 this is a generated file, DO NOT EDIT!
  */
 // GrpcSwitcher is a runtime func with which a server starts.
-var GrpcSwitcher = func(s *turbo.Server, methodName string, resp http.ResponseWriter, req *http.Request) (rpcResponse interface{}, err error) {
+var GrpcSwitcher = func(s turbo.Servable, methodName string, resp http.ResponseWriter, req *http.Request) (rpcResponse interface{}, err error) {
 	callOptions, header, trailer, peer := turbo.CallOptions(methodName, req)
 	switch methodName { {{range $i, $MethodName := .MethodNames}}
 	case "{{$MethodName}}":
@@ -92,7 +92,7 @@ var GrpcSwitcher = func(s *turbo.Server, methodName string, resp http.ResponseWr
 		if err != nil {
 			return nil, err
 		}
-		rpcResponse, err = s.GrpcService().(g.{{$.ServiceName}}Client).{{$MethodName}}(req.Context(), request, callOptions...){{end}}
+		rpcResponse, err = s.Service().(g.{{$.ServiceName}}Client).{{$MethodName}}(req.Context(), request, callOptions...){{end}}
 	default:
 		return nil, errors.New("No such method[" + methodName + "]")
 	}
@@ -363,7 +363,7 @@ import (
 this is a generated file, DO NOT EDIT!
  */
 // ThriftSwitcher is a runtime func with which a server starts.
-var ThriftSwitcher = func(s *turbo.Server, methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
+var ThriftSwitcher = func(s turbo.Servable, methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
 	switch methodName {
 {{range $i, $MethodName := .MethodNames}}
 	case "{{$MethodName}}":{{if index $.NotEmptyParameters $i }}
@@ -371,14 +371,14 @@ var ThriftSwitcher = func(s *turbo.Server, methodName string, resp http.Response
 		if err != nil {
 			return nil, err
 		}{{end}}
-		return s.ThriftService().(*gen.{{$.ServiceName}}Client).{{$MethodName}}({{index $.Parameters $i}})
+		return s.Service().(*gen.{{$.ServiceName}}Client).{{$MethodName}}({{index $.Parameters $i}})
 {{end}}
 	default:
 		return nil, errors.New("No such method[" + methodName + "]")
 	}
 }
 
-func buildStructArg(s *turbo.Server, typeName string, req *http.Request) (v reflect.Value, err error) {
+func buildStructArg(s turbo.Servable, typeName string, req *http.Request) (v reflect.Value, err error) {
 	switch typeName {
 {{range $i, $StructName := .StructNames}}
 	case "{{$StructName}}":
