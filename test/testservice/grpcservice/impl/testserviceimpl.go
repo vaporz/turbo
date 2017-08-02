@@ -6,6 +6,7 @@ import (
 	"github.com/vaporz/turbo/test/testservice/gen/proto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 // RegisterServer registers a service struct to a server
@@ -29,5 +30,9 @@ func (s *TestService) SayHello(ctx context.Context, req *proto.SayHelloRequest) 
 	if req.YourName == "error" {
 		return &proto.SayHelloResponse{}, errors.New("grpc error")
 	}
+	trailer := metadata.Pairs("trailer-key", "trailerval")
+	grpc.SetTrailer(ctx, trailer)
+	header := metadata.Pairs("header-key", "headerval")
+	grpc.SetHeader(ctx, header)
 	return &proto.SayHelloResponse{Message: "[grpc server]Hello, " + req.YourName}, nil
 }

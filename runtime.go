@@ -4,11 +4,15 @@ import (
 	"errors"
 	// TODO support logging levels, log file path, etc.
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/mux"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -78,6 +82,46 @@ func doRequest(s *Server, methodName string, resp http.ResponseWriter, req *http
 		return
 	}
 	doPostprocessor(s, resp, req, serviceResp, err)
+}
+
+type headerKey struct{}
+type trailerKey struct{}
+type peerKey struct{}
+
+// CallOptions returns grpc CallOptions,
+// you can overwrite this func to build CallOptions for your needs.
+var CallOptions = func(methodName string, req *http.Request) ([]grpc.CallOption, *metadata.MD, *metadata.MD, *peer.Peer) {
+	header := new(metadata.MD)
+	trailer := new(metadata.MD)
+	peer := &peer.Peer{}
+	callOptions := make([]grpc.CallOption, 0)
+	callOptions = append(callOptions, grpc.Header(header))
+	callOptions = append(callOptions, grpc.Trailer(trailer))
+	callOptions = append(callOptions, grpc.Peer(peer))
+	return callOptions, header, trailer, peer
+}
+
+// WithCallOptions read header, trailer and peer into context
+func WithCallOptions(req *http.Request, header *metadata.MD, trailer *metadata.MD, peer *peer.Peer) {
+	ctx := context.WithValue(req.Context(), headerKey{}, header)
+	ctx = context.WithValue(ctx, trailerKey{}, trailer)
+	ctx = context.WithValue(ctx, peerKey{}, peer)
+	*req = *req.WithContext(ctx)
+}
+
+// GrpcMetadataHeader returns the header in metadata
+func GrpcMetadataHeader(ctx context.Context) *metadata.MD {
+	return ctx.Value(headerKey{}).(*metadata.MD)
+}
+
+// GrpcMetadataTrailer returns the trailer in metadata
+func GrpcMetadataTrailer(ctx context.Context) *metadata.MD {
+	return ctx.Value(trailerKey{}).(*metadata.MD)
+}
+
+// GrpcMetadataPeer returns the peer in metadata
+func GrpcMetadataPeer(ctx context.Context) *peer.Peer {
+	return ctx.Value(peerKey{}).(*peer.Peer)
 }
 
 func doPreprocessor(s *Server, resp http.ResponseWriter, req *http.Request) error {

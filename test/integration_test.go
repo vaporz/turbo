@@ -80,6 +80,11 @@ func TestGrpcService(t *testing.T) {
 		"{\"message\":\"{\\\"values\\\":{\\\"someId\\\":1111111},\\\"yourName\\\":\\\"testtest\\\",\\\"boolValue\\\":true}\"}")
 	s.Components.Reset()
 
+	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("MetadataInterceptor").(turbo.Interceptor))
+	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
+		"{\"message\":\"[grpc server]Hello, testtest\"}metadata:header:headerval:trailer:trailerval:peer:127.0.0.1:50051")
+	s.Components.Reset()
+
 	body := strings.NewReader("{\"values\":{\"someId\":123}, \"yourName\":\"a name\", \"boolValue\":true}")
 	testPostWithContentType(t, "http://localhost:"+httpPort+"/hello", "application/json", body,
 		"{\"message\":\"{\\\"values\\\":{\\\"someId\\\":123},\\\"yourName\\\":\\\"a name\\\",\\\"boolValue\\\":true}\"}")
@@ -466,6 +471,7 @@ func (t *testInitializer) InitService(s *turbo.Server) error {
 	s.RegisterComponent("TestInterceptor", &TestInterceptor{})
 	s.RegisterComponent("Test1Interceptor", &Test1Interceptor{})
 	s.RegisterComponent("ContextValueInterceptor", &ContextValueInterceptor{})
+	s.RegisterComponent("MetadataInterceptor", &MetadataInterceptor{})
 	s.RegisterComponent("preProcessor", preProcessor)
 	s.RegisterComponent("errorPreProcessor", errorPreProcessor)
 	s.RegisterComponent("postProcessor", postProcessor)
@@ -544,6 +550,18 @@ func (l *ContextValueInterceptor) Before(resp http.ResponseWriter, req *http.Req
 	return nil
 }
 
+type MetadataInterceptor struct {
+	turbo.BaseInterceptor
+}
+
+func (m *MetadataInterceptor) After(resp http.ResponseWriter, req *http.Request) error {
+	ctx := req.Context()
+	resp.Write([]byte("metadata:header:" + (*turbo.GrpcMetadataHeader(ctx))["header-key"][0] +
+		":trailer:" + (*turbo.GrpcMetadataTrailer(ctx))["trailer-key"][0] +
+		":peer:" + (*turbo.GrpcMetadataPeer(ctx)).Addr.String()))
+	return nil
+}
+
 var preProcessor turbo.Preprocessor = func(resp http.ResponseWriter, req *http.Request) error {
 	resp.Write([]byte("preprocessor:"))
 	return nil
@@ -594,6 +612,7 @@ func overwriteServiceYaml(httpPort, servicePort, env string) {
 	writeFileWithTemplate(
 		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml",
 		`config:
+  service_root_path: github.com/vaporz/turbo/test/testservice
   http_port: {{.HttpPort}}
   environment: {{.Env}}
   turbo_log_path: log
@@ -630,6 +649,7 @@ func overwriteServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
 	writeFileWithTemplate(
 		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml",
 		`config:
+  service_root_path: github.com/vaporz/turbo/test/testservice
   http_port: {{.HttpPort}}
   environment: {{.Env}}
   turbo_log_path:
@@ -685,6 +705,7 @@ func changeServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
 	writeFileWithTemplate(
 		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml",
 		`config:
+  service_root_path: github.com/vaporz/turbo/test/testservice
   http_port: {{.HttpPort}}
   environment: {{.Env}}
   turbo_log_path: log
