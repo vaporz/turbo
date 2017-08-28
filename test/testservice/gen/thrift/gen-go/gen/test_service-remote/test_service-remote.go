@@ -21,7 +21,7 @@ func Usage() {
   fmt.Fprintln(os.Stderr, "Usage of ", os.Args[0], " [-h host:port] [-u url] [-f[ramed]] function [arg1 [arg2...]]:")
   flag.PrintDefaults()
   fmt.Fprintln(os.Stderr, "\nFunctions:")
-  fmt.Fprintln(os.Stderr, "  SayHelloResponse sayHello(CommonValues values, string yourName, i64 int64Value, bool boolValue, double float64Value, i64 uint64Value, i32 int32Value, i16 int16Value)")
+  fmt.Fprintln(os.Stderr, "  SayHelloResponse sayHello(CommonValues values, string yourName, i64 int64Value, bool boolValue, double float64Value, i64 uint64Value, i32 int32Value, i16 int16Value,  stringList,  i32List,  boolList)")
   fmt.Fprintln(os.Stderr, "  TestJsonResponse testJson(TestJsonRequest request)")
   fmt.Fprintln(os.Stderr)
   os.Exit(0)
@@ -118,64 +118,118 @@ func main() {
   
   switch cmd {
   case "sayHello":
-    if flag.NArg() - 1 != 8 {
-      fmt.Fprintln(os.Stderr, "SayHello requires 8 args")
+    if flag.NArg() - 1 != 11 {
+      fmt.Fprintln(os.Stderr, "SayHello requires 11 args")
       flag.Usage()
     }
-    arg6 := flag.Arg(1)
-    mbTrans7 := thrift.NewTMemoryBufferLen(len(arg6))
-    defer mbTrans7.Close()
-    _, err8 := mbTrans7.WriteString(arg6)
-    if err8 != nil {
+    arg9 := flag.Arg(1)
+    mbTrans10 := thrift.NewTMemoryBufferLen(len(arg9))
+    defer mbTrans10.Close()
+    _, err11 := mbTrans10.WriteString(arg9)
+    if err11 != nil {
       Usage()
       return
     }
-    factory9 := thrift.NewTSimpleJSONProtocolFactory()
-    jsProt10 := factory9.GetProtocol(mbTrans7)
+    factory12 := thrift.NewTSimpleJSONProtocolFactory()
+    jsProt13 := factory12.GetProtocol(mbTrans10)
     argvalue0 := gen.NewCommonValues()
-    err11 := argvalue0.Read(jsProt10)
-    if err11 != nil {
+    err14 := argvalue0.Read(jsProt13)
+    if err14 != nil {
       Usage()
       return
     }
     value0 := argvalue0
     argvalue1 := flag.Arg(2)
     value1 := argvalue1
-    argvalue2, err13 := (strconv.ParseInt(flag.Arg(3), 10, 64))
-    if err13 != nil {
+    argvalue2, err16 := (strconv.ParseInt(flag.Arg(3), 10, 64))
+    if err16 != nil {
       Usage()
       return
     }
     value2 := argvalue2
     argvalue3 := flag.Arg(4) == "true"
     value3 := argvalue3
-    argvalue4, err15 := (strconv.ParseFloat(flag.Arg(5), 64))
-    if err15 != nil {
+    argvalue4, err18 := (strconv.ParseFloat(flag.Arg(5), 64))
+    if err18 != nil {
       Usage()
       return
     }
     value4 := argvalue4
-    argvalue5, err16 := (strconv.ParseInt(flag.Arg(6), 10, 64))
-    if err16 != nil {
+    argvalue5, err19 := (strconv.ParseInt(flag.Arg(6), 10, 64))
+    if err19 != nil {
       Usage()
       return
     }
     value5 := argvalue5
-    tmp6, err17 := (strconv.Atoi(flag.Arg(7)))
-    if err17 != nil {
+    tmp6, err20 := (strconv.Atoi(flag.Arg(7)))
+    if err20 != nil {
       Usage()
       return
     }
     argvalue6 := int32(tmp6)
     value6 := argvalue6
-    tmp7, err18 := (strconv.Atoi(flag.Arg(8)))
-    if err18 != nil {
+    tmp7, err21 := (strconv.Atoi(flag.Arg(8)))
+    if err21 != nil {
       Usage()
       return
     }
     argvalue7 := int16(tmp7)
     value7 := argvalue7
-    fmt.Print(client.SayHello(value0, value1, value2, value3, value4, value5, value6, value7))
+    arg22 := flag.Arg(9)
+    mbTrans23 := thrift.NewTMemoryBufferLen(len(arg22))
+    defer mbTrans23.Close()
+    _, err24 := mbTrans23.WriteString(arg22)
+    if err24 != nil { 
+      Usage()
+      return
+    }
+    factory25 := thrift.NewTSimpleJSONProtocolFactory()
+    jsProt26 := factory25.GetProtocol(mbTrans23)
+    containerStruct8 := gen.NewTestServiceSayHelloArgs()
+    err27 := containerStruct8.ReadField9(jsProt26)
+    if err27 != nil {
+      Usage()
+      return
+    }
+    argvalue8 := containerStruct8.StringList
+    value8 := argvalue8
+    arg28 := flag.Arg(10)
+    mbTrans29 := thrift.NewTMemoryBufferLen(len(arg28))
+    defer mbTrans29.Close()
+    _, err30 := mbTrans29.WriteString(arg28)
+    if err30 != nil { 
+      Usage()
+      return
+    }
+    factory31 := thrift.NewTSimpleJSONProtocolFactory()
+    jsProt32 := factory31.GetProtocol(mbTrans29)
+    containerStruct9 := gen.NewTestServiceSayHelloArgs()
+    err33 := containerStruct9.ReadField10(jsProt32)
+    if err33 != nil {
+      Usage()
+      return
+    }
+    argvalue9 := containerStruct9.I32List
+    value9 := argvalue9
+    arg34 := flag.Arg(11)
+    mbTrans35 := thrift.NewTMemoryBufferLen(len(arg34))
+    defer mbTrans35.Close()
+    _, err36 := mbTrans35.WriteString(arg34)
+    if err36 != nil { 
+      Usage()
+      return
+    }
+    factory37 := thrift.NewTSimpleJSONProtocolFactory()
+    jsProt38 := factory37.GetProtocol(mbTrans35)
+    containerStruct10 := gen.NewTestServiceSayHelloArgs()
+    err39 := containerStruct10.ReadField11(jsProt38)
+    if err39 != nil {
+      Usage()
+      return
+    }
+    argvalue10 := containerStruct10.BoolList
+    value10 := argvalue10
+    fmt.Print(client.SayHello(value0, value1, value2, value3, value4, value5, value6, value7, value8, value9, value10))
     fmt.Print("\n")
     break
   case "testJson":
@@ -183,19 +237,19 @@ func main() {
       fmt.Fprintln(os.Stderr, "TestJson requires 1 args")
       flag.Usage()
     }
-    arg19 := flag.Arg(1)
-    mbTrans20 := thrift.NewTMemoryBufferLen(len(arg19))
-    defer mbTrans20.Close()
-    _, err21 := mbTrans20.WriteString(arg19)
-    if err21 != nil {
+    arg40 := flag.Arg(1)
+    mbTrans41 := thrift.NewTMemoryBufferLen(len(arg40))
+    defer mbTrans41.Close()
+    _, err42 := mbTrans41.WriteString(arg40)
+    if err42 != nil {
       Usage()
       return
     }
-    factory22 := thrift.NewTSimpleJSONProtocolFactory()
-    jsProt23 := factory22.GetProtocol(mbTrans20)
+    factory43 := thrift.NewTSimpleJSONProtocolFactory()
+    jsProt44 := factory43.GetProtocol(mbTrans41)
     argvalue0 := gen.NewTestJsonRequest()
-    err24 := argvalue0.Read(jsProt23)
-    if err24 != nil {
+    err45 := argvalue0.Read(jsProt44)
+    if err45 != nil {
       Usage()
       return
     }

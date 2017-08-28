@@ -201,13 +201,13 @@ func BuildStruct(s Servable, theType reflect.Type, theValue reflect.Value, req *
 		if !ok {
 			continue
 		}
-		err := setValue(fieldValue, v)
+		err := setValue(theType.Field(i).Type, fieldValue, v)
 		logErrorIf(err)
 	}
 }
 
 // setValue sets v to fieldValue according to fieldValue's Kind
-func setValue(fieldValue reflect.Value, v string) error {
+func setValue(fieldType reflect.Type, fieldValue reflect.Value, v string) error {
 	var err error
 	switch k := fieldValue.Kind(); k {
 	case reflect.Int,
@@ -232,8 +232,57 @@ func setValue(fieldValue reflect.Value, v string) error {
 		var u uint64
 		u, err = strconv.ParseUint(v, 10, 64)
 		fieldValue.SetUint(u)
-	//case reflect.Slice:
-	// TODO [1] support slice value
+	case reflect.Slice:
+		if len(v) == 0 {
+			fieldValue.Set(reflect.MakeSlice(fieldType, 0, 0))
+			return nil
+		}
+		vSlice := strings.Split(v, ",")
+		length := len(vSlice)
+		s := reflect.MakeSlice(fieldType, length, length)
+		switch fieldType.Elem().Kind() {
+		case reflect.Int,
+			reflect.Int8,
+			reflect.Int16,
+			reflect.Int32,
+			reflect.Int64:
+			for k, v := range vSlice {
+				value, err := strconv.ParseInt(v, 10, 64)
+				if err != nil {
+					return err
+				}
+				s.Index(k).SetInt(value)
+			}
+		case reflect.String:
+			for k, v := range vSlice {
+				s.Index(k).SetString(v)
+			}
+		case reflect.Bool:
+			for k, v := range vSlice {
+				value, err := strconv.ParseBool(v)
+				if err != nil {
+					return err
+				}
+				s.Index(k).SetBool(value)
+			}
+		case reflect.Float32, reflect.Float64:
+			for k, v := range vSlice {
+				value, err := strconv.ParseFloat(v, 64)
+				if err != nil {
+					return err
+				}
+				s.Index(k).SetFloat(value)
+			}
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			for k, v := range vSlice {
+				value, err := strconv.ParseUint(v, 10, 64)
+				if err != nil {
+					return err
+				}
+				s.Index(k).SetUint(value)
+			}
+		}
+		fieldValue.Set(s)
 	default:
 		return errors.New("turbo: not supported kind[" + k.String() + "]")
 	}
@@ -263,14 +312,14 @@ func BuildArgs(s Servable, argsType reflect.Type, argsValue reflect.Value, req *
 			continue
 		}
 		v, _ := findValue(fieldName, req)
-		value, _ := reflectValue(argsValue.FieldByName(fieldName), v)
+		value, _ := reflectValue(field.Type, argsValue.FieldByName(fieldName), v)
 		params[i] = value
 	}
 	return params, nil
 }
 
 // reflectValue returns a reflect.Value with v according to fieldValue's Kind
-func reflectValue(fieldValue reflect.Value, v string) (reflect.Value, error) {
+func reflectValue(fieldType reflect.Type, fieldValue reflect.Value, v string) (reflect.Value, error) {
 	switch k := fieldValue.Kind(); k {
 	case reflect.Int16:
 		i, err := strconv.ParseInt(v, 10, 16)
@@ -304,6 +353,56 @@ func reflectValue(fieldValue reflect.Value, v string) (reflect.Value, error) {
 			return reflect.ValueOf(float64(0)), errors.New("error float")
 		}
 		return reflect.ValueOf(float64(f)), nil
+	case reflect.Slice:
+		if len(v) == 0 {
+			return reflect.MakeSlice(fieldType, 0, 0), nil
+		}
+		vSlice := strings.Split(v, ",")
+		length := len(vSlice)
+		s := reflect.MakeSlice(fieldType, length, length)
+		switch fieldType.Elem().Kind() {
+		case reflect.Int,
+			reflect.Int8,
+			reflect.Int16,
+			reflect.Int32,
+			reflect.Int64:
+			for k, v := range vSlice {
+				value, err := strconv.ParseInt(v, 10, 64)
+				if err != nil {
+					return reflect.ValueOf(nil), err
+				}
+				s.Index(k).SetInt(value)
+			}
+		case reflect.String:
+			for k, v := range vSlice {
+				s.Index(k).SetString(v)
+			}
+		case reflect.Bool:
+			for k, v := range vSlice {
+				value, err := strconv.ParseBool(v)
+				if err != nil {
+					return reflect.ValueOf(nil), err
+				}
+				s.Index(k).SetBool(value)
+			}
+		case reflect.Float32, reflect.Float64:
+			for k, v := range vSlice {
+				value, err := strconv.ParseFloat(v, 64)
+				if err != nil {
+					return reflect.ValueOf(nil), err
+				}
+				s.Index(k).SetFloat(value)
+			}
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			for k, v := range vSlice {
+				value, err := strconv.ParseUint(v, 10, 64)
+				if err != nil {
+					return reflect.ValueOf(nil), err
+				}
+				s.Index(k).SetUint(value)
+			}
+		}
+		return s, nil
 	default:
 		return reflect.ValueOf(0), errors.New("turbo: not supported kind[" + k.String() + "]")
 	}
@@ -388,7 +487,7 @@ func setPathParams(theType reflect.Type, theValue reflect.Value, req *http.Reque
 		if !ok {
 			continue
 		}
-		err := setValue(fieldValue, v)
+		err := setValue(theType.Field(i).Type, fieldValue, v)
 		logErrorIf(err)
 	}
 }

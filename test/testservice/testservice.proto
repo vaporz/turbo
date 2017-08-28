@@ -9,6 +9,11 @@ message SayHelloRequest {
     bool boolValue = 4;
     double float64Value = 5;
     uint64 uint64Value = 6;
+    repeated string stringList = 7;
+    repeated int64 int64List = 8;
+    repeated bool boolList = 9;
+    repeated double doubleList = 10;
+    repeated uint64 uint64List = 11;
 }
 
 message SayHelloResponse {

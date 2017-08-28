@@ -17,10 +17,13 @@ type TestService struct {
 }
 
 // SayHello is an example entry point
-func (s TestService) SayHello(values *gen.CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64, uint64Value int64, int32Value int32, int16Value int16) (r *gen.SayHelloResponse, err error) {
+func (s TestService) SayHello(values *gen.CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64,
+	uint64Value int64, int32Value int32, int16Value int16, stringList []string, i32List []int32, boolList []bool) (r *gen.SayHelloResponse, err error) {
 	if boolValue {
-		result := fmt.Sprintf("values.TransactionId=%d, yourName=%s,int64Value=%d, boolValue=%t, float64Value=%f, uint64Value=%d, int32Value=%d, int16Value=%d",
-			values.TransactionId, yourName, int64Value, boolValue, float64Value, uint64Value, int32Value, int16Value)
+		result := fmt.Sprintf("values.TransactionId=%d, yourName=%s,int64Value=%d, boolValue=%t, float64Value=%f, "+
+			"uint64Value=%d, int32Value=%d, int16Value=%d, stringList=%v, i32List=%v, boolList=%v",
+			values.TransactionId, yourName, int64Value, boolValue, float64Value, uint64Value, int32Value, int16Value,
+			stringList, i32List, boolList)
 		return &gen.SayHelloResponse{Message: "[thrift server]" + result}, nil
 	}
 	if yourName == "error" {
