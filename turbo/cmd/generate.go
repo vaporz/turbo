@@ -10,12 +10,12 @@ var generateCmd = &cobra.Command{
 	Use:     "generate package_path",
 	Aliases: []string{"g"},
 	Example: "turbo generate package/path/to/yourservice -r grpc \n" +
-		"        -I (absolute_paths_to_proto/thrift_files) -I ... -I ...\n",
+		"        -I (absolute_paths_to_proto|thrift_files) -I ... -I ...\n",
 	Short: "Generate '[gprc|thrift]switcher.go' and grpc|thrift generated codes \n" +
 		"according to service.yaml and .proto|.thrift files",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
-			return errors.New("Usage: generate [package_path]")
+			return errors.New("Usage: generate [package_path] -r [grpc|thrift] -I (absolute_paths_to_proto|thrift_files)")
 		}
 		if RpcType == "" {
 			return errors.New("missing rpctype (-r)")

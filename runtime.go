@@ -232,6 +232,8 @@ func setValue(fieldValue reflect.Value, v string) error {
 		var u uint64
 		u, err = strconv.ParseUint(v, 10, 64)
 		fieldValue.SetUint(u)
+	//case reflect.Slice:
+	// TODO [1] support slice value
 	default:
 		return errors.New("turbo: not supported kind[" + k.String() + "]")
 	}
@@ -358,7 +360,7 @@ func BuildThriftRequest(s Servable, args interface{}, req *http.Request, buildSt
 		buf.ReadFrom(req.Body)
 		v := reflect.New(reflect.ValueOf(args).Field(0).Type().Elem()).Interface()
 		err := json.Unmarshal(buf.Bytes(), v)
-		// TODO refactor error, define own errors?
+		// TODO [2] refactor error, define own errors?
 		if err != nil {
 			return params, errors.New(fmt.Sprintf("turbo: failed to BuildThriftRequest for json api, "+
 				"request body: %s, error: %s", req.Body, err))

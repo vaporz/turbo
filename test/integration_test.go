@@ -69,25 +69,25 @@ func TestGrpcService(t *testing.T) {
 
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("ContextValueInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"test1_intercepted:{\"message\":\"{\\\"values\\\":{},\\\"yourName\\\":\\\"testtest\\\",\\\"int64Value\\\":1234567,\\\"boolValue\\\":true,\\\"float64Value\\\":1.23,\\\"uint64Value\\\":456}\"}")
+		`test1_intercepted:{"message":"{\"values\":{},\"yourName\":\"testtest\",\"int64Value\":1234567,\"boolValue\":true,\"float64Value\":1.23,\"uint64Value\":456}"}`)
 	s.Components.Reset()
 
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?int64_value=64&bool_value=true&float64_value=0.123&uint64_value=123",
-		"{\"message\":\"{\\\"values\\\":{},\\\"yourName\\\":\\\"testtest\\\",\\\"int64Value\\\":64,\\\"boolValue\\\":true,\\\"float64Value\\\":0.123,\\\"uint64Value\\\":123}\"}")
+		`{"message":"{\"values\":{},\"yourName\":\"testtest\",\"int64Value\":64,\"boolValue\":true,\"float64Value\":0.123,\"uint64Value\":123}"}`)
 
 	s.Components.SetMessageFieldConvertor("CommonValues", s.Component("convertProtoCommonValues").(turbo.Convertor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?bool_value=true",
-		"{\"message\":\"{\\\"values\\\":{\\\"someId\\\":1111111},\\\"yourName\\\":\\\"testtest\\\",\\\"boolValue\\\":true}\"}")
+		`{"message":"{\"values\":{\"someId\":1111111},\"yourName\":\"testtest\",\"boolValue\":true}"}`)
 	s.Components.Reset()
 
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("MetadataInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"{\"message\":\"[grpc server]Hello, testtest\"}metadata:header:headerval:trailer:trailerval:peer:127.0.0.1:50051")
+		`{"message":"[grpc server]Hello, testtest"}metadata:header:headerval:trailer:trailerval:peer:127.0.0.1:50051`)
 	s.Components.Reset()
 
-	body := strings.NewReader("{\"values\":{\"someId\":123}, \"yourName\":\"a name\", \"boolValue\":true}")
+	body := strings.NewReader(`{"values":{"someId":123}, "yourName":"a name", "boolValue":true}`)
 	testPostWithContentType(t, "http://localhost:"+httpPort+"/hello", "application/json", body,
-		"{\"message\":\"{\\\"values\\\":{\\\"someId\\\":123},\\\"yourName\\\":\\\"a name\\\",\\\"boolValue\\\":true}\"}")
+		`{"message":"{\"values\":{\"someId\":123},\"yourName\":\"a name\",\"boolValue\":true}"}`)
 
 	s.Stop()
 	time.Sleep(time.Millisecond * 100)
@@ -115,24 +115,24 @@ func TestThriftService(t *testing.T) {
 
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("ContextValueInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"test1_intercepted:{\"message\":\"[thrift server]values.TransactionId=0, yourName=testtest,int64Value=1234567, boolValue=true, float64Value=1.230000, uint64Value=456, int32Value=0, int16Value=0\"}")
+		`test1_intercepted:{"message":"[thrift server]values.TransactionId=0, yourName=testtest,int64Value=1234567, boolValue=true, float64Value=1.230000, uint64Value=456, int32Value=0, int16Value=0"}`)
 	s.Components.Reset()
 
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?transaction_id=111&int64_value=64&bool_value=true&float64_value=0.123&uint64_value=123&int32_value=32&int16_value=16",
-		"{\"message\":\"[thrift server]values.TransactionId=111, yourName=testtest,int64Value=64, boolValue=true, float64Value=0.123000, uint64Value=123, int32Value=32, int16Value=16\"}")
+		`{"message":"[thrift server]values.TransactionId=111, yourName=testtest,int64Value=64, boolValue=true, float64Value=0.123000, uint64Value=123, int32Value=32, int16Value=16"}`)
 
 	s.Components.SetMessageFieldConvertor("CommonValues", s.Component("convertThriftCommonValues").(turbo.Convertor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?bool_value=true",
-		"{\"message\":\"[thrift server]values.TransactionId=222222, yourName=testtest,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0\"}")
+		`{"message":"[thrift server]values.TransactionId=222222, yourName=testtest,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0"}`)
 	s.Components.Reset()
 
-	body := strings.NewReader("{\"StringValue\":\"123\", \"int32Value\":456, \"boolvalue\":true}")
+	body := strings.NewReader(`{"StringValue":"123", "int32Value":456, "boolvalue":true}`)
 	testPostWithContentType(t, "http://localhost:"+httpPort+"/testjson", "application/json", body,
-		"{\"message\":\"[thrift server]json= TestJsonRequest({StringValue:123 Int32Value:456 BoolValue:true})\"}")
+		`{"message":"[thrift server]json= TestJsonRequest({StringValue:123 Int32Value:456 BoolValue:true})"}`)
 
-	body = strings.NewReader("{\"BoolValue\":true}")
+	body = strings.NewReader(`{"BoolValue":true}`)
 	testPostWithContentType(t, "http://localhost:"+httpPort+"/testjson/123/456", "application/json", body,
-		"{\"message\":\"[thrift server]json= TestJsonRequest({StringValue:123 Int32Value:456 BoolValue:true})\"}")
+		`{"message":"[thrift server]json= TestJsonRequest({StringValue:123 Int32Value:456 BoolValue:true})"}`)
 
 	s.Stop()
 	time.Sleep(time.Millisecond * 100)
@@ -149,7 +149,7 @@ func TestHTTPGrpcService(t *testing.T) {
 	go s.StartGrpcHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
 	time.Sleep(time.Millisecond * 300)
 
-	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", "{\"message\":\"[grpc server]Hello, testtest\"}")
+	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", `{"message":"[grpc server]Hello, testtest"}`)
 
 	s.Stop()
 	time.Sleep(time.Millisecond * 100)
@@ -166,7 +166,7 @@ func TestHTTPThriftService(t *testing.T) {
 	go s.StartThriftHTTPServer(tcompoent.ThriftClient, gen.ThriftSwitcher)
 	time.Sleep(time.Millisecond * 500)
 
-	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", "{\"message\":\"[thrift server]Hello, testtest\"}")
+	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", `{"message":"[thrift server]Hello, testtest"}`)
 
 	s.Stop()
 	time.Sleep(time.Millisecond * 100)
@@ -184,13 +184,13 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 
 	go s.StartGrpcHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
 	time.Sleep(time.Millisecond * 300)
-	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", "{\"message\":\"[grpc server]Hello, testtest\"}")
-	testGet(t, "http://localhost:"+httpPort+"/hello", "intercepted:{\"message\":\"[grpc server]Hello, \"}")
+	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", `{"message":"[grpc server]Hello, testtest"}`)
+	testGet(t, "http://localhost:"+httpPort+"/hello", `intercepted:{"message":"[grpc server]Hello, "}`)
 	testGet(t, "http://localhost:"+httpPort+"/hellointerceptor", "interceptor_error:from errorHandler:error!")
-	testGet(t, "http://localhost:"+httpPort+"/hello_preprocessor", "preprocessor:{\"message\":\"[grpc server]Hello, \"}")
+	testGet(t, "http://localhost:"+httpPort+"/hello_preprocessor", `preprocessor:{"message":"[grpc server]Hello, "}`)
 	testGet(t, "http://localhost:"+httpPort+"/hello_postprocessor", "postprocessor:[grpc server]Hello, ")
 	testGet(t, "http://localhost:"+httpPort+"/hello_hijacker", "hijacker")
-	testGet(t, "http://localhost:"+httpPort+"/hello_convertor?bool_value=true", "{\"message\":\"{\\\"values\\\":{\\\"someId\\\":1111111},\\\"boolValue\\\":true}\"}")
+	testGet(t, "http://localhost:"+httpPort+"/hello_convertor?bool_value=true", `{"message":"{\"values\":{\"someId\":1111111},\"boolValue\":true}"}`)
 	testGet(t, "http://localhost:"+httpPort+"/hello_hijacker", "hijacker")
 	testGet(t, "http://localhost:"+httpPort+"/hello/error", "from errorHandler:rpc error: code = Unknown desc = grpc error")
 
@@ -319,7 +319,8 @@ func create(t *testing.T, rpc string) {
 func generate(t *testing.T, rpc string) {
 	cmd.RootCmd.SetArgs([]string{"generate"})
 	err := cmd.Execute()
-	assert.Equal(t, "Usage: generate [package_path]", err.Error())
+	assert.Equal(t, "Usage: generate [package_path] -r [grpc|thrift] -I (absolute_paths_to_proto|thrift_files)",
+		err.Error())
 
 	cmd.RootCmd.SetArgs([]string{"generate", "github.com/vaporz/turbo/test/testcreateservice"})
 	err = cmd.Execute()
@@ -346,33 +347,33 @@ func generate(t *testing.T, rpc string) {
 
 func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
 	testGet(t, "http://localhost:"+httpPort+"/hello",
-		"{\"message\":\"["+rpcType+" server]Hello, \"}")
+		`{"message":"[`+rpcType+` server]Hello, "}`)
 	testGet(t, "http://localhost:"+httpPort+"/hello?your_name=turbo",
-		"{\"message\":\"["+rpcType+" server]Hello, turbo\"}")
+		`{"message":"[`+rpcType+` server]Hello, turbo"}`)
 	testGet(t, "http://localhost:"+httpPort+"/hello?your_name=turbo&yourname=xxx",
-		"{\"message\":\"["+rpcType+" server]Hello, xxx\"}")
+		`{"message":"[`+rpcType+` server]Hello, xxx"}`)
 	testGet(t, "http://localhost:"+httpPort+"/hello/vaporz?yourName=turbo&yourname=xxx",
-		"{\"message\":\"["+rpcType+" server]Hello, xxx\"}")
+		`{"message":"[`+rpcType+` server]Hello, xxx"}`)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
+		`{"message":"[`+rpcType+` server]Hello, testtest"}`)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?your_name=aaa",
-		"{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
+		`{"message":"[`+rpcType+` server]Hello, testtest"}`)
 	testPost(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"404 page not found\n")
 
 	s.Components.SetCommonInterceptor(s.Component("Test1Interceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"test1_intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
+		`test1_intercepted:{"message":"[`+rpcType+` server]Hello, testtest"}`)
 
 	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/", s.Component("TestInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?yourName=testname",
-		"intercepted:{\"message\":\"["+rpcType+" server]Hello, testname\"}")
+		`intercepted:{"message":"[`+rpcType+` server]Hello, testname"}`)
 
 	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/", s.Component("TestInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
+		`intercepted:{"message":"[`+rpcType+` server]Hello, testtest"}`)
 
 	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("BeforeErrorInterceptor").(turbo.Interceptor))
@@ -388,17 +389,17 @@ func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
 	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
+		`intercepted:{"message":"[`+rpcType+` server]Hello, testtest"}`)
 
 	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor), s.Component("Test1Interceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"intercepted:test1_intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
+		`intercepted:test1_intercepted:{"message":"[`+rpcType+` server]Hello, testtest"}`)
 
 	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor), s.Component("AfterErrorInterceptor").(turbo.Interceptor), s.Component("Test1Interceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"intercepted:test1_intercepted:{\"message\":\"["+rpcType+" server]Hello, testtest\"}:after_error:")
+		`intercepted:test1_intercepted:{"message":"[`+rpcType+` server]Hello, testtest"}:after_error:`)
 
 	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor), s.Component("BeforeErrorInterceptor").(turbo.Interceptor), s.Component("Test1Interceptor").(turbo.Interceptor))
@@ -415,7 +416,7 @@ func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("TestInterceptor").(turbo.Interceptor))
 	s.Components.SetPreprocessor([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("preProcessor").(turbo.Preprocessor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"intercepted:preprocessor:{\"message\":\"["+rpcType+" server]Hello, testtest\"}")
+		`intercepted:preprocessor:{"message":"[`+rpcType+` server]Hello, testtest"}`)
 
 	if rpcType == "thrift" {
 		s.Components.SetPostprocessor([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("thriftPostProcessor").(turbo.Postprocessor))
@@ -423,7 +424,7 @@ func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
 		s.Components.SetPostprocessor([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("postProcessor").(turbo.Postprocessor))
 	}
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"intercepted:preprocessor:postprocessor:["+rpcType+" server]Hello, testtest")
+		`intercepted:preprocessor:postprocessor:[`+rpcType+` server]Hello, testtest`)
 
 	s.Components.SetHijacker([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", s.Component("hijacker").(turbo.Hijacker))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",

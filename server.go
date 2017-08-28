@@ -99,6 +99,7 @@ func (s *Server) loadComponents() *Components {
 		names := strings.Split(m[2], ",")
 		components := make([]Interceptor, 0)
 		for _, name := range names {
+			// TODO [3] component is nil? not registered?
 			components = append(components, s.Component(name).(Interceptor))
 		}
 		c.Intercept(strings.Split(m[0], ","), m[1], components...)
