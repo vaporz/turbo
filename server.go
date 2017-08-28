@@ -2,6 +2,7 @@ package turbo
 
 import (
 	"context"
+	"errors"
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/mux"
@@ -49,11 +50,11 @@ func (s *Server) RegisterComponent(name string, component interface{}) {
 }
 
 // Component returns a component by name.
-func (s *Server) Component(name string) interface{} {
+func (s *Server) Component(name string) (interface{}, error) {
 	if s.Components.registeredComponents == nil {
-		return nil
+		return nil, errors.New("no such component: " + name + ", forget to register?")
 	}
-	return s.Components.registeredComponents[name]
+	return s.Components.registeredComponents[name], nil
 }
 
 func (s *Server) watchConfig() {
@@ -99,33 +100,40 @@ func (s *Server) loadComponents() *Components {
 		names := strings.Split(m[2], ",")
 		components := make([]Interceptor, 0)
 		for _, name := range names {
-			// TODO [3] component is nil? not registered?
-			components = append(components, s.Component(name).(Interceptor))
+			components = append(components, getComponentByName(s, name).(Interceptor))
 		}
 		c.Intercept(strings.Split(m[0], ","), m[1], components...)
 		log.Info("interceptor:", m)
 	}
 	for _, m := range s.Config.mappings[preprocessors] {
-		c.SetPreprocessor(strings.Split(m[0], ","), m[1], s.Component(m[2]).(Preprocessor))
+		c.SetPreprocessor(strings.Split(m[0], ","), m[1], getComponentByName(s, m[2]).(Preprocessor))
 		log.Info("preprocessor:", m)
 	}
 	for _, m := range s.Config.mappings[postprocessors] {
-		c.SetPostprocessor(strings.Split(m[0], ","), m[1], s.Component(m[2]).(Postprocessor))
+		c.SetPostprocessor(strings.Split(m[0], ","), m[1], getComponentByName(s, m[2]).(Postprocessor))
 		log.Info("postprocessor:", m)
 	}
 	for _, m := range s.Config.mappings[hijackers] {
-		c.SetHijacker(strings.Split(m[0], ","), m[1], s.Component(m[2]).(Hijacker))
+		c.SetHijacker(strings.Split(m[0], ","), m[1], getComponentByName(s, m[2]).(Hijacker))
 		log.Info("hijacker:", m)
 	}
 	for _, m := range s.Config.mappings[convertors] {
-		c.SetMessageFieldConvertor(m[0], s.Component(m[1]).(Convertor))
+		c.SetMessageFieldConvertor(m[0], getComponentByName(s, m[1]).(Convertor))
 		log.Info("convertor:", m)
 	}
 	if len(s.Config.ErrorHandler()) > 0 {
-		c.WithErrorHandler(s.Component(s.Config.ErrorHandler()).(ErrorHandlerFunc))
+		c.WithErrorHandler(getComponentByName(s, s.Config.ErrorHandler()).(ErrorHandlerFunc))
 		log.Info("errorhandler:", s.Config.ErrorHandler())
 	}
 	return c
+}
+
+func getComponentByName(s *Server, name string) interface{} {
+	com, err := s.Component(name)
+	if err != nil {
+		panic(err)
+	}
+	return com
 }
 
 func waitForQuit(s Servable, httpServer *http.Server, grpcServer *grpc.Server, thriftServer *thrift.TSimpleServer) {
