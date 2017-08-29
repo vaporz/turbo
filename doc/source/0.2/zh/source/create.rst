@@ -25,7 +25,8 @@
 
     go get google.golang.org/grpc
     go get git.apache.org/thrift.git/lib/go/thrift
-    go get github.com/kylelemons/go-gypsy/yaml
+    go get github.com/golang/protobuf
+    go get github.com/sirupsen/logrus
     go get github.com/gorilla/mux
     go get github.com/spf13/cobra
     go get github.com/spf13/viper
