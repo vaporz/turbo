@@ -155,17 +155,16 @@ func component(r *mux.Router, req *http.Request) http.Handler {
 }
 
 // Convertor--------------
-// TODO use convertor for whole request message
 type Convertor func(r *http.Request) reflect.Value
 
-func (c *Components) registerMessageFieldConvertor(field string, convertorFunc Convertor) {
+func (c *Components) registerConvertor(field string, convertorFunc Convertor) {
 	if c.convertorMap == nil {
 		c.convertorMap = make(map[string]Convertor)
 	}
 	c.convertorMap[field] = convertorFunc
 }
 
-func (c *Components) messageFieldConvertor(theType string) Convertor {
+func (c *Components) convertor(theType string) Convertor {
 	if c.convertorMap == nil {
 		return nil
 	}
@@ -241,13 +240,13 @@ func (c *Components) Hijacker(req *http.Request) Hijacker {
 	return c.hijacker(req)
 }
 
-// SetMessageFieldConvertor registers a Convertor on a type
-// usage: SetMessageFieldConvertor(new(SomeInterface), convertorFunc)
-func (c *Components) SetMessageFieldConvertor(field string, convertorFunc Convertor) {
-	c.registerMessageFieldConvertor(field, convertorFunc)
+// SetConvertor registers a Convertor on a type
+// usage: SetConvertor(new(SomeInterface), convertorFunc)
+func (c *Components) SetConvertor(field string, convertorFunc Convertor) {
+	c.registerConvertor(field, convertorFunc)
 }
 
-// MessageFieldConvertor returns the Convertor for this type
-func (c *Components) MessageFieldConvertor(theType string) Convertor {
-	return c.messageFieldConvertor(theType)
+// Convertor returns the Convertor for this type
+func (c *Components) Convertor(theType string) Convertor {
+	return c.convertor(theType)
 }

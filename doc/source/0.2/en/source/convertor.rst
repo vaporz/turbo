@@ -1,7 +1,7 @@
 .. _convertor:
 
-Message Field Convertor
-=======================
+Convertor
+=========
 
 Turbo automatically finds from URL route, query string and context.Context, and sets value into a request by struct field name.
 

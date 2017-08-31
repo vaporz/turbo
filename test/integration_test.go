@@ -90,12 +90,12 @@ func TestGrpcService(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?int64_value=64&bool_value=true&float64_value=0.123&uint64_value=123",
 		`{"message":"{\"values\":{},\"yourName\":\"testtest\",\"int64Value\":64,\"boolValue\":true,\"float64Value\":0.123,\"uint64Value\":123}"}`)
 
-	s.Components.SetMessageFieldConvertor("CommonValues", component(s.Server, "convertProtoCommonValues").(turbo.Convertor))
+	s.Components.SetConvertor("CommonValues", component(s.Server, "convertProtoCommonValues").(turbo.Convertor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?bool_value=true",
 		`{"message":"{\"values\":{\"someId\":1111111},\"yourName\":\"testtest\",\"boolValue\":true}"}`)
 	s.Components.Reset()
 
-	s.Components.SetMessageFieldConvertor("SayHelloRequest", component(s.Server, "convertProtoSayHelloRequest").(turbo.Convertor))
+	s.Components.SetConvertor("SayHelloRequest", component(s.Server, "convertProtoSayHelloRequest").(turbo.Convertor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?bool_value=true",
 		`{"message":"[grpc server]Hello, from convertor"}`)
 	s.Components.Reset()
@@ -147,7 +147,7 @@ func TestThriftService(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?transaction_id=111&int64_value=64&bool_value=true&float64_value=0.123&uint64_value=123&int32_value=32&int16_value=16",
 		`{"message":"[thrift server]values.TransactionId=111, yourName=testtest,int64Value=64, boolValue=true, float64Value=0.123000, uint64Value=123, int32Value=32, int16Value=16, stringList=[], i32List=[], boolList=[], doubleList=[]"}`)
 
-	s.Components.SetMessageFieldConvertor("CommonValues", component(s.Server, "convertThriftCommonValues").(turbo.Convertor))
+	s.Components.SetConvertor("CommonValues", component(s.Server, "convertThriftCommonValues").(turbo.Convertor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?bool_value=true",
 		`{"message":"[thrift server]values.TransactionId=222222, yourName=testtest,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0, stringList=[], i32List=[], boolList=[], doubleList=[]"}`)
 	s.Components.Reset()

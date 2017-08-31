@@ -14,5 +14,5 @@ Turbo
 * `拦截器（Interceptor） <interceptor>`_ 。
 * `预处理器（PreProcessor） <preprocessor>`_  和 `后处理器（PostProcessor） <postprocessor>`_ : 可定制的URL-RPC映射过程。
 * `劫持器（Hijacker） <hijacker>`_ : 接管整个request处理过程，你想干什么都行！
-* `Message字段转换器（MessageFieldConvertor） <convertor>`_ : 告诉 Turbo 怎么给struct里的参数赋值。
+* `Message字段转换器（Convertor） <convertor>`_ : 告诉 Turbo 怎么给struct里的参数赋值。
 * 不需要重启服务，在运行时修改和重新载入 `配置文件 <config>`_  ！

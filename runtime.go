@@ -184,7 +184,7 @@ func BuildStruct(s Servable, theType reflect.Type, theValue reflect.Value, req *
 	if theValue.Kind() == reflect.Invalid {
 		log.Info("value is invalid, please check grpc-fieldmapping")
 	}
-	convertor := s.ServerField().Components.MessageFieldConvertor(theValue.Type().Name())
+	convertor := s.ServerField().Components.Convertor(theValue.Type().Name())
 	if convertor != nil {
 		theValue.Set(convertor(req).Elem())
 		return
@@ -195,7 +195,7 @@ func BuildStruct(s Servable, theType reflect.Type, theValue reflect.Value, req *
 		fieldName := theType.Field(i).Name
 		fieldValue := theValue.FieldByName(fieldName)
 		if fieldValue.Kind() == reflect.Ptr && fieldValue.Type().Elem().Kind() == reflect.Struct {
-			convertor := s.ServerField().Components.MessageFieldConvertor(fieldValue.Type().Elem().Name())
+			convertor := s.ServerField().Components.Convertor(fieldValue.Type().Elem().Name())
 			if convertor != nil {
 				fieldValue.Set(convertor(req))
 				continue
@@ -304,7 +304,7 @@ func BuildArgs(s Servable, argsType reflect.Type, argsValue reflect.Value, req *
 		fieldName := field.Name
 		valueType := argsValue.FieldByName(fieldName).Type()
 		if field.Type.Kind() == reflect.Ptr && valueType.Elem().Kind() == reflect.Struct {
-			convertor := s.ServerField().Components.MessageFieldConvertor(valueType.Elem().Name())
+			convertor := s.ServerField().Components.Convertor(valueType.Elem().Name())
 			if convertor != nil {
 				params[i] = convertor(req)
 				continue

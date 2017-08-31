@@ -118,7 +118,7 @@ func (s *Server) loadComponents() *Components {
 		log.Info("hijacker:", m)
 	}
 	for _, m := range s.Config.mappings[convertors] {
-		c.SetMessageFieldConvertor(m[0], getComponentByName(s, m[1]).(Convertor))
+		c.SetConvertor(m[0], getComponentByName(s, m[1]).(Convertor))
 		log.Info("convertor:", m)
 	}
 	if len(s.Config.ErrorHandler()) > 0 {

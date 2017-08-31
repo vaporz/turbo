@@ -11,7 +11,7 @@
  * [Interceptor](https://vaporz.github.io/0.2/en/interceptor.html#interceptor).
  * [PreProcessor](https://vaporz.github.io/0.2/en/preprocessor.html#preprocessor) and [PostProcessor](https://vaporz.github.io/0.2/en/postprocessor.html#postprocessor): customizable URL-RPC mapping process.
  * [Hijacker](https://vaporz.github.io/0.2/en/hijacker.html#hijacker): Take over requests, do anything you want!
- * [MessageFieldConvertor](https://vaporz.github.io/0.2/en/convertor.html#convertor): Tell Turbo how to set a struct field.
+ * [Convertor](https://vaporz.github.io/0.2/en/convertor.html#convertor): Tell Turbo how to set a struct.
  * Modify and reload [configuration](https://vaporz.github.io/0.2/en/config.html#config) file at runtime! Without restarting service.
 ## Index
  * [Create a service on the fly](https://vaporz.github.io/0.2/en/create.html)
@@ -23,7 +23,7 @@
  * [Interceptor](https://vaporz.github.io/0.2/en/interceptor.html)
  * [PreProcessor](https://vaporz.github.io/0.2/en/preprocessor.html#preprocessor) and [PostProcessor](https://vaporz.github.io/0.2/en/postprocessor.html#postprocessor)
  * [Hijacker](https://vaporz.github.io/0.2/en/hijacker.html#hijacker)
- * [MessageFieldConvertor](https://vaporz.github.io/0.2/en/convertor.html#convertor)
+ * [Convertor](https://vaporz.github.io/0.2/en/convertor.html#convertor)
  * [Error Handler](https://vaporz.github.io/0.2/en/errorhandler.html)
  * [Thrift support](https://vaporz.github.io/0.2/en/thrift.html)
  * [Configs in service.yaml](https://vaporz.github.io/0.2/en/config.html#config)
