@@ -184,6 +184,12 @@ func BuildStruct(s Servable, theType reflect.Type, theValue reflect.Value, req *
 	if theValue.Kind() == reflect.Invalid {
 		log.Info("value is invalid, please check grpc-fieldmapping")
 	}
+	convertor := s.ServerField().Components.MessageFieldConvertor(theValue.Type().Name())
+	if convertor != nil {
+		theValue.Set(convertor(req).Elem())
+		return
+	}
+
 	fieldNum := theType.NumField()
 	for i := 0; i < fieldNum; i++ {
 		fieldName := theType.Field(i).Name
@@ -392,14 +398,6 @@ func reflectValue(fieldType reflect.Type, fieldValue reflect.Value, v string) (r
 					return reflect.ValueOf(nil), err
 				}
 				s.Index(k).SetFloat(value)
-			}
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			for k, v := range vSlice {
-				value, err := strconv.ParseUint(v, 10, 64)
-				if err != nil {
-					return reflect.ValueOf(nil), err
-				}
-				s.Index(k).SetUint(value)
 			}
 		}
 		return s, nil

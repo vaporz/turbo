@@ -343,7 +343,8 @@ type TestService interface {
   //  - StringList
   //  - I32List
   //  - BoolList
-  SayHello(values *CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64, uint64Value int64, int32Value int32, int16Value int16, stringList []string, i32List []int32, boolList []bool) (r *SayHelloResponse, err error)
+  //  - DoubleList
+  SayHello(values *CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64, uint64Value int64, int32Value int32, int16Value int16, stringList []string, i32List []int32, boolList []bool, doubleList []float64) (r *SayHelloResponse, err error)
   // Parameters:
   //  - Request
   TestJson(request *TestJsonRequest) (r *TestJsonResponse, err error)
@@ -387,12 +388,13 @@ func NewTestServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, o
 //  - StringList
 //  - I32List
 //  - BoolList
-func (p *TestServiceClient) SayHello(values *CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64, uint64Value int64, int32Value int32, int16Value int16, stringList []string, i32List []int32, boolList []bool) (r *SayHelloResponse, err error) {
-  if err = p.sendSayHello(values, yourName, int64Value, boolValue, float64Value, uint64Value, int32Value, int16Value, stringList, i32List, boolList); err != nil { return }
+//  - DoubleList
+func (p *TestServiceClient) SayHello(values *CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64, uint64Value int64, int32Value int32, int16Value int16, stringList []string, i32List []int32, boolList []bool, doubleList []float64) (r *SayHelloResponse, err error) {
+  if err = p.sendSayHello(values, yourName, int64Value, boolValue, float64Value, uint64Value, int32Value, int16Value, stringList, i32List, boolList, doubleList); err != nil { return }
   return p.recvSayHello()
 }
 
-func (p *TestServiceClient) sendSayHello(values *CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64, uint64Value int64, int32Value int32, int16Value int16, stringList []string, i32List []int32, boolList []bool)(err error) {
+func (p *TestServiceClient) sendSayHello(values *CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64, uint64Value int64, int32Value int32, int16Value int16, stringList []string, i32List []int32, boolList []bool, doubleList []float64)(err error) {
   oprot := p.OutputProtocol
   if oprot == nil {
     oprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -414,6 +416,7 @@ func (p *TestServiceClient) sendSayHello(values *CommonValues, yourName string, 
   StringList : stringList,
   I32List : i32List,
   BoolList : boolList,
+  DoubleList : doubleList,
   }
   if err = args.Write(oprot); err != nil {
       return
@@ -611,7 +614,7 @@ func (p *testServiceProcessorSayHello) Process(seqId int32, iprot, oprot thrift.
   result := TestServiceSayHelloResult{}
 var retval *SayHelloResponse
   var err2 error
-  if retval, err2 = p.handler.SayHello(args.Values, args.YourName, args.Int64Value, args.BoolValue, args.Float64Value, args.Uint64Value, args.Int32Value, args.Int16Value, args.StringList, args.I32List, args.BoolList); err2 != nil {
+  if retval, err2 = p.handler.SayHello(args.Values, args.YourName, args.Int64Value, args.BoolValue, args.Float64Value, args.Uint64Value, args.Int32Value, args.Int16Value, args.StringList, args.I32List, args.BoolList, args.DoubleList); err2 != nil {
     x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing sayHello: " + err2.Error())
     oprot.WriteMessageBegin("sayHello", thrift.EXCEPTION, seqId)
     x.Write(oprot)
@@ -702,6 +705,7 @@ var retval *TestJsonResponse
 //  - StringList
 //  - I32List
 //  - BoolList
+//  - DoubleList
 type TestServiceSayHelloArgs struct {
   Values *CommonValues `thrift:"values,1" db:"values" json:"values"`
   YourName string `thrift:"yourName,2" db:"yourName" json:"yourName"`
@@ -714,6 +718,7 @@ type TestServiceSayHelloArgs struct {
   StringList []string `thrift:"stringList,9" db:"stringList" json:"stringList"`
   I32List []int32 `thrift:"i32List,10" db:"i32List" json:"i32List"`
   BoolList []bool `thrift:"boolList,11" db:"boolList" json:"boolList"`
+  DoubleList []float64 `thrift:"doubleList,12" db:"doubleList" json:"doubleList"`
 }
 
 func NewTestServiceSayHelloArgs() *TestServiceSayHelloArgs {
@@ -766,6 +771,10 @@ func (p *TestServiceSayHelloArgs) GetI32List() []int32 {
 
 func (p *TestServiceSayHelloArgs) GetBoolList() []bool {
   return p.BoolList
+}
+
+func (p *TestServiceSayHelloArgs) GetDoubleList() []float64 {
+  return p.DoubleList
 }
 func (p *TestServiceSayHelloArgs) IsSetValues() bool {
   return p.Values != nil
@@ -826,6 +835,10 @@ func (p *TestServiceSayHelloArgs) Read(iprot thrift.TProtocol) error {
       }
     case 11:
       if err := p.ReadField11(iprot); err != nil {
+        return err
+      }
+    case 12:
+      if err := p.ReadField12(iprot); err != nil {
         return err
       }
     default:
@@ -980,6 +993,28 @@ var _elem8 bool
   return nil
 }
 
+func (p *TestServiceSayHelloArgs)  ReadField12(iprot thrift.TProtocol) error {
+  _, size, err := iprot.ReadListBegin()
+  if err != nil {
+    return thrift.PrependError("error reading list begin: ", err)
+  }
+  tSlice := make([]float64, 0, size)
+  p.DoubleList =  tSlice
+  for i := 0; i < size; i ++ {
+var _elem9 float64
+    if v, err := iprot.ReadDouble(); err != nil {
+    return thrift.PrependError("error reading field 0: ", err)
+} else {
+    _elem9 = v
+}
+    p.DoubleList = append(p.DoubleList, _elem9)
+  }
+  if err := iprot.ReadListEnd(); err != nil {
+    return thrift.PrependError("error reading list end: ", err)
+  }
+  return nil
+}
+
 func (p *TestServiceSayHelloArgs) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("sayHello_args"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
@@ -995,6 +1030,7 @@ func (p *TestServiceSayHelloArgs) Write(oprot thrift.TProtocol) error {
     if err := p.writeField9(oprot); err != nil { return err }
     if err := p.writeField10(oprot); err != nil { return err }
     if err := p.writeField11(oprot); err != nil { return err }
+    if err := p.writeField12(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -1135,6 +1171,24 @@ func (p *TestServiceSayHelloArgs) writeField11(oprot thrift.TProtocol) (err erro
   }
   if err := oprot.WriteFieldEnd(); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write field end error 11:boolList: ", p), err) }
+  return err
+}
+
+func (p *TestServiceSayHelloArgs) writeField12(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("doubleList", thrift.LIST, 12); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 12:doubleList: ", p), err) }
+  if err := oprot.WriteListBegin(thrift.DOUBLE, len(p.DoubleList)); err != nil {
+    return thrift.PrependError("error writing list begin: ", err)
+  }
+  for _, v := range p.DoubleList {
+    if err := oprot.WriteDouble(float64(v)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err) }
+  }
+  if err := oprot.WriteListEnd(); err != nil {
+    return thrift.PrependError("error writing list end: ", err)
+  }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 12:doubleList: ", p), err) }
   return err
 }
 

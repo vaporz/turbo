@@ -31,7 +31,8 @@ var ThriftSwitcher = func(s turbo.Servable, methodName string, resp http.Respons
 			params[7].Interface().(int16),
 			params[8].Interface().([]string),
 			params[9].Interface().([]int32),
-			params[10].Interface().([]bool), )
+			params[10].Interface().([]bool),
+			params[11].Interface().([]float64), )
 
 	case "TestJson":
 		params, err := turbo.BuildThriftRequest(s, gen.TestServiceTestJsonArgs{}, req, buildStructArg)

@@ -99,9 +99,9 @@ var fieldsYaml string = `thrift-fieldmapping:
 func buildParameterStr(methodName string) string {
 	switch methodName {
 
-	case "SayHello":
+	case "TestJson":
 		var result string
-		args := g.TestServiceSayHelloArgs{}
+		args := g.TestServiceTestJsonArgs{}
 		at := reflect.TypeOf(args)
 		num := at.NumField()
 		for i := 0; i < num; i++ {
@@ -111,9 +111,9 @@ func buildParameterStr(methodName string) string {
 		}
 		return result
 
-	case "TestJson":
+	case "SayHello":
 		var result string
-		args := g.TestServiceTestJsonArgs{}
+		args := g.TestServiceSayHelloArgs{}
 		at := reflect.TypeOf(args)
 		num := at.NumField()
 		for i := 0; i < num; i++ {

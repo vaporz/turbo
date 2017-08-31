@@ -95,6 +95,11 @@ func TestGrpcService(t *testing.T) {
 		`{"message":"{\"values\":{\"someId\":1111111},\"yourName\":\"testtest\",\"boolValue\":true}"}`)
 	s.Components.Reset()
 
+	s.Components.SetMessageFieldConvertor("SayHelloRequest", component(s.Server, "convertProtoSayHelloRequest").(turbo.Convertor))
+	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?bool_value=true",
+		`{"message":"[grpc server]Hello, from convertor"}`)
+	s.Components.Reset()
+
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", component(s.Server, "MetadataInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		`{"message":"[grpc server]Hello, testtest"}metadata:header:headerval:trailer:trailerval:peer:127.0.0.1:50051`)
@@ -124,7 +129,10 @@ func TestThriftService(t *testing.T) {
 		"Internal error processing sayHello: thrift error\n")
 
 	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true",
-		`{"message":"[thrift server]values.TransactionId=0, yourName=name,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0, stringList=[], i32List=[], boolList=[]"}`)
+		`{"message":"[thrift server]values.TransactionId=0, yourName=name,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0, stringList=[], i32List=[], boolList=[], doubleList=[]"}`)
+
+	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&stringlist=a,b&i32_list=1,2,3&boolList=true,false,true&doubleList=1.1,2.2",
+		`{"message":"[thrift server]values.TransactionId=0, yourName=name,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0, stringList=[a b], i32List=[1 2 3], boolList=[true false true], doubleList=[1.1 2.2]"}`)
 
 	s.Components.WithErrorHandler(component(s.Server, "errorHandler").(turbo.ErrorHandlerFunc))
 	testGet(t, "http://localhost:"+httpPort+"/hello/error",
@@ -133,15 +141,15 @@ func TestThriftService(t *testing.T) {
 
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", component(s.Server, "ContextValueInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		`test1_intercepted:{"message":"[thrift server]values.TransactionId=0, yourName=testtest,int64Value=1234567, boolValue=true, float64Value=1.230000, uint64Value=456, int32Value=0, int16Value=0, stringList=[], i32List=[], boolList=[]"}`)
+		`test1_intercepted:{"message":"[thrift server]values.TransactionId=0, yourName=testtest,int64Value=1234567, boolValue=true, float64Value=1.230000, uint64Value=456, int32Value=0, int16Value=0, stringList=[], i32List=[], boolList=[], doubleList=[]"}`)
 	s.Components.Reset()
 
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?transaction_id=111&int64_value=64&bool_value=true&float64_value=0.123&uint64_value=123&int32_value=32&int16_value=16",
-		`{"message":"[thrift server]values.TransactionId=111, yourName=testtest,int64Value=64, boolValue=true, float64Value=0.123000, uint64Value=123, int32Value=32, int16Value=16, stringList=[], i32List=[], boolList=[]"}`)
+		`{"message":"[thrift server]values.TransactionId=111, yourName=testtest,int64Value=64, boolValue=true, float64Value=0.123000, uint64Value=123, int32Value=32, int16Value=16, stringList=[], i32List=[], boolList=[], doubleList=[]"}`)
 
 	s.Components.SetMessageFieldConvertor("CommonValues", component(s.Server, "convertThriftCommonValues").(turbo.Convertor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?bool_value=true",
-		`{"message":"[thrift server]values.TransactionId=222222, yourName=testtest,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0, stringList=[], i32List=[], boolList=[]"}`)
+		`{"message":"[thrift server]values.TransactionId=222222, yourName=testtest,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0, stringList=[], i32List=[], boolList=[], doubleList=[]"}`)
 	s.Components.Reset()
 
 	body := strings.NewReader(`{"StringValue":"123", "int32Value":456, "boolvalue":true}`)
@@ -499,6 +507,7 @@ func (t *testInitializer) InitService(s turbo.Servable) error {
 	s.ServerField().RegisterComponent("hijacker", hijacker)
 	s.ServerField().RegisterComponent("errorHandler", errorHandler)
 	s.ServerField().RegisterComponent("convertProtoCommonValues", convertProtoCommonValues)
+	s.ServerField().RegisterComponent("convertProtoSayHelloRequest", convertProtoSayHelloRequest)
 	s.ServerField().RegisterComponent("convertThriftCommonValues", convertThriftCommonValues)
 	return nil
 }
@@ -613,6 +622,12 @@ var errorHandler turbo.ErrorHandlerFunc = func(resp http.ResponseWriter, req *ht
 var convertProtoCommonValues turbo.Convertor = func(req *http.Request) reflect.Value {
 	result := &proto.CommonValues{}
 	result.SomeId = 1111111
+	return reflect.ValueOf(result)
+}
+
+var convertProtoSayHelloRequest turbo.Convertor = func(req *http.Request) reflect.Value {
+	result := &proto.SayHelloRequest{}
+	result.YourName = "from convertor"
 	return reflect.ValueOf(result)
 }
 
