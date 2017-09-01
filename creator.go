@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+// TODO support plugin for e.g. customize folder structure
+
 // Creator creates new projects
 type Creator struct {
 	RpcType string

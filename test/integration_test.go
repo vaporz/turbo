@@ -74,7 +74,23 @@ func TestGrpcService(t *testing.T) {
 		"&doubleList=1.1,2.2&uint64_list=3,4",
 		`{"message":"{\"values\":{},\"yourName\":\"name\",\"boolValue\":true,\"stringList\":[\"a\",\"b\"],\"int64List\":[1,2],\"boolList\":[true,false],\"doubleList\":[1.1,2.2],\"uint64List\":[3,4]}"}`)
 
+	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&string_list=a,b&int64_list=1,a,2&bool_list=true,a,false"+
+		"&doubleList=1.1,a,2.2&uint64_list=3,a,4",
+		`{"message":"{\"values\":{},\"yourName\":\"name\",\"boolValue\":true,\"stringList\":[\"a\",\"b\"]}"}`)
+
+	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&string_list=",
+		`{"message":"{\"values\":{},\"yourName\":\"name\",\"boolValue\":true}"}`)
+
 	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&int64_list=1-2",
+		`{"message":"{\"values\":{},\"yourName\":\"name\",\"boolValue\":true}"}`)
+
+	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&bool_list=aaa",
+		`{"message":"{\"values\":{},\"yourName\":\"name\",\"boolValue\":true}"}`)
+
+	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&doublelist=aaa",
+		`{"message":"{\"values\":{},\"yourName\":\"name\",\"boolValue\":true}"}`)
+
+	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&uint64_list=aaa",
 		`{"message":"{\"values\":{},\"yourName\":\"name\",\"boolValue\":true}"}`)
 
 	s.Components.WithErrorHandler(component(s.Server, "errorHandler").(turbo.ErrorHandlerFunc))
@@ -109,6 +125,10 @@ func TestGrpcService(t *testing.T) {
 	testPostWithContentType(t, "http://localhost:"+httpPort+"/hello", "application/json", body,
 		`{"message":"{\"values\":{\"someId\":123},\"yourName\":\"a name\",\"boolValue\":true}"}`)
 
+	body = strings.NewReader(`{aaaaa`)
+	testPostWithContentType(t, "http://localhost:"+httpPort+"/hello", "application/json", body,
+		"turbo: failed to BuildRequest for json api, request body: {aaaaa, error: invalid character 'a' looking for beginning of object key string\n")
+
 	s.Stop()
 	time.Sleep(time.Millisecond * 100)
 }
@@ -133,6 +153,9 @@ func TestThriftService(t *testing.T) {
 
 	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&stringlist=a,b&i32_list=1,2,3&boolList=true,false,true&doubleList=1.1,2.2",
 		`{"message":"[thrift server]values.TransactionId=0, yourName=name,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0, stringList=[a b], i32List=[1 2 3], boolList=[true false true], doubleList=[1.1 2.2]"}`)
+
+	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&stringlist=a,b&i32_list=1,a,3&boolList=true,a,true&doubleList=1.1,a,2.2",
+		`{"message":"[thrift server]values.TransactionId=0, yourName=name,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0, stringList=[a b], i32List=[], boolList=[], doubleList=[]"}`)
 
 	s.Components.WithErrorHandler(component(s.Server, "errorHandler").(turbo.ErrorHandlerFunc))
 	testGet(t, "http://localhost:"+httpPort+"/hello/error",
@@ -159,6 +182,10 @@ func TestThriftService(t *testing.T) {
 	body = strings.NewReader(`{"BoolValue":true}`)
 	testPostWithContentType(t, "http://localhost:"+httpPort+"/testjson/123/456", "application/json", body,
 		`{"message":"[thrift server]json= TestJsonRequest({StringValue:123 Int32Value:456 BoolValue:true})"}`)
+
+	body = strings.NewReader(`{ttttt`)
+	testPostWithContentType(t, "http://localhost:"+httpPort+"/testjson/123/456", "application/json", body,
+		"turbo: failed to BuildThriftRequest for json api, request body: {ttttt, error: invalid character 't' looking for beginning of object key string\n")
 
 	s.Stop()
 	time.Sleep(time.Millisecond * 100)
