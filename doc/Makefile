@@ -31,3 +31,5 @@ html: clean
 	cd source/0.1/zh && make html VERSION=0.1 LANG=zh
 	cd source/0.2/en && make html VERSION=0.2 LANG=en
 	cd source/0.2/zh && make html VERSION=0.2 LANG=zh
+	cd source/master/en && make html VERSION=master LANG=en
+	cd source/master/zh && make html VERSION=master LANG=zh
