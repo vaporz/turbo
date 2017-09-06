@@ -34,18 +34,20 @@ func router(s Servable) *mux.Router {
 	return r
 }
 
-type componentsPtr struct{}
+type key int
+
+var componentsKey key = 0
 
 // copyComponentsPtr copies the ptr to Server.Components to context, to ensure that,
 // we are using the same Components through out one request lifecycle.
 // Server.Components may change on reloading config.
 func copyComponentsPtr(s Servable, req *http.Request) {
-	ctx := context.WithValue(req.Context(), &componentsPtr{}, s.ServerField().Components)
+	ctx := context.WithValue(req.Context(), componentsKey, s.ServerField().Components)
 	*req = *req.WithContext(ctx)
 }
 
 func components(req *http.Request) *Components {
-	return req.Context().Value(&componentsPtr{}).(*Components)
+	return req.Context().Value(componentsKey).(*Components)
 }
 
 func handler(s Servable, methodName string) func(http.ResponseWriter, *http.Request) {

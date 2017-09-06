@@ -1,7 +1,7 @@
 config:
   service_root_path: github.com/vaporz/turbo/test/testservice
   http_port: 8085
-  environment: development
+  environment: production
   turbo_log_path: log
   grpc_service_name: TestService
   grpc_service_host: 127.0.0.1
