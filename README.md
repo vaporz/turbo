@@ -5,7 +5,8 @@
 文档地址 | Documentation: https://vaporz.github.io
 
 ## Features
- * Turbo generates a reverse-proxy server which translates a HTTP request into a grpc/Thrift request.
+ * Turbo generates a reverse-proxy server which translates a HTTP request into a grpc/Thrift request.  
+ **(In other words, now you have a grpc|thrift service? Turbo turns your grpc|thrift APIs into HTTP APIs!)**
  * Support gRPC and [Thrift](https://vaporz.github.io/0.2/en/thrift.html).
  * Support [RESTFUL JSON API](https://vaporz.github.io/0.2/en/json.html) ("application/json").
  * [Interceptor](https://vaporz.github.io/0.2/en/interceptor.html#interceptor).
@@ -30,4 +31,3 @@
 ## Requirements
 Golang version: >= 1.8.x  
 Thrift version: >= 0.10.0  
-Protocol buffer version: 3
