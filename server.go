@@ -179,6 +179,7 @@ func quit(s Servable, httpServer *http.Server, grpcServer *grpc.Server, thriftSe
 
 // Stop stops the server gracefully
 func (s *Server) Stop() {
+	// TODO call quit() here
 	close(s.exit)
 }
 
