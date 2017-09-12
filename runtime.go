@@ -34,24 +34,41 @@ func router(s Servable) *mux.Router {
 	return r
 }
 
+type key int
+
+var componentsKey key = 0
+
+// copyComponentsPtr copies the ptr to Server.Components to context, to ensure that,
+// we are using the same Components through out one request lifecycle.
+// Server.Components may change on reloading config.
+func copyComponentsPtr(s Servable, req *http.Request) {
+	ctx := context.WithValue(req.Context(), componentsKey, s.ServerField().Components)
+	*req = *req.WithContext(ctx)
+}
+
+func components(req *http.Request) *Components {
+	return req.Context().Value(componentsKey).(*Components)
+}
+
 func handler(s Servable, methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
+		copyComponentsPtr(s, req)
 		parseRequestForm(req)
 		interceptors := getInterceptors(s, req)
 		req, err := doBefore(&interceptors, resp, req)
 		if err == nil {
 			doRequest(s, methodName, resp, req)
 		} else {
-			s.ServerField().Components.errorHandlerFunc()(resp, req, err)
+			components(req).errorHandlerFunc()(resp, req, err)
 		}
 		doAfter(interceptors, resp, req)
 	}
 }
 
 func getInterceptors(s Servable, req *http.Request) []Interceptor {
-	interceptors := s.ServerField().Components.Interceptors(req)
+	interceptors := components(req).Interceptors(req)
 	if len(interceptors) == 0 {
-		interceptors = s.ServerField().Components.CommonInterceptors()
+		interceptors = components(req).CommonInterceptors()
 	}
 	return interceptors
 }
@@ -69,18 +86,18 @@ func doBefore(interceptors *[]Interceptor, resp http.ResponseWriter, req *http.R
 }
 
 func doRequest(s Servable, methodName string, resp http.ResponseWriter, req *http.Request) {
-	if hijack := s.ServerField().Components.Hijacker(req); hijack != nil {
+	if hijack := components(req).Hijacker(req); hijack != nil {
 		hijack(resp, req)
 		return
 	}
 	err := doPreprocessor(s, resp, req)
 	if err != nil {
-		s.ServerField().Components.errorHandlerFunc()(resp, req, err)
+		components(req).errorHandlerFunc()(resp, req, err)
 		return
 	}
 	serviceResp, err := switcherFunc(s, methodName, resp, req)
 	if err != nil {
-		s.ServerField().Components.errorHandlerFunc()(resp, req, err)
+		components(req).errorHandlerFunc()(resp, req, err)
 		return
 	}
 	doPostprocessor(s, resp, req, serviceResp, err)
@@ -128,7 +145,7 @@ func GrpcMetadataPeer(ctx context.Context) *peer.Peer {
 }
 
 func doPreprocessor(s Servable, resp http.ResponseWriter, req *http.Request) error {
-	if pre := s.ServerField().Components.Preprocessor(req); pre != nil {
+	if pre := components(req).Preprocessor(req); pre != nil {
 		if err := pre(resp, req); err != nil {
 			log.Println(err.Error())
 			return errors.New(fmt.Sprintf("turbo: encounter error in preprocessor for %s, error: %s", req.URL, err))
@@ -139,7 +156,7 @@ func doPreprocessor(s Servable, resp http.ResponseWriter, req *http.Request) err
 
 func doPostprocessor(s Servable, resp http.ResponseWriter, req *http.Request, serviceResponse interface{}, err error) {
 	// 1, run Postprocessor, if any
-	post := s.ServerField().Components.Postprocessor(req)
+	post := components(req).Postprocessor(req)
 	if post != nil {
 		post(resp, req, serviceResponse, err)
 		return
@@ -184,7 +201,7 @@ func BuildStruct(s Servable, theType reflect.Type, theValue reflect.Value, req *
 	if theValue.Kind() == reflect.Invalid {
 		log.Info("value is invalid, please check grpc-fieldmapping")
 	}
-	convertor := s.ServerField().Components.Convertor(theValue.Type().Name())
+	convertor := components(req).Convertor(theValue.Type().Name())
 	if convertor != nil {
 		theValue.Set(convertor(req).Elem())
 		return
@@ -195,7 +212,7 @@ func BuildStruct(s Servable, theType reflect.Type, theValue reflect.Value, req *
 		fieldName := theType.Field(i).Name
 		fieldValue := theValue.FieldByName(fieldName)
 		if fieldValue.Kind() == reflect.Ptr && fieldValue.Type().Elem().Kind() == reflect.Struct {
-			convertor := s.ServerField().Components.Convertor(fieldValue.Type().Elem().Name())
+			convertor := components(req).Convertor(fieldValue.Type().Elem().Name())
 			if convertor != nil {
 				fieldValue.Set(convertor(req))
 				continue
@@ -309,7 +326,7 @@ func BuildArgs(s Servable, argsType reflect.Type, argsValue reflect.Value, req *
 		fieldName := field.Name
 		valueType := argsValue.FieldByName(fieldName).Type()
 		if field.Type.Kind() == reflect.Ptr && valueType.Elem().Kind() == reflect.Struct {
-			convertor := s.ServerField().Components.Convertor(valueType.Elem().Name())
+			convertor := components(req).Convertor(valueType.Elem().Name())
 			if convertor != nil {
 				params[i] = convertor(req)
 				continue

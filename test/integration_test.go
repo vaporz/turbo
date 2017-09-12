@@ -249,8 +249,11 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/error", "from errorHandler:rpc error: code = Unknown desc = grpc error")
 
 	changeServiceYamlWithGrpcComponents(httpPort, "50055", "production")
-	time.Sleep(time.Millisecond * 100)
-	testGet(t, "http://localhost:"+httpPort+"/hello", "test1_intercepted:preprocessor:postprocessor:[grpc server]Hello, ")
+	time.Sleep(time.Millisecond * 10)
+	for i := 0; i < 10; i++ {
+		go testGet(t, "http://localhost:"+httpPort+"/hello", "test1_intercepted:preprocessor:postprocessor:[grpc server]Hello, ")
+	}
+	time.Sleep(time.Millisecond * 1000)
 	s.Stop()
 	time.Sleep(time.Millisecond * 100)
 }

@@ -150,7 +150,6 @@ Wait:
 		newComponents := s.ServerField().loadComponentsNoPanic()
 		newRouter := router(s)
 		httpServer.Handler = newRouter
-		log.Info("Router reloaded")
 		s.ServerField().Components = newComponents
 		log.Info("Configuration reloaded")
 		goto Wait
