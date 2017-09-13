@@ -9,7 +9,9 @@ import (
 
 type GrpcServer struct {
 	*Server
-	gClient *grpcClient
+	gClient    *grpcClient
+	httpServer *http.Server
+	grpcServer *grpc.Server
 }
 
 func NewGrpcServer(configFilePath string) *GrpcServer {
@@ -34,9 +36,9 @@ type grpcClientCreator func(conn *grpc.ClientConn) interface{}
 func (s *GrpcServer) StartGRPC(clientCreator grpcClientCreator, sw switcher, registerServer func(s *grpc.Server)) {
 	log.Info("Starting Turbo...")
 	s.Initializer.InitService(s)
-	grpcServer := s.startGrpcServiceInternal(registerServer, false)
-	httpServer := s.startGrpcHTTPServerInternal(clientCreator, sw)
-	waitForQuit(s, httpServer, grpcServer, nil)
+	s.grpcServer = s.startGrpcServiceInternal(registerServer, false)
+	s.httpServer = s.startGrpcHTTPServerInternal(clientCreator, sw)
+	waitForQuit(s, s.httpServer, s.grpcServer, nil)
 	log.Info("Turbo exit, bye!")
 }
 
@@ -88,3 +90,8 @@ func (s *GrpcServer) Service() interface{} {
 	return s.gClient.grpcService
 }
 func (s *GrpcServer) ServerField() *Server { return s.Server }
+
+func (s *GrpcServer) Stop() {
+	log.Info("Stop() invoked, Service is stopping...")
+	quit(s, s.httpServer, s.grpcServer, nil)
+}

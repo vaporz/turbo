@@ -22,6 +22,7 @@ import (
 type Servable interface {
 	Service() interface{}
 	ServerField() *Server
+	Stop()
 }
 
 // Server holds the data for a server
@@ -38,6 +39,9 @@ type Server struct {
 
 func (s *Server) Service() interface{} { return nil }
 func (s *Server) ServerField() *Server { return s }
+
+// Stop stops the server gracefully
+func (s *Server) Stop() { return }
 
 // RegisterComponent registers a component,
 // The convention is to register with the name of that component,
@@ -175,12 +179,6 @@ func quit(s Servable, httpServer *http.Server, grpcServer *grpc.Server, thriftSe
 		log.Info("Grpc Server stopped")
 	}
 	s.ServerField().Initializer.StopService(s)
-}
-
-// Stop stops the server gracefully
-func (s *Server) Stop() {
-	// TODO call quit() here
-	close(s.exit)
 }
 
 // Initializable defines funcs run before service started and after service stopped

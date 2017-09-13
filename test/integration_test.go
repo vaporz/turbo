@@ -130,7 +130,6 @@ func TestGrpcService(t *testing.T) {
 		"turbo: failed to BuildRequest for json api, request body: {aaaaa, error: invalid character 'a' looking for beginning of object key string\n")
 
 	s.Stop()
-	time.Sleep(time.Millisecond * 100)
 }
 
 func TestThriftService(t *testing.T) {
@@ -188,7 +187,6 @@ func TestThriftService(t *testing.T) {
 		"turbo: failed to BuildThriftRequest for json api, request body: {ttttt, error: invalid character 't' looking for beginning of object key string\n")
 
 	s.Stop()
-	time.Sleep(time.Millisecond * 100)
 }
 
 func TestHTTPGrpcService(t *testing.T) {
@@ -205,7 +203,6 @@ func TestHTTPGrpcService(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", `{"message":"[grpc server]Hello, testtest"}`)
 
 	s.Stop()
-	time.Sleep(time.Millisecond * 100)
 }
 
 func TestHTTPThriftService(t *testing.T) {
@@ -222,7 +219,6 @@ func TestHTTPThriftService(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", `{"message":"[thrift server]Hello, testtest"}`)
 
 	s.Stop()
-	time.Sleep(time.Millisecond * 100)
 }
 
 func TestLoadComponentsFromConfig(t *testing.T) {
@@ -250,11 +246,10 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 
 	changeServiceYamlWithGrpcComponents(httpPort, "50055", "production")
 	time.Sleep(time.Millisecond * 1000)
-	for i := 0; i < 10; i++ {
-		testGet(t, "http://localhost:"+httpPort+"/hello", "test1_intercepted:preprocessor:postprocessor:[grpc server]Hello, ")
-	}
+	//for i := 0; i < 10; i++ {
+	testGet(t, "http://localhost:"+httpPort+"/hello", "test1_intercepted:preprocessor:postprocessor:[grpc server]Hello, ")
+	//}
 	s.Stop()
-	time.Sleep(time.Millisecond * 100)
 }
 
 func overwriteProto() {

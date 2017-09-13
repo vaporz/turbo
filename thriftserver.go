@@ -8,7 +8,9 @@ import (
 
 type ThriftServer struct {
 	*Server
-	tClient *thriftClient
+	tClient      *thriftClient
+	httpServer   *http.Server
+	thriftServer *thrift.TSimpleServer
 }
 
 func NewThriftServer(configFilePath string) *ThriftServer {
@@ -34,10 +36,10 @@ func (s *ThriftServer) StartTHRIFT(clientCreator thriftClientCreator, sw switche
 	registerTProcessor func() thrift.TProcessor) {
 	log.Info("Starting Turbo...")
 	s.Initializer.InitService(s)
-	thriftServer := s.startThriftServiceInternal(registerTProcessor, false)
+	s.thriftServer = s.startThriftServiceInternal(registerTProcessor, false)
 	time.Sleep(time.Second * 1)
-	httpServer := s.startThriftHTTPServerInternal(clientCreator, sw)
-	waitForQuit(s, httpServer, nil, thriftServer)
+	s.httpServer = s.startThriftHTTPServerInternal(clientCreator, sw)
+	waitForQuit(s, s.httpServer, nil, s.thriftServer)
 	log.Info("Turbo exit, bye!")
 }
 
@@ -86,3 +88,8 @@ func (s *ThriftServer) Service() interface{} {
 }
 
 func (s *ThriftServer) ServerField() *Server { return s.Server }
+
+func (s *ThriftServer) Stop() {
+	log.Info("Stop() invoked, Service is stopping...")
+	quit(s, s.httpServer, nil, s.thriftServer)
+}
