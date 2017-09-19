@@ -6,6 +6,7 @@ import (
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/mux"
+	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"net/http"
 	"os"
@@ -64,7 +65,12 @@ func (s *Server) Component(name string) (interface{}, error) {
 func (s *Server) watchConfig() {
 	s.Config.WatchConfig()
 	s.Config.OnConfigChange(func(e fsnotify.Event) {
-		s.Config.loadServiceConfig()
+		c := &Config{
+			Viper:    *viper.New(),
+			File:     s.Config.File,
+			mappings: make(map[string][][3]string)}
+		c.loadServiceConfig()
+		s.Config = c
 		s.reloadConfig <- true
 	})
 }
@@ -142,6 +148,22 @@ func getComponentByName(s *Server, name string) interface{} {
 
 func waitForQuit(s Servable, httpServer *http.Server, grpcServer *grpc.Server, thriftServer *thrift.TSimpleServer) {
 	signal.Notify(s.ServerField().exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
+	if httpServer == nil {
+		waitOnExit(s, httpServer, grpcServer, thriftServer)
+	} else {
+		waitOnExitAndReload(s, httpServer, grpcServer, thriftServer)
+	}
+}
+
+func waitOnExit(s Servable, httpServer *http.Server, grpcServer *grpc.Server, thriftServer *thrift.TSimpleServer) {
+	select {
+	case <-s.ServerField().exit:
+		log.Info("Received CTRL-C, Service is stopping...")
+	}
+	quit(s, httpServer, grpcServer, thriftServer)
+}
+
+func waitOnExitAndReload(s Servable, httpServer *http.Server, grpcServer *grpc.Server, thriftServer *thrift.TSimpleServer) {
 Wait:
 	select {
 	case <-s.ServerField().exit:

@@ -28,7 +28,6 @@ func NewGrpcServer(initializer Initializable, configFilePath string) *GrpcServer
 		gClient: new(grpcClient),
 	}
 	s.initChans()
-	s.watchConfig()
 	initLogger(s.Config)
 	return s
 }
@@ -41,6 +40,7 @@ func (s *GrpcServer) StartGRPC(clientCreator grpcClientCreator, sw switcher, reg
 	s.Initializer.InitService(s)
 	s.grpcServer = s.startGrpcServiceInternal(registerServer, false)
 	s.httpServer = s.startGrpcHTTPServerInternal(clientCreator, sw)
+	s.watchConfig()
 	waitForQuit(s, s.httpServer, s.grpcServer, nil)
 	log.Info("Turbo exit, bye!")
 }
@@ -48,16 +48,17 @@ func (s *GrpcServer) StartGRPC(clientCreator grpcClientCreator, sw switcher, reg
 // StartGrpcHTTPServer starts a HTTP server which sends requests via grpc
 func (s *GrpcServer) StartGrpcHTTPServer(clientCreator grpcClientCreator, sw switcher) {
 	s.Initializer.InitService(s)
-	httpServer := s.startGrpcHTTPServerInternal(clientCreator, sw)
-	waitForQuit(s, httpServer, nil, nil)
+	s.httpServer = s.startGrpcHTTPServerInternal(clientCreator, sw)
+	s.watchConfig()
+	waitForQuit(s, s.httpServer, nil, nil)
 	log.Info("Grpc HttpServer exit, bye!")
 }
 
 // StartGrpcService starts a GRPC service
 func (s *GrpcServer) StartGrpcService(registerServer func(s *grpc.Server)) {
 	s.Initializer.InitService(s)
-	grpcServer := s.startGrpcServiceInternal(registerServer, true)
-	waitForQuit(s, nil, grpcServer, nil)
+	s.grpcServer = s.startGrpcServiceInternal(registerServer, true)
+	waitForQuit(s, nil, s.grpcServer, nil)
 	log.Info("Grpc Service exit, bye!")
 }
 

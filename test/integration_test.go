@@ -1,6 +1,7 @@
 package test
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -224,10 +225,9 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 	httpPort := "8085"
 	overwriteServiceYamlWithGrpcComponents(httpPort, "50055", "production")
 
-	s := turbo.NewGrpcServer(nil, "testservice/service.yaml")
+	s := turbo.NewGrpcServer(&testInitializer{}, turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml")
 	_, err := s.Component("test")
-	assert.NotNil(t, err)
-	s.Initializer = &testInitializer{}
+	assert.Equal(t, "no such component: test, forget to register?", err.Error())
 	go s.StartGrpcService(gimpl.RegisterServer)
 	time.Sleep(time.Millisecond * 300)
 
@@ -245,9 +245,7 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 
 	changeServiceYamlWithGrpcComponents(httpPort, "50055", "production")
 	time.Sleep(time.Millisecond * 1000)
-	//for i := 0; i < 10; i++ {
 	testGet(t, "http://localhost:"+httpPort+"/hello", "test1_intercepted:preprocessor:postprocessor:[grpc server]Hello, ")
-	//}
 	s.Stop()
 }
 
@@ -806,12 +804,14 @@ func writeFileWithTemplate(filePath, text string, data interface{}) {
 	if err != nil {
 		panic("fail to create file:" + filePath)
 	}
+	bf := bufio.NewWriter(f)
 	tmpl, err := template.New("").Parse(text)
 	if err != nil {
 		panic(err)
 	}
-	err = tmpl.Execute(f, data)
+	err = tmpl.Execute(bf, data)
 	if err != nil {
 		panic(err)
 	}
+	bf.Flush()
 }

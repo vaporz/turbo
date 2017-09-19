@@ -42,23 +42,25 @@ func (s *ThriftServer) StartTHRIFT(clientCreator thriftClientCreator, sw switche
 	s.thriftServer = s.startThriftServiceInternal(registerTProcessor, false)
 	time.Sleep(time.Second * 1)
 	s.httpServer = s.startThriftHTTPServerInternal(clientCreator, sw)
-	waitForQuit(s, s.httpServer, nil, s.thriftServer)
+	s.watchConfig()
+	waitForQuit(s, s.httpServer, nil, s.thriftServer) // TODO pass s only
 	log.Info("Turbo exit, bye!")
 }
 
 // StartThriftHTTPServer starts a HTTP server which sends requests via Thrift
 func (s *ThriftServer) StartThriftHTTPServer(clientCreator thriftClientCreator, sw switcher) {
 	s.Initializer.InitService(s)
-	httpServer := s.startThriftHTTPServerInternal(clientCreator, sw)
-	waitForQuit(s, httpServer, nil, nil)
+	s.httpServer = s.startThriftHTTPServerInternal(clientCreator, sw)
+	s.watchConfig()
+	waitForQuit(s, s.httpServer, nil, nil)
 	log.Info("Thrift HttpServer exit, bye!")
 }
 
 // StartThriftService starts a Thrift service
 func (s *ThriftServer) StartThriftService(registerTProcessor func() thrift.TProcessor) {
 	s.Initializer.InitService(s)
-	thriftServer := s.startThriftServiceInternal(registerTProcessor, true)
-	waitForQuit(s, nil, nil, thriftServer)
+	s.thriftServer = s.startThriftServiceInternal(registerTProcessor, true)
+	waitForQuit(s, nil, nil, s.thriftServer)
 	log.Info("Thrift Service exit, bye!")
 }
 
