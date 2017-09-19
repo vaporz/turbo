@@ -210,7 +210,7 @@ import (
 )
 
 func main() {
-	s := turbo.NewGrpcServer("{{.ConfigFilePath}}")
+	s := turbo.NewGrpcServer(nil, "{{.ConfigFilePath}}")
 	s.StartGrpcService(impl.RegisterServer)
 }
 `,
@@ -234,7 +234,7 @@ import (
 )
 
 func main() {
-	s := turbo.NewThriftServer("{{.ConfigFilePath}}")
+	s := turbo.NewThriftServer(nil, "{{.ConfigFilePath}}")
 	s.StartThriftService(impl.TProcessor)
 }
 `,
@@ -330,12 +330,10 @@ import (
 )
 
 func main() {
-	s := turbo.NewGrpcServer("{{.ConfigFilePath}}")
-	component.RegisterComponents(s)
-	s.Initializer = &component.ServiceInitializer{}
+	s := turbo.NewGrpcServer(&component.ServiceInitializer{}, "{{.ConfigFilePath}}")
 	s.StartGrpcHTTPServer(component.GrpcClient, gen.GrpcSwitcher)
 }
-`,
+`, // TODO register components in initializer
 	)
 }
 
@@ -360,16 +358,11 @@ func GrpcClient(conn *grpc.ClientConn) interface{} {
 	return proto.New{{.ServiceName}}Client(conn)
 }
 
-// RegisterComponents inits turbo components, such as Interceptors, pre/postprocessors, errorHandlers, etc.
-func RegisterComponents(s *turbo.GrpcServer) {
-	// TODO
-	// s.RegisterComponent("name", component)
-}
-
 type ServiceInitializer struct {
 }
 
-// InitService is run before the service is started, do initializing staffs for your service here
+// InitService is run before the service is started, do initializing staffs for your service here.
+// For example, init turbo components, such as interceptors, pre/postprocessors, errorHandlers, etc.
 func (i *ServiceInitializer) InitService(s turbo.Servable) error {
 	// TODO
 	return nil
@@ -405,16 +398,11 @@ func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) interface{
 	return t.New{{.ServiceName}}ClientFactory(trans, f)
 }
 
-// RegisterComponents inits turbo components, such as Interceptors, pre/postprocessors, errorHandlers, etc.
-func RegisterComponents(s *turbo.ThriftServer) {
-	// TODO
-	// s.RegisterComponent("name", component)
-}
-
 type ServiceInitializer struct {
 }
 
-// InitService is run before the service is started, do initializing staffs for your service here
+// InitService is run before the service is started, do initializing staffs for your service here.
+// For example, init turbo components, such as interceptors, pre/postprocessors, errorHandlers, etc.
 func (i *ServiceInitializer) InitService(s turbo.Servable) error {
 	// TODO
 	return nil
@@ -451,9 +439,7 @@ import (
 )
 
 func main() {
-	s := turbo.NewThriftServer("{{.ConfigFilePath}}")
-	component.RegisterComponents(s)
-	s.Initializer = &component.ServiceInitializer{}
+	s := turbo.NewThriftServer(&component.ServiceInitializer{}, "{{.ConfigFilePath}}")
 	s.StartThriftHTTPServer(component.ThriftClient, gen.ThriftSwitcher)
 }
 `,
@@ -492,14 +478,10 @@ import (
 )
 
 func main() {
-	s := turbo.NewGrpcServer("{{.ConfigFilePath}}")
-	gcomponent.RegisterComponents(s)
-	s.Initializer = &gcomponent.ServiceInitializer{}
+	s := turbo.NewGrpcServer(&gcomponent.ServiceInitializer{}, "{{.ConfigFilePath}}")
 	s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
-	//s := turbo.NewThriftServer("{{.ConfigFilePath}}")
-	//tcomponent.RegisterComponents(s)
-	//s.Initializer = &tcomponent.ServiceInitializer{}
+	//s := turbo.NewThriftServer(&tcomponent.ServiceInitializer{}, "{{.ConfigFilePath}}")
 	//s.StartTHRIFT(tcomponent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 }
 `
@@ -516,14 +498,10 @@ import (
 )
 
 func main() {
-	//s := turbo.NewGrpcServer("{{.ConfigFilePath}}")
-	//gcomponent.RegisterComponents(s)
-	//s.Initializer = &gcomponent.ServiceInitializer{}
+	//s := turbo.NewGrpcServer(&gcomponent.ServiceInitializer{}, "{{.ConfigFilePath}}")
 	//s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
-	s := turbo.NewThriftServer("{{.ConfigFilePath}}")
-	tcomponent.RegisterComponents(s)
-	s.Initializer = &tcomponent.ServiceInitializer{}
+	s := turbo.NewThriftServer(&tcomponent.ServiceInitializer{}, "{{.ConfigFilePath}}")
 	s.StartTHRIFT(tcomponent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 }
 `

@@ -55,7 +55,7 @@ func (s *Server) RegisterComponent(name string, component interface{}) {
 
 // Component returns a component by name.
 func (s *Server) Component(name string) (interface{}, error) {
-	if s.Components.registeredComponents == nil {
+	if s.Components.registeredComponents[name] == nil {
 		return nil, errors.New("no such component: " + name + ", forget to register?")
 	}
 	return s.Components.registeredComponents[name], nil

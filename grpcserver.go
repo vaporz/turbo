@@ -14,13 +14,16 @@ type GrpcServer struct {
 	grpcServer *grpc.Server
 }
 
-func NewGrpcServer(configFilePath string) *GrpcServer {
+func NewGrpcServer(initializer Initializable, configFilePath string) *GrpcServer {
+	if initializer == nil {
+		initializer = &defaultInitializer{}
+	}
 	s := &GrpcServer{
 		Server: &Server{
 			Config:       NewConfig("grpc", configFilePath),
 			Components:   new(Components),
 			reloadConfig: make(chan bool),
-			Initializer:  &defaultInitializer{},
+			Initializer:  initializer,
 		},
 		gClient: new(grpcClient),
 	}

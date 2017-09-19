@@ -12,12 +12,8 @@ import (
 // TODO go generate: turbo generate
 
 func main() {
-	//s := turbo.NewGrpcServer(turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testservice/service.yaml")
-	//gcomponent.RegisterComponents(s)
-	//s.Initializer = &gcomponent.ServiceInitializer{}
+	//s := turbo.NewGrpcServer(&gcomponent.ServiceInitializer{}, turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testservice/service.yaml")
 	//s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
-	s := turbo.NewThriftServer(turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testservice/service.yaml")
-	tcomponent.RegisterComponents(s)
-	s.Initializer = &tcomponent.ServiceInitializer{}
+	s := turbo.NewThriftServer(&tcomponent.ServiceInitializer{}, turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml")
 	s.StartTHRIFT(tcomponent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 }

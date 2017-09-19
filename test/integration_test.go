@@ -45,6 +45,7 @@ func TestCreateThriftService(t *testing.T) {
 	os.RemoveAll(turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice/gen")
 	generate(t, "thrift")
 	// recover grpc gen code
+	overwriteProto()
 	generate(t, "grpc")
 }
 
@@ -60,8 +61,7 @@ func TestGrpcService(t *testing.T) {
 	httpPort := "8081"
 	overwriteServiceYaml("8081", "50051", "development")
 
-	s := turbo.NewGrpcServer("testservice/service.yaml")
-	s.Initializer = &testInitializer{}
+	s := turbo.NewGrpcServer(&testInitializer{}, "testservice/service.yaml")
 	go s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 	time.Sleep(time.Millisecond * 1000)
 
@@ -136,8 +136,7 @@ func TestThriftService(t *testing.T) {
 	httpPort := "8082"
 	overwriteServiceYaml(httpPort, "50052", "production")
 
-	s := turbo.NewThriftServer("testservice/service.yaml")
-	s.Initializer = &testInitializer{}
+	s := turbo.NewThriftServer(&testInitializer{}, "testservice/service.yaml")
 	go s.StartTHRIFT(tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 	time.Sleep(time.Second * 2)
 	turbo.SetOutput(os.Stdout)
@@ -193,7 +192,7 @@ func TestHTTPGrpcService(t *testing.T) {
 	httpPort := "8083"
 	overwriteServiceYaml(httpPort, "50053", "development")
 
-	s := turbo.NewGrpcServer("testservice/service.yaml")
+	s := turbo.NewGrpcServer(nil, "testservice/service.yaml")
 	go s.StartGrpcService(gimpl.RegisterServer)
 	time.Sleep(time.Millisecond * 300)
 
@@ -209,7 +208,7 @@ func TestHTTPThriftService(t *testing.T) {
 	httpPort := "8084"
 	overwriteServiceYaml(httpPort, "50054", "development")
 
-	s := turbo.NewThriftServer("testservice/service.yaml")
+	s := turbo.NewThriftServer(nil, "testservice/service.yaml")
 	go s.StartThriftService(timpl.TProcessor)
 	time.Sleep(time.Millisecond * 500)
 
@@ -225,7 +224,7 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 	httpPort := "8085"
 	overwriteServiceYamlWithGrpcComponents(httpPort, "50055", "production")
 
-	s := turbo.NewGrpcServer("testservice/service.yaml")
+	s := turbo.NewGrpcServer(nil, "testservice/service.yaml")
 	_, err := s.Component("test")
 	assert.NotNil(t, err)
 	s.Initializer = &testInitializer{}

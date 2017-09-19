@@ -7,8 +7,6 @@ import (
 )
 
 func main() {
-	s := turbo.NewThriftServer(turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testservice/service.yaml")
-	component.RegisterComponents(s)
-	s.Initializer = &component.ServiceInitializer{}
+	s := turbo.NewThriftServer(&component.ServiceInitializer{}, turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml")
 	s.StartThriftHTTPServer(component.ThriftClient, gen.ThriftSwitcher)
 }

@@ -13,13 +13,16 @@ type ThriftServer struct {
 	thriftServer *thrift.TSimpleServer
 }
 
-func NewThriftServer(configFilePath string) *ThriftServer {
+func NewThriftServer(initializer Initializable, configFilePath string) *ThriftServer {
+	if initializer == nil {
+		initializer = &defaultInitializer{}
+	}
 	s := &ThriftServer{
 		Server: &Server{
 			Config:       NewConfig("thrift", configFilePath),
 			Components:   new(Components),
 			reloadConfig: make(chan bool),
-			Initializer:  &defaultInitializer{},
+			Initializer:  initializer,
 		},
 		tClient: new(thriftClient),
 	}
