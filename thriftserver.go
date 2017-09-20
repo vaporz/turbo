@@ -27,7 +27,6 @@ func NewThriftServer(initializer Initializable, configFilePath string) *ThriftSe
 		tClient: new(thriftClient),
 	}
 	s.initChans()
-	s.watchConfig()
 	initLogger(s.Config)
 	return s
 }
@@ -43,7 +42,7 @@ func (s *ThriftServer) StartTHRIFT(clientCreator thriftClientCreator, sw switche
 	time.Sleep(time.Second * 1)
 	s.httpServer = s.startThriftHTTPServerInternal(clientCreator, sw)
 	s.watchConfig()
-	waitForQuit(s, s.httpServer, nil, s.thriftServer) // TODO pass s only
+	waitForQuit(s, s.httpServer, nil, s.thriftServer)
 	log.Info("Turbo exit, bye!")
 }
 

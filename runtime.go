@@ -155,21 +155,14 @@ func doPreprocessor(s Servable, resp http.ResponseWriter, req *http.Request) err
 }
 
 func doPostprocessor(s Servable, resp http.ResponseWriter, req *http.Request, serviceResponse interface{}, err error) {
-	// 1, run Postprocessor, if any
+	// run Postprocessor, if any
 	post := components(req).Postprocessor(req)
 	if post != nil {
 		post(resp, req, serviceResponse, err)
 		return
 	}
 
-	// 2, parse serviceResponse with registered struct
-	//if user defined struct registered {
-	// TODO user can define a struct, which defines how data is mapped
-	// from response to this struct, and how this struct is parsed into xml/json
-	// return
-	//}
-
-	//3, return as json
+	// return as json
 	m := Marshaler{
 		FilterProtoJson: s.ServerField().Config.FilterProtoJson(),
 		EmitZeroValues:  s.ServerField().Config.FilterProtoJsonEmitZeroValues(),

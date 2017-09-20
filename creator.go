@@ -333,7 +333,7 @@ func main() {
 	s := turbo.NewGrpcServer(&component.ServiceInitializer{}, "{{.ConfigFilePath}}")
 	s.StartGrpcHTTPServer(component.GrpcClient, gen.GrpcSwitcher)
 }
-`, // TODO register components in initializer
+`,
 	)
 }
 
