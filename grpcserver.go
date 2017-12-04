@@ -70,6 +70,7 @@ func (s *GrpcServer) StartGrpcService(registerServer func(s *grpc.Server)) {
 func (s *GrpcServer) startGrpcHTTPServerInternal(clientCreator grpcClientCreator, sw switcher) *http.Server {
 	log.Info("Starting HTTP Server...")
 	switcherFunc = sw
+	//TODO register multi gClients
 	s.gClient.init(s.Config.GrpcServiceHost()+":"+s.Config.GrpcServicePort(), clientCreator)
 	return startHTTPServer(s)
 }

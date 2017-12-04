@@ -22,6 +22,10 @@ import (
 	"time"
 )
 
+// TODO use dep
+
+// TODO try to use sync.Once
+
 // TODO Make Ctrl+C cancel the context.Context
 // https://medium.com/@matryer/make-ctrl-c-cancel-the-context-context-bd006a8ad6ff
 
@@ -171,9 +175,9 @@ func waitOnExit(s Servable, httpServer *http.Server, grpcServer *grpc.Server, th
 func waitOnExitAndReload(s Servable, httpServer *http.Server, grpcServer *grpc.Server, thriftServer *thrift.TSimpleServer) {
 Wait:
 	select {
-	case <-s.ServerField().exit:
+	case <-s.ServerField().exit:// TODO move this blocking line out to user's code?
 		log.Info("Received CTRL-C, Service is stopping...")
-	case <-s.ServerField().reloadConfig:
+	case <-s.ServerField().reloadConfig:// TODO start a new goroutine "reloader" to reload
 		if httpServer == nil {
 			goto Wait
 		}
@@ -185,10 +189,11 @@ Wait:
 		log.Info("Configuration reloaded")
 		goto Wait
 	}
-	quit(s, httpServer, grpcServer, thriftServer)
+	quit(s, httpServer, grpcServer, thriftServer)// TODO should remove this line?
 }
 
 func quit(s Servable, httpServer *http.Server, grpcServer *grpc.Server, thriftServer *thrift.TSimpleServer) {
+	// if s.ServerField().exit is not closed, close it, return directly
 	if httpServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
