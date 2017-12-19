@@ -487,6 +487,7 @@ func BuildThriftRequest(s Servable, args interface{}, req *http.Request, buildSt
 		err := json.Unmarshal(buf.Bytes(), v)
 		// TODO [2] refactor error, define own errors?
 		if err != nil {
+			// TODO use fmt.Errorf()
 			return params, errors.New(fmt.Sprintf("turbo: failed to BuildThriftRequest for json api, "+
 				"request body: %s, error: %s", buf.String(), err))
 		}

@@ -15,7 +15,6 @@ import (
 type GrpcServer struct {
 	*Server
 	gClient    *grpcClient
-	httpServer *http.Server
 	grpcServer *grpc.Server
 }
 
@@ -45,26 +44,20 @@ func (s *GrpcServer) StartGRPC(clientCreator grpcClientCreator, sw switcher, reg
 	s.Initializer.InitService(s)
 	s.grpcServer = s.startGrpcServiceInternal(registerServer, false)
 	s.httpServer = s.startGrpcHTTPServerInternal(clientCreator, sw)
-	s.watchConfig()
-	waitForQuit(s, s.httpServer, s.grpcServer, nil)
-	log.Info("Turbo exit, bye!")
+	watchConfigReload(s)
 }
 
 // StartGrpcHTTPServer starts a HTTP server which sends requests via grpc
 func (s *GrpcServer) StartGrpcHTTPServer(clientCreator grpcClientCreator, sw switcher) {
 	s.Initializer.InitService(s)
 	s.httpServer = s.startGrpcHTTPServerInternal(clientCreator, sw)
-	s.watchConfig()
-	waitForQuit(s, s.httpServer, nil, nil)
-	log.Info("Grpc HttpServer exit, bye!")
+	watchConfigReload(s)
 }
 
 // StartGrpcService starts a GRPC service
 func (s *GrpcServer) StartGrpcService(registerServer func(s *grpc.Server)) {
 	s.Initializer.InitService(s)
 	s.grpcServer = s.startGrpcServiceInternal(registerServer, true)
-	waitForQuit(s, nil, s.grpcServer, nil)
-	log.Info("Grpc Service exit, bye!")
 }
 
 func (s *GrpcServer) startGrpcHTTPServerInternal(clientCreator grpcClientCreator, sw switcher) *http.Server {
@@ -103,5 +96,5 @@ func (s *GrpcServer) ServerField() *Server { return s.Server }
 
 func (s *GrpcServer) Stop() {
 	log.Info("Stop() invoked, Service is stopping...")
-	quit(s, s.httpServer, s.grpcServer, nil)
+	stop(s, s.httpServer, s.grpcServer, nil)
 }

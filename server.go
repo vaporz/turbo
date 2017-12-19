@@ -15,11 +15,10 @@ import (
 	"google.golang.org/grpc"
 	"net/http"
 	"os"
-	"os/signal"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
+	"fmt"
 )
 
 // TODO use dep
@@ -45,9 +44,13 @@ type Server struct {
 	exit         chan os.Signal
 	// Initializer implements Initializable
 	Initializer Initializable
+	httpServer  *http.Server
 }
 
-func (s *Server) Service() interface{} { return nil }
+func (s *Server) Service() interface{} {
+	fmt.Println("oh no!!!")
+	return nil
+}
 func (s *Server) ServerField() *Server { return s }
 
 // Stop stops the server gracefully
@@ -69,6 +72,26 @@ func (s *Server) Component(name string) (interface{}, error) {
 		return nil, errors.New("no such component: " + name + ", forget to register?")
 	}
 	return s.Components.registeredComponents[name], nil
+}
+
+func watchConfigReload(s Servable) {
+	s.ServerField().watchConfig()
+	go func() {
+		for {
+			select {
+			case <-s.ServerField().reloadConfig:
+				if s.ServerField().httpServer == nil {
+					continue
+				}
+				log.Info("Reloading configuration...")
+				newComponents := s.ServerField().loadComponentsNoPanic()
+				newRouter := router(s)
+				s.ServerField().httpServer.Handler = newRouter
+				s.ServerField().Components = newComponents
+				log.Info("Configuration reloaded")
+			}
+		}
+	}()
 }
 
 func (s *Server) watchConfig() {
@@ -155,44 +178,7 @@ func getComponentByName(s *Server, name string) interface{} {
 	return com
 }
 
-func waitForQuit(s Servable, httpServer *http.Server, grpcServer *grpc.Server, thriftServer *thrift.TSimpleServer) {
-	signal.Notify(s.ServerField().exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
-	if httpServer == nil {
-		waitOnExit(s, httpServer, grpcServer, thriftServer)
-	} else {
-		waitOnExitAndReload(s, httpServer, grpcServer, thriftServer)
-	}
-}
-
-func waitOnExit(s Servable, httpServer *http.Server, grpcServer *grpc.Server, thriftServer *thrift.TSimpleServer) {
-	select {
-	case <-s.ServerField().exit:
-		log.Info("Received CTRL-C, Service is stopping...")
-	}
-	quit(s, httpServer, grpcServer, thriftServer)
-}
-
-func waitOnExitAndReload(s Servable, httpServer *http.Server, grpcServer *grpc.Server, thriftServer *thrift.TSimpleServer) {
-Wait:
-	select {
-	case <-s.ServerField().exit:// TODO move this blocking line out to user's code?
-		log.Info("Received CTRL-C, Service is stopping...")
-	case <-s.ServerField().reloadConfig:// TODO start a new goroutine "reloader" to reload
-		if httpServer == nil {
-			goto Wait
-		}
-		log.Info("Reloading configuration...")
-		newComponents := s.ServerField().loadComponentsNoPanic()
-		newRouter := router(s)
-		httpServer.Handler = newRouter
-		s.ServerField().Components = newComponents
-		log.Info("Configuration reloaded")
-		goto Wait
-	}
-	quit(s, httpServer, grpcServer, thriftServer)// TODO should remove this line?
-}
-
-func quit(s Servable, httpServer *http.Server, grpcServer *grpc.Server, thriftServer *thrift.TSimpleServer) {
+func stop(s Servable, httpServer *http.Server, grpcServer *grpc.Server, thriftServer *thrift.TSimpleServer) {
 	// if s.ServerField().exit is not closed, close it, return directly
 	if httpServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)

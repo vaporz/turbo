@@ -212,11 +212,26 @@ func (c *Creator) generateGrpcServiceMain() {
 import (
 	"{{.PkgPath}}/grpcservice/impl"
 	"github.com/vaporz/turbo"
+	"os/signal"
+	"os"
+	"syscall"
+	"fmt"
 )
 
 func main() {
 	s := turbo.NewGrpcServer(nil, "{{.ConfigFilePath}}")
 	s.StartGrpcService(impl.RegisterServer)
+
+	exit := make(chan os.Signal, 1)
+	signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
+
+	select {
+	case <-exit:
+		fmt.Println("Service is stopping...")
+	}
+
+	s.Stop()
+	fmt.Println("Service stopped")
 }
 `,
 	)
@@ -236,11 +251,26 @@ func (c *Creator) generateThriftServiceMain() {
 import (
 	"{{.PkgPath}}/thriftservice/impl"
 	"github.com/vaporz/turbo"
+	"os/signal"
+	"os"
+	"syscall"
+	"fmt"
 )
 
 func main() {
 	s := turbo.NewThriftServer(nil, "{{.ConfigFilePath}}")
 	s.StartThriftService(impl.TProcessor)
+
+	exit := make(chan os.Signal, 1)
+	signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
+
+	select {
+	case <-exit:
+		fmt.Println("Service is stopping...")
+	}
+
+	s.Stop()
+	fmt.Println("Service stopped")
 }
 `,
 	)
@@ -332,11 +362,26 @@ import (
 	"{{.PkgPath}}/gen"
 	"{{.PkgPath}}/grpcapi/component"
 	"github.com/vaporz/turbo"
+	"os/signal"
+	"os"
+	"syscall"
+	"fmt"
 )
 
 func main() {
 	s := turbo.NewGrpcServer(&component.ServiceInitializer{}, "{{.ConfigFilePath}}")
 	s.StartGrpcHTTPServer(component.GrpcClient, gen.GrpcSwitcher)
+
+	exit := make(chan os.Signal, 1)
+	signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
+
+	select {
+	case <-exit:
+		fmt.Println("Service is stopping...")
+	}
+
+	s.Stop()
+	fmt.Println("Service stopped")
 }
 `,
 	)
@@ -441,11 +486,26 @@ import (
 	"github.com/vaporz/turbo"
 	"{{.PkgPath}}/gen"
 	"{{.PkgPath}}/thriftapi/component"
+	"os/signal"
+	"os"
+	"syscall"
+	"fmt"
 )
 
 func main() {
 	s := turbo.NewThriftServer(&component.ServiceInitializer{}, "{{.ConfigFilePath}}")
 	s.StartThriftHTTPServer(component.ThriftClient, gen.ThriftSwitcher)
+
+	exit := make(chan os.Signal, 1)
+	signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
+
+	select {
+	case <-exit:
+		fmt.Println("Service is stopping...")
+	}
+
+	s.Stop()
+	fmt.Println("Service stopped")
 }
 `,
 	)
@@ -480,6 +540,10 @@ import (
 	gimpl "{{.PkgPath}}/grpcservice/impl"
 	//tcomponent "{{.PkgPath}}/thriftapi/component"
 	//timpl "{{.PkgPath}}/thriftservice/impl"
+	"os/signal"
+	"os"
+	"syscall"
+	"fmt"
 )
 
 func main() {
@@ -488,6 +552,17 @@ func main() {
 
 	//s := turbo.NewThriftServer(&tcomponent.ServiceInitializer{}, "{{.ConfigFilePath}}")
 	//s.StartTHRIFT(tcomponent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
+
+	exit := make(chan os.Signal, 1)
+	signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
+
+	select {
+	case <-exit:
+		fmt.Println("Service is stopping...")
+	}
+
+	s.Stop()
+	fmt.Println("Service stopped")
 }
 `
 
@@ -500,6 +575,10 @@ import (
 	//gimpl "{{.PkgPath}}/grpcservice/impl"
 	tcomponent "{{.PkgPath}}/thriftapi/component"
 	timpl "{{.PkgPath}}/thriftservice/impl"
+	"os/signal"
+	"os"
+	"syscall"
+	"fmt"
 )
 
 func main() {
@@ -508,5 +587,16 @@ func main() {
 
 	s := turbo.NewThriftServer(&tcomponent.ServiceInitializer{}, "{{.ConfigFilePath}}")
 	s.StartTHRIFT(tcomponent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
+
+	exit := make(chan os.Signal, 1)
+	signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
+
+	select {
+	case <-exit:
+		fmt.Println("Service is stopping...")
+	}
+
+	s.Stop()
+	fmt.Println("Service stopped")
 }
 `
