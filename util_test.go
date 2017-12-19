@@ -1,12 +1,13 @@
 package turbo
 
 import (
-	sjson "github.com/bitly/go-simplejson"
-	logger "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"reflect"
 	"testing"
+
+	sjson "github.com/bitly/go-simplejson"
+	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMain(m *testing.M) {

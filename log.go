@@ -6,12 +6,13 @@
 package turbo
 
 import (
-	logger "github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"path"
 	"runtime"
 	"strings"
+
+	logger "github.com/sirupsen/logrus"
 )
 
 var log *logger.Logger

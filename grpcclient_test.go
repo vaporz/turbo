@@ -1,10 +1,11 @@
 package turbo
 
 import (
+	"testing"
+
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
-	"testing"
 )
 
 func TestGrpcInit(t *testing.T) {

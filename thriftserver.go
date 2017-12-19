@@ -6,9 +6,10 @@
 package turbo
 
 import (
-	"git.apache.org/thrift.git/lib/go/thrift"
 	"net/http"
 	"time"
+
+	"git.apache.org/thrift.git/lib/go/thrift"
 )
 
 type ThriftServer struct {

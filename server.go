@@ -8,17 +8,18 @@ package turbo
 import (
 	"context"
 	"errors"
-	"git.apache.org/thrift.git/lib/go/thrift"
-	"github.com/fsnotify/fsnotify"
-	"github.com/gorilla/mux"
-	"github.com/spf13/viper"
-	"google.golang.org/grpc"
+	"fmt"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
-	"fmt"
+
+	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/fsnotify/fsnotify"
+	"github.com/gorilla/mux"
+	"github.com/spf13/viper"
+	"google.golang.org/grpc"
 )
 
 // TODO use dep

@@ -6,10 +6,11 @@
 package turbo
 
 import (
-	"github.com/gorilla/mux"
 	"net/http"
 	"reflect"
 	"strings"
+
+	"github.com/gorilla/mux"
 )
 
 // Components holds all component mappings

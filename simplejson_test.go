@@ -2,9 +2,10 @@
 package turbo
 
 import (
+	"testing"
+
 	sjson "github.com/bitly/go-simplejson"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestLen(t *testing.T) {

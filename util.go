@@ -9,15 +9,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	sjson "github.com/bitly/go-simplejson"
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/proto"
-	"github.com/gorilla/mux"
 	"net/http"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+
+	sjson "github.com/bitly/go-simplejson"
+	"github.com/golang/protobuf/jsonpb"
+	"github.com/golang/protobuf/proto"
+	"github.com/gorilla/mux"
 )
 
 func logErrorIf(err error) {
