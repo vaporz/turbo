@@ -63,7 +63,7 @@ func TestGrpcService(t *testing.T) {
 	overwriteServiceYaml("8081", "50051", "development")
 
 	s := turbo.NewGrpcServer(&testInitializer{}, "testservice/service.yaml")
-	go s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
+	go s.Start(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 	time.Sleep(time.Millisecond * 1000)
 
 	runCommonTests(t, s.Server, httpPort, "grpc")
@@ -138,7 +138,7 @@ func TestThriftService(t *testing.T) {
 	overwriteServiceYaml(httpPort, "50052", "production")
 
 	s := turbo.NewThriftServer(&testInitializer{}, "testservice/service.yaml")
-	go s.StartTHRIFT(tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
+	go s.Start(tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 	time.Sleep(time.Second * 2)
 	turbo.SetOutput(os.Stdout)
 
@@ -197,7 +197,7 @@ func TestHTTPGrpcService(t *testing.T) {
 	go s.StartGrpcService(gimpl.RegisterServer)
 	time.Sleep(time.Millisecond * 300)
 
-	go s.StartGrpcHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	go s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
 	time.Sleep(time.Millisecond * 300)
 
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", `{"message":"[grpc server]Hello, testtest"}`)
@@ -213,7 +213,7 @@ func TestHTTPThriftService(t *testing.T) {
 	go s.StartThriftService(timpl.TProcessor)
 	time.Sleep(time.Millisecond * 500)
 
-	go s.StartThriftHTTPServer(tcompoent.ThriftClient, gen.ThriftSwitcher)
+	go s.StartHTTPServer(tcompoent.ThriftClient, gen.ThriftSwitcher)
 	time.Sleep(time.Millisecond * 500)
 
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", `{"message":"[thrift server]Hello, testtest"}`)
@@ -231,7 +231,7 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 	go s.StartGrpcService(gimpl.RegisterServer)
 	time.Sleep(time.Millisecond * 300)
 
-	go s.StartGrpcHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	go s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
 	time.Sleep(time.Millisecond * 300)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", `{"message":"[grpc server]Hello, testtest"}`)
 	testGet(t, "http://localhost:"+httpPort+"/hello", `intercepted:{"message":"[grpc server]Hello, "}`)

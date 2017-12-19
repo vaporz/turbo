@@ -12,7 +12,7 @@ import (
 
 func main() {
 	s := turbo.NewGrpcServer(&component.ServiceInitializer{}, turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml")
-	s.StartGrpcHTTPServer(component.GrpcClient, gen.GrpcSwitcher)
+	s.StartHTTPServer(component.GrpcClient, gen.GrpcSwitcher)
 
 	exit := make(chan os.Signal, 1)
 	signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)

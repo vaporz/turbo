@@ -38,8 +38,8 @@ func NewThriftServer(initializer Initializable, configFilePath string) *ThriftSe
 
 type thriftClientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}
 
-// StartTHRIFT starts both HTTP server and Thrift service
-func (s *ThriftServer) StartTHRIFT(clientCreator thriftClientCreator, sw switcher,
+// Start starts both HTTP server and Thrift service
+func (s *ThriftServer) Start(clientCreator thriftClientCreator, sw switcher,
 	registerTProcessor func() thrift.TProcessor) {
 	log.Info("Starting Turbo...")
 	s.Initializer.InitService(s)
@@ -49,8 +49,8 @@ func (s *ThriftServer) StartTHRIFT(clientCreator thriftClientCreator, sw switche
 	watchConfigReload(s)
 }
 
-// StartThriftHTTPServer starts a HTTP server which sends requests via Thrift
-func (s *ThriftServer) StartThriftHTTPServer(clientCreator thriftClientCreator, sw switcher) {
+// StartHTTPServer starts a HTTP server which sends requests via Thrift
+func (s *ThriftServer) StartHTTPServer(clientCreator thriftClientCreator, sw switcher) {
 	s.Initializer.InitService(s)
 	s.httpServer = s.startThriftHTTPServerInternal(clientCreator, sw)
 	watchConfigReload(s)

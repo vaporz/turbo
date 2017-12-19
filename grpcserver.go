@@ -39,8 +39,8 @@ func NewGrpcServer(initializer Initializable, configFilePath string) *GrpcServer
 
 type grpcClientCreator func(conn *grpc.ClientConn) interface{}
 
-// StartGRPC starts both HTTP server and GRPC service
-func (s *GrpcServer) StartGRPC(clientCreator grpcClientCreator, sw switcher, registerServer func(s *grpc.Server)) {
+// Start starts both HTTP server and GRPC service
+func (s *GrpcServer) Start(clientCreator grpcClientCreator, sw switcher, registerServer func(s *grpc.Server)) {
 	log.Info("Starting Turbo...")
 	s.Initializer.InitService(s)
 	s.grpcServer = s.startGrpcServiceInternal(registerServer, false)
@@ -48,8 +48,8 @@ func (s *GrpcServer) StartGRPC(clientCreator grpcClientCreator, sw switcher, reg
 	watchConfigReload(s)
 }
 
-// StartGrpcHTTPServer starts a HTTP server which sends requests via grpc
-func (s *GrpcServer) StartGrpcHTTPServer(clientCreator grpcClientCreator, sw switcher) {
+// StartHTTPServer starts a HTTP server which sends requests via grpc
+func (s *GrpcServer) StartHTTPServer(clientCreator grpcClientCreator, sw switcher) {
 	s.Initializer.InitService(s)
 	s.httpServer = s.startGrpcHTTPServerInternal(clientCreator, sw)
 	watchConfigReload(s)

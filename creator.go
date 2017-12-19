@@ -370,7 +370,7 @@ import (
 
 func main() {
 	s := turbo.NewGrpcServer(&component.ServiceInitializer{}, "{{.ConfigFilePath}}")
-	s.StartGrpcHTTPServer(component.GrpcClient, gen.GrpcSwitcher)
+	s.StartHTTPServer(component.GrpcClient, gen.GrpcSwitcher)
 
 	exit := make(chan os.Signal, 1)
 	signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
@@ -494,7 +494,7 @@ import (
 
 func main() {
 	s := turbo.NewThriftServer(&component.ServiceInitializer{}, "{{.ConfigFilePath}}")
-	s.StartThriftHTTPServer(component.ThriftClient, gen.ThriftSwitcher)
+	s.StartHTTPServer(component.ThriftClient, gen.ThriftSwitcher)
 
 	exit := make(chan os.Signal, 1)
 	signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
@@ -548,10 +548,10 @@ import (
 
 func main() {
 	s := turbo.NewGrpcServer(&gcomponent.ServiceInitializer{}, "{{.ConfigFilePath}}")
-	s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
+	s.Start(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
 	//s := turbo.NewThriftServer(&tcomponent.ServiceInitializer{}, "{{.ConfigFilePath}}")
-	//s.StartTHRIFT(tcomponent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
+	//s.Start(tcomponent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 
 	exit := make(chan os.Signal, 1)
 	signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
@@ -583,10 +583,10 @@ import (
 
 func main() {
 	//s := turbo.NewGrpcServer(&gcomponent.ServiceInitializer{}, "{{.ConfigFilePath}}")
-	//s.StartGRPC(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
+	//s.Start(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 
 	s := turbo.NewThriftServer(&tcomponent.ServiceInitializer{}, "{{.ConfigFilePath}}")
-	s.StartTHRIFT(tcomponent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
+	s.Start(tcomponent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 
 	exit := make(chan os.Signal, 1)
 	signal.Notify(exit, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGQUIT)
