@@ -63,7 +63,7 @@ func TestGrpcService(t *testing.T) {
 	overwriteServiceYaml("8081", "50051", "development")
 
 	s := turbo.NewGrpcServer(&testInitializer{}, "testservice/service.yaml")
-	go s.Start(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
+	s.Start(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 	time.Sleep(time.Millisecond * 1000)
 
 	runCommonTests(t, s.Server, httpPort, "grpc")
@@ -138,7 +138,7 @@ func TestThriftService(t *testing.T) {
 	overwriteServiceYaml(httpPort, "50052", "production")
 
 	s := turbo.NewThriftServer(&testInitializer{}, "testservice/service.yaml")
-	go s.Start(tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
+	s.Start(tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 	time.Sleep(time.Second * 2)
 	turbo.SetOutput(os.Stdout)
 
@@ -194,10 +194,10 @@ func TestHTTPGrpcService(t *testing.T) {
 	overwriteServiceYaml(httpPort, "50053", "development")
 
 	s := turbo.NewGrpcServer(nil, "testservice/service.yaml")
-	go s.StartGrpcService(gimpl.RegisterServer)
+	s.StartGrpcService(gimpl.RegisterServer)
 	time.Sleep(time.Millisecond * 300)
 
-	go s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
 	time.Sleep(time.Millisecond * 300)
 
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", `{"message":"[grpc server]Hello, testtest"}`)
@@ -210,10 +210,10 @@ func TestHTTPThriftService(t *testing.T) {
 	overwriteServiceYaml(httpPort, "50054", "development")
 
 	s := turbo.NewThriftServer(nil, "testservice/service.yaml")
-	go s.StartThriftService(timpl.TProcessor)
+	s.StartThriftService(timpl.TProcessor)
 	time.Sleep(time.Millisecond * 500)
 
-	go s.StartHTTPServer(tcompoent.ThriftClient, gen.ThriftSwitcher)
+	s.StartHTTPServer(tcompoent.ThriftClient, gen.ThriftSwitcher)
 	time.Sleep(time.Millisecond * 500)
 
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", `{"message":"[thrift server]Hello, testtest"}`)
@@ -228,10 +228,10 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 	s := turbo.NewGrpcServer(&testInitializer{}, turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml")
 	_, err := s.Component("test")
 	assert.Equal(t, "no such component: test, forget to register?", err.Error())
-	go s.StartGrpcService(gimpl.RegisterServer)
+	s.StartGrpcService(gimpl.RegisterServer)
 	time.Sleep(time.Millisecond * 300)
 
-	go s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
 	time.Sleep(time.Millisecond * 300)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest", `{"message":"[grpc server]Hello, testtest"}`)
 	testGet(t, "http://localhost:"+httpPort+"/hello", `intercepted:{"message":"[grpc server]Hello, "}`)

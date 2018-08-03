@@ -60,7 +60,7 @@ func handler(s Servable, methodName string) func(http.ResponseWriter, *http.Requ
 	return func(resp http.ResponseWriter, req *http.Request) {
 		copyComponentsPtr(s, req)
 		parseRequestForm(req)
-		interceptors := getInterceptors(s, req)
+		interceptors := getInterceptors(req)
 		req, err := doBefore(&interceptors, resp, req)
 		if err == nil {
 			doRequest(s, methodName, resp, req)
@@ -71,7 +71,7 @@ func handler(s Servable, methodName string) func(http.ResponseWriter, *http.Requ
 	}
 }
 
-func getInterceptors(s Servable, req *http.Request) []Interceptor {
+func getInterceptors(req *http.Request) []Interceptor {
 	interceptors := components(req).Interceptors(req)
 	if len(interceptors) == 0 {
 		interceptors = components(req).CommonInterceptors()
@@ -96,7 +96,7 @@ func doRequest(s Servable, methodName string, resp http.ResponseWriter, req *htt
 		hijack(resp, req)
 		return
 	}
-	err := doPreprocessor(s, resp, req)
+	err := doPreprocessor(resp, req)
 	if err != nil {
 		components(req).errorHandlerFunc()(resp, req, err)
 		return
@@ -150,7 +150,7 @@ func GrpcMetadataPeer(ctx context.Context) *peer.Peer {
 	return ctx.Value(peerKey{}).(*peer.Peer)
 }
 
-func doPreprocessor(s Servable, resp http.ResponseWriter, req *http.Request) error {
+func doPreprocessor(resp http.ResponseWriter, req *http.Request) error {
 	if pre := components(req).Preprocessor(req); pre != nil {
 		if err := pre(resp, req); err != nil {
 			log.Println(err.Error())
