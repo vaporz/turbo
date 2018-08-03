@@ -402,7 +402,7 @@ func reflectSliceValue(fieldType reflect.Type, fieldValue reflect.Value, v strin
 		reflect.Int32,
 		reflect.Int64:
 		for k, v := range vSlice {
-			value, err := strconv.ParseInt(v, 10, 64)
+			value, err := strconv.ParseInt(strings.TrimSpace(v), 10, 64)
 			if err != nil {
 				return s.Slice(0, 0), err
 			}
@@ -410,11 +410,11 @@ func reflectSliceValue(fieldType reflect.Type, fieldValue reflect.Value, v strin
 		}
 	case reflect.String:
 		for k, v := range vSlice {
-			s.Index(k).SetString(v)
+			s.Index(k).SetString(strings.TrimSpace(v))
 		}
 	case reflect.Bool:
 		for k, v := range vSlice {
-			value, err := strconv.ParseBool(v)
+			value, err := strconv.ParseBool(strings.TrimSpace(v))
 			if err != nil {
 				return s.Slice(0, 0), err
 			}
@@ -422,7 +422,7 @@ func reflectSliceValue(fieldType reflect.Type, fieldValue reflect.Value, v strin
 		}
 	case reflect.Float32, reflect.Float64:
 		for k, v := range vSlice {
-			value, err := strconv.ParseFloat(v, 64)
+			value, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
 			if err != nil {
 				return s.Slice(0, 0), err
 			}
