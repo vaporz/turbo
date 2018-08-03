@@ -124,16 +124,15 @@ func (c *Creator) createThriftFolders() {
 }
 
 func (c *Creator) createServiceYaml(serviceRootPath, serviceName, configFileName string) {
-	type serviceYamlValues struct {
-		ServiceRoot string
-		ServiceName string
-	}
 	if _, err := os.Stat(serviceRootPath + "/" + configFileName + ".yaml"); err == nil {
 		return
 	}
 	writeFileWithTemplate(
 		serviceRootPath+"/"+configFileName+".yaml",
-		serviceYamlValues{ServiceRoot: serviceRootPath, ServiceName: serviceName},
+		struct {
+			ServiceRoot string
+			ServiceName string
+		}{serviceRootPath, serviceName},
 		`config:
   environment: development
   service_root_path: {{.ServiceRoot}}
@@ -152,13 +151,12 @@ urlmapping:
 }
 
 func (c *Creator) createProto(serviceName string) {
-	type protoValues struct {
-		ServiceName string
-	}
 	nameLower := strings.ToLower(serviceName)
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/"+nameLower+".proto",
-		protoValues{ServiceName: serviceName},
+		struct {
+			ServiceName string
+		}{serviceName},
 		`syntax = "proto3";
 package proto;
 
@@ -178,13 +176,12 @@ service {{.ServiceName}} {
 }
 
 func (c *Creator) createThrift(serviceName string) {
-	type thriftValues struct {
-		ServiceName string
-	}
 	nameLower := strings.ToLower(serviceName)
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/"+nameLower+".thrift",
-		thriftValues{ServiceName: serviceName},
+		struct {
+			ServiceName string
+		}{serviceName},
 		`namespace go gen
 
 struct SayHelloResponse {
@@ -199,14 +196,13 @@ service {{.ServiceName}} {
 }
 
 func (c *Creator) generateGrpcServiceMain() {
-	type serviceMainValues struct {
-		PkgPath        string
-		ConfigFilePath string
-	}
 	nameLower := strings.ToLower(c.c.GrpcServiceName())
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/grpcservice/"+nameLower+".go",
-		serviceMainValues{PkgPath: c.PkgPath, ConfigFilePath: c.c.ServiceRootPathAbsolute() + "/service.yaml"},
+		struct {
+			PkgPath        string
+			ConfigFilePath string
+		}{c.PkgPath, c.c.ServiceRootPathAbsolute() + "/service.yaml"},
 		`package main
 
 import (
@@ -238,14 +234,13 @@ func main() {
 }
 
 func (c *Creator) generateThriftServiceMain() {
-	type thriftServiceMainValues struct {
-		PkgPath        string
-		ConfigFilePath string
-	}
 	nameLower := strings.ToLower(c.c.ThriftServiceName())
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/thriftservice/"+nameLower+".go",
-		thriftServiceMainValues{PkgPath: c.PkgPath, ConfigFilePath: c.c.ServiceRootPathAbsolute() + "/service.yaml"},
+		struct {
+			PkgPath        string
+			ConfigFilePath string
+		}{c.PkgPath, c.c.ServiceRootPathAbsolute() + "/service.yaml"},
 		`package main
 
 import (
@@ -277,14 +272,13 @@ func main() {
 }
 
 func (c *Creator) generateGrpcServiceImpl() {
-	type serviceImplValues struct {
-		PkgPath     string
-		ServiceName string
-	}
 	nameLower := strings.ToLower(c.c.GrpcServiceName())
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/grpcservice/impl/"+nameLower+"impl.go",
-		serviceImplValues{PkgPath: c.PkgPath, ServiceName: c.c.GrpcServiceName()},
+		struct {
+			PkgPath     string
+			ServiceName string
+		}{c.PkgPath, c.c.GrpcServiceName()},
 		`package impl
 
 import (
@@ -311,14 +305,13 @@ func (s *{{.ServiceName}}) SayHello(ctx context.Context, req *proto.SayHelloRequ
 }
 
 func (c *Creator) generateThriftServiceImpl() {
-	type thriftServiceImplValues struct {
-		PkgPath     string
-		ServiceName string
-	}
 	nameLower := strings.ToLower(c.c.ThriftServiceName())
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/thriftservice/impl/"+nameLower+"impl.go",
-		thriftServiceImplValues{PkgPath: c.PkgPath, ServiceName: c.c.ThriftServiceName()},
+		struct {
+			PkgPath     string
+			ServiceName string
+		}{c.PkgPath, c.c.ThriftServiceName()},
 		`package impl
 
 import (
@@ -344,18 +337,17 @@ func (s {{.ServiceName}}) SayHello(yourName string) (r *gen.SayHelloResponse, er
 }
 
 func (c *Creator) generateGrpcHTTPMain() {
-	type HTTPMainValues struct {
-		ServiceName    string
-		PkgPath        string
-		ConfigFilePath string
-	}
 	nameLower := strings.ToLower(c.c.GrpcServiceName())
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/grpcapi/"+nameLower+"api.go",
-		HTTPMainValues{
-			ServiceName:    c.c.GrpcServiceName(),
-			PkgPath:        c.PkgPath,
-			ConfigFilePath: c.c.ServiceRootPathAbsolute() + "/service.yaml"},
+		struct {
+			ServiceName    string
+			PkgPath        string
+			ConfigFilePath string
+		}{
+			c.c.GrpcServiceName(),
+			c.PkgPath,
+			c.c.ServiceRootPathAbsolute() + "/service.yaml"},
 		`package main
 
 import (
@@ -388,13 +380,12 @@ func main() {
 }
 
 func (c *Creator) generateGrpcHTTPComponent() {
-	type HTTPComponentValues struct {
-		ServiceName string
-		PkgPath     string
-	}
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/grpcapi/component/components.go",
-		HTTPComponentValues{ServiceName: c.c.GrpcServiceName(), PkgPath: c.PkgPath},
+		struct {
+			ServiceName string
+			PkgPath     string
+		}{c.c.GrpcServiceName(), c.PkgPath},
 		`package component
 
 import (
@@ -428,13 +419,12 @@ func (i *ServiceInitializer) StopService(s turbo.Servable) {
 }
 
 func (c *Creator) generateThriftHTTPComponent() {
-	type thriftHTTPComponentValues struct {
-		ServiceName string
-		PkgPath     string
-	}
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/thriftapi/component/components.go",
-		thriftHTTPComponentValues{ServiceName: c.c.GrpcServiceName(), PkgPath: c.PkgPath},
+		struct {
+			ServiceName string
+			PkgPath     string
+		}{c.c.GrpcServiceName(), c.PkgPath},
 		`package component
 
 import (
@@ -468,18 +458,17 @@ func (i *ServiceInitializer) StopService(s turbo.Servable) {
 }
 
 func (c *Creator) generateThriftHTTPMain() {
-	type HTTPMainValues struct {
-		ServiceName    string
-		PkgPath        string
-		ConfigFilePath string
-	}
 	nameLower := strings.ToLower(c.c.ThriftServiceName())
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/thriftapi/"+nameLower+"api.go",
-		HTTPMainValues{
-			ServiceName:    c.c.ThriftServiceName(),
-			PkgPath:        c.PkgPath,
-			ConfigFilePath: c.c.ServiceRootPathAbsolute() + "/service.yaml"},
+		struct {
+			ServiceName    string
+			PkgPath        string
+			ConfigFilePath string
+		}{
+			c.c.ThriftServiceName(),
+			c.PkgPath,
+			c.c.ServiceRootPathAbsolute() + "/service.yaml"},
 		`package main
 
 import (
