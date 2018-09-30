@@ -71,11 +71,11 @@ func TestGrpcService(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/error",
 		"rpc error: code = Unknown desc = grpc error\n")
 
-	testGet(t, "http://localhost:" + httpPort + "/hello/name?bool_value=true&string_list=a,b&int64_list=1,2&bool_list=true,false"+
+	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&string_list=a,b&int64_list=1,2&bool_list=true,false"+
 		"&doubleList=1.1,2.2&uint64_list=3,4",
 		`{"message":"{\"values\":{},\"yourName\":\"name\",\"boolValue\":true,\"stringList\":[\"a\",\"b\"],\"int64List\":[1,2],\"boolList\":[true,false],\"doubleList\":[1.1,2.2],\"uint64List\":[3,4]}"}`)
 
-	testGet(t, "http://localhost:" + httpPort + "/hello/name?bool_value=true&string_list=a,b&int64_list=1,a,2&bool_list=true,a,false"+
+	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&string_list=a,b&int64_list=1,a,2&bool_list=true,a,false"+
 		"&doubleList=1.1,a,2.2&uint64_list=3,a,4",
 		`{"message":"{\"values\":{},\"yourName\":\"name\",\"boolValue\":true,\"stringList\":[\"a\",\"b\"]}"}`)
 

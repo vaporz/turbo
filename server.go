@@ -30,7 +30,7 @@ import (
 // https://medium.com/@matryer/make-ctrl-c-cancel-the-context-context-bd006a8ad6ff
 
 type Servable interface {
-	Service() interface{}
+	Service(serviceName string) interface{}
 	ServerField() *Server
 	Stop()
 }

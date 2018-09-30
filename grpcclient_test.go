@@ -15,8 +15,8 @@ func TestGrpcInit(t *testing.T) {
 		}
 	}()
 	s := &GrpcServer{gClient: new(grpcClient)}
-	s.gClient.grpcService = ""
-	s.gClient.init("", func(*grpc.ClientConn) interface{} { return nil })
+	s.gClient.grpcServiceMap = make(map[string]interface{})
+	s.gClient.init("", func(*grpc.ClientConn) map[string]interface{} { return nil })
 }
 
 func TestGrpcClose(t *testing.T) {
@@ -34,5 +34,5 @@ func TestGrpcService(t *testing.T) {
 		}
 	}()
 	s := &GrpcServer{gClient: new(grpcClient)}
-	s.Service()
+	s.Service("")
 }

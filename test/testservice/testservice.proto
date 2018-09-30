@@ -20,6 +20,13 @@ message SayHelloResponse {
     string message = 1;
 }
 
+message TestJsonRequest {
+}
+
+message TestJsonResponse {
+}
+
 service TestService {
     rpc sayHello (SayHelloRequest) returns (SayHelloResponse) {}
+    rpc testJson (TestJsonRequest) returns (TestJsonResponse) {}
 }

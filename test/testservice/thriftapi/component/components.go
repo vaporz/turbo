@@ -6,8 +6,8 @@ import (
 	t "github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/gen"
 )
 
-func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) interface{} {
-	return t.NewTestServiceClientFactory(trans, f)
+func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) map[string]interface{} {
+	return map[string]interface{}{"TestService":t.NewTestServiceClientFactory(trans, f)}
 }
 
 type ServiceInitializer struct {

@@ -379,6 +379,7 @@ func main() {
 	)
 }
 
+// todo reuse created client instance
 func (c *Creator) generateGrpcHTTPComponent() {
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/grpcapi/component/components.go",
@@ -395,8 +396,8 @@ import (
 )
 
 // GrpcClient returns a grpc client
-func GrpcClient(conn *grpc.ClientConn) interface{} {
-	return proto.New{{.ServiceName}}Client(conn)
+func GrpcClient(conn *grpc.ClientConn) map[string]interface{} {
+	return map[string]interface{}{"{{.ServiceName}}": proto.New{{.ServiceName}}Client(conn)}
 }
 
 type ServiceInitializer struct {
@@ -434,8 +435,8 @@ import (
 )
 
 // ThriftClient returns a thrift client
-func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) interface{} {
-	return t.New{{.ServiceName}}ClientFactory(trans, f)
+func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) map[string]interface{} {
+	return map[string]interface{}{"{{.ServiceName}}": t.New{{.ServiceName}}ClientFactory(trans, f)}
 }
 
 type ServiceInitializer struct {

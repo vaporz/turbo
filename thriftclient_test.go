@@ -15,8 +15,8 @@ func TestThriftInit(t *testing.T) {
 		}
 	}()
 	s := &ThriftServer{tClient: new(thriftClient)}
-	s.tClient.thriftService = ""
-	s.tClient.init("", func(thrift.TTransport, thrift.TProtocolFactory) interface{} { return nil })
+	s.tClient.thriftService = make(map[string]interface{})
+	s.tClient.init("", func(thrift.TTransport, thrift.TProtocolFactory) map[string]interface{} { return nil })
 }
 
 func TestThriftClose(t *testing.T) {
@@ -34,5 +34,5 @@ func TestThriftService(t *testing.T) {
 		}
 	}()
 	s := &ThriftServer{tClient: new(thriftClient)}
-	s.Service()
+	s.Service("")
 }

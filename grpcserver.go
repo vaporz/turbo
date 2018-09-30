@@ -37,7 +37,7 @@ func NewGrpcServer(initializer Initializable, configFilePath string) *GrpcServer
 	return s
 }
 
-type grpcClientCreator func(conn *grpc.ClientConn) interface{}
+type grpcClientCreator func(conn *grpc.ClientConn) map[string]interface{}
 
 // Start starts both HTTP server and GRPC service
 func (s *GrpcServer) Start(clientCreator grpcClientCreator, sw switcher, registerServer func(s *grpc.Server)) {
@@ -87,11 +87,11 @@ func (s *GrpcServer) startGrpcServiceInternal(registerServer func(s *grpc.Server
 
 // GrpcService returns a grpc client instance,
 // example: client := turbo.GrpcService().(proto.YourServiceClient)
-func (s *GrpcServer) Service() interface{} {
-	if s == nil || s.gClient == nil || s.gClient.grpcService == nil {
+func (s *GrpcServer) Service(serviceName string) interface{} {
+	if s == nil || s.gClient == nil || s.gClient.grpcServiceMap == nil {
 		log.Panic("grpc connection not initiated!")
 	}
-	return s.gClient.grpcService
+	return s.gClient.grpcServiceMap[serviceName]
 }
 func (s *GrpcServer) ServerField() *Server { return s.Server }
 

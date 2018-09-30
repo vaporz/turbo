@@ -12,6 +12,8 @@ It has these top-level messages:
 	CommonValues
 	SayHelloRequest
 	SayHelloResponse
+	TestJsonRequest
+	TestJsonResponse
 */
 package proto
 

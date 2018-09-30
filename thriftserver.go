@@ -36,7 +36,7 @@ func NewThriftServer(initializer Initializable, configFilePath string) *ThriftSe
 	return s
 }
 
-type thriftClientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}
+type thriftClientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) map[string]interface{}
 
 // Start starts both HTTP server and Thrift service
 func (s *ThriftServer) Start(clientCreator thriftClientCreator, sw switcher,
@@ -83,11 +83,11 @@ func (s *ThriftServer) startThriftServiceInternal(registerTProcessor func() thri
 
 // ThriftService returns a Thrift client instance,
 // example: client := turbo.ThriftService().(proto.YourServiceClient)
-func (s *ThriftServer) Service() interface{} {
+func (s *ThriftServer) Service(serviceName string) interface{} {
 	if s == nil || s.tClient == nil || s.tClient.thriftService == nil {
 		log.Panic("thrift connection not initiated!")
 	}
-	return s.tClient.thriftService
+	return s.tClient.thriftService[serviceName]
 }
 
 func (s *ThriftServer) ServerField() *Server { return s.Server }

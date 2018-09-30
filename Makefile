@@ -12,3 +12,7 @@ test:
 .PHONY: doc
 doc:
 	@cd doc && make html
+
+.PHONY: fmt
+fmt:
+	@gofmt -w *.go protoc-gen-buildfields/*.go test/*.go turbo/*.go turbo/cmd/*.go

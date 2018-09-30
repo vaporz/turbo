@@ -10,19 +10,18 @@ import (
 )
 
 type grpcClient struct {
-	grpcService interface{}
-	conn        *grpc.ClientConn
+	grpcServiceMap map[string]interface{}
+	conn           *grpc.ClientConn
 }
 
-func (g *grpcClient) init(addr string, clientCreator func(conn *grpc.ClientConn) interface{}) {
-	// ???? support multiple grpc clients
+func (g *grpcClient) init(addr string, clientCreator grpcClientCreator) {
 	// ???? support grpcservice discovery
-	if g.grpcService != nil {
+	if g.grpcServiceMap != nil {
 		return
 	}
 	log.Info("[grpc]connecting addr:", addr)
 	g.dial(addr)
-	g.grpcService = clientCreator(g.conn)
+	g.grpcServiceMap = clientCreator(g.conn)
 }
 
 func (g *grpcClient) dial(address string) {

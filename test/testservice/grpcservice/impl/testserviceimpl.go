@@ -36,3 +36,7 @@ func (s *TestService) SayHello(ctx context.Context, req *proto.SayHelloRequest) 
 	grpc.SetHeader(ctx, header)
 	return &proto.SayHelloResponse{Message: "[grpc server]Hello, " + req.YourName}, nil
 }
+
+func (s *TestService) TestJson(ctx context.Context, req *proto.TestJsonRequest) (*proto.TestJsonResponse, error) {
+	return &proto.TestJsonResponse{}, nil
+}

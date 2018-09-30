@@ -10,12 +10,12 @@ import (
 )
 
 type thriftClient struct {
-	thriftService interface{}
+	thriftService map[string]interface{}
 	transport     thrift.TTransport
 	factory       thrift.TProtocolFactory
 }
 
-func (t *thriftClient) init(addr string, clientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) interface{}) {
+func (t *thriftClient) init(addr string, clientCreator thriftClientCreator) {
 	if t.thriftService != nil {
 		return
 	}
