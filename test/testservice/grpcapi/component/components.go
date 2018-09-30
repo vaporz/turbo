@@ -8,7 +8,9 @@ import (
 
 // GrpcClient returns a grpc client
 func GrpcClient(conn *grpc.ClientConn) map[string]interface{} {
-	return map[string]interface{}{"TestService": proto.NewTestServiceClient(conn)}
+	return map[string]interface{}{
+		"TestService": proto.NewTestServiceClient(conn),
+	}
 }
 
 type ServiceInitializer struct {

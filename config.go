@@ -187,8 +187,9 @@ func (c *Config) ServiceRootPathAbsolute() string {
 	}
 }
 
-func (c *Config) GrpcServiceName() string {
-	return c.configs[grpcServiceName]
+func (c *Config) GrpcServiceNames() []string {
+	names := c.configs[grpcServiceName]
+	return strings.Split(names, ",")
 }
 
 func (c *Config) GrpcServiceHost() string {

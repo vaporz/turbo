@@ -15,9 +15,9 @@ func TestConfig(t *testing.T) {
 
 	assert.Equal(t, int64(8081), c.HTTPPort())
 
-	assert.Equal(t, "YourService", c.GrpcServiceName())
+	assert.Equal(t, "YourService", c.GrpcServiceNames()[0])
 	c.configs[grpcServiceName] = "test"
-	assert.Equal(t, "test", c.GrpcServiceName())
+	assert.Equal(t, "test", c.GrpcServiceNames()[0])
 
 	assert.Equal(t, "127.0.0.1", c.GrpcServiceHost())
 	assert.Equal(t, "50051", c.GrpcServicePort())

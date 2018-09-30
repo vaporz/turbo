@@ -196,7 +196,7 @@ service {{.ServiceName}} {
 }
 
 func (c *Creator) generateGrpcServiceMain() {
-	nameLower := strings.ToLower(c.c.GrpcServiceName())
+	nameLower := strings.ToLower(c.c.GrpcServiceNames()[0])
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/grpcservice/"+nameLower+".go",
 		struct {
@@ -272,13 +272,13 @@ func main() {
 }
 
 func (c *Creator) generateGrpcServiceImpl() {
-	nameLower := strings.ToLower(c.c.GrpcServiceName())
+	nameLower := strings.ToLower(c.c.GrpcServiceNames()[0])
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/grpcservice/impl/"+nameLower+"impl.go",
 		struct {
 			PkgPath     string
 			ServiceName string
-		}{c.PkgPath, c.c.GrpcServiceName()},
+		}{c.PkgPath, c.c.GrpcServiceNames()[0]},
 		`package impl
 
 import (
@@ -337,15 +337,13 @@ func (s {{.ServiceName}}) SayHello(yourName string) (r *gen.SayHelloResponse, er
 }
 
 func (c *Creator) generateGrpcHTTPMain() {
-	nameLower := strings.ToLower(c.c.GrpcServiceName())
+	nameLower := strings.ToLower(c.c.GrpcServiceNames()[0])
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/grpcapi/"+nameLower+"api.go",
 		struct {
-			ServiceName    string
 			PkgPath        string
 			ConfigFilePath string
 		}{
-			c.c.GrpcServiceName(),
 			c.PkgPath,
 			c.c.ServiceRootPathAbsolute() + "/service.yaml"},
 		`package main
@@ -384,9 +382,9 @@ func (c *Creator) generateGrpcHTTPComponent() {
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/grpcapi/component/components.go",
 		struct {
-			ServiceName string
-			PkgPath     string
-		}{c.c.GrpcServiceName(), c.PkgPath},
+			ServiceNames []string
+			PkgPath      string
+		}{c.c.GrpcServiceNames(), c.PkgPath},
 		`package component
 
 import (
@@ -397,7 +395,11 @@ import (
 
 // GrpcClient returns a grpc client
 func GrpcClient(conn *grpc.ClientConn) map[string]interface{} {
-	return map[string]interface{}{"{{.ServiceName}}": proto.New{{.ServiceName}}Client(conn)}
+	return map[string]interface{}{
+{{range $i, $ServiceName := .ServiceNames}}
+		"{{$ServiceName}}": proto.New{{$ServiceName}}Client(conn),
+{{end}}
+	}
 }
 
 type ServiceInitializer struct {
@@ -423,9 +425,9 @@ func (c *Creator) generateThriftHTTPComponent() {
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/thriftapi/component/components.go",
 		struct {
-			ServiceName string
-			PkgPath     string
-		}{c.c.GrpcServiceName(), c.PkgPath},
+			ServiceNames []string
+			PkgPath      string
+		}{c.c.GrpcServiceNames(), c.PkgPath},
 		`package component
 
 import (
@@ -436,7 +438,11 @@ import (
 
 // ThriftClient returns a thrift client
 func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) map[string]interface{} {
-	return map[string]interface{}{"{{.ServiceName}}": t.New{{.ServiceName}}ClientFactory(trans, f)}
+	return map[string]interface{}{
+{{range $i, $ServiceName := .ServiceNames}}
+		"{{$ServiceName}}": t.New{{$ServiceName}}ClientFactory(trans, f),
+{{end}}
+	}
 }
 
 type ServiceInitializer struct {
@@ -521,7 +527,7 @@ func (c *Creator) generateServiceMain(rpcType string) {
 	}
 }
 
-var rootMainGrpc string = `package main
+var rootMainGrpc = `package main
 
 import (
 	"github.com/vaporz/turbo"
@@ -556,7 +562,7 @@ func main() {
 }
 `
 
-var rootMainThrift string = `package main
+var rootMainThrift = `package main
 
 import (
 	"github.com/vaporz/turbo"
