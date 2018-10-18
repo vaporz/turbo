@@ -680,10 +680,10 @@ func overwriteServiceYaml(httpPort, servicePort, env string) {
   thrift_service_port: {{.ServicePort}}
 
 urlmapping:
-  - GET /hello/{your_Name:[a-zA-Z0-9]+} SayHello
-  - GET,POST /hello SayHello
-  - POST /testjson TestJson
-  - POST /testjson/{StringValue:[a-zA-Z0-9]+}/{int32_value:[a-zA-Z0-9]+} TestJson
+  - GET /hello/{your_Name:[a-zA-Z0-9]+} {{.ServiceName}} SayHello
+  - GET,POST /hello {{.ServiceName}} SayHello
+  - POST /testjson {{.ServiceName}} TestJson
+  - POST /testjson/{StringValue:[a-zA-Z0-9]+}/{int32_value:[a-zA-Z0-9]+} {{.ServiceName}} TestJson
 `,
 		serviceYamlValues{
 			HttpPort:    httpPort,
@@ -718,15 +718,15 @@ func overwriteServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
   thrift_service_port: {{.ServicePort}}
 
 urlmapping:
-  - GET /hello/{your_Name:[a-zA-Z0-9]+} SayHello
-  - GET /hello SayHello
-  - GET /hellointerceptor SayHello
-  - GET /hello_preprocessor SayHello
-  - GET /hello_postprocessor SayHello
-  - GET /hello_hijacker SayHello
-  - GET /hello_convertor SayHello
-  - POST /testjson TestJson
-  - POST /testjson/{StringValue:[a-zA-Z0-9]+}/{int32_value:[a-zA-Z0-9]+} TestJson
+  - GET /hello/{your_Name:[a-zA-Z0-9]+} {{.ServiceName}} SayHello
+  - GET /hello {{.ServiceName}} SayHello
+  - GET /hellointerceptor {{.ServiceName}} SayHello
+  - GET /hello_preprocessor {{.ServiceName}} SayHello
+  - GET /hello_postprocessor {{.ServiceName}} SayHello
+  - GET /hello_hijacker {{.ServiceName}} SayHello
+  - GET /hello_convertor {{.ServiceName}} SayHello
+  - POST /testjson {{.ServiceName}} TestJson
+  - POST /testjson/{StringValue:[a-zA-Z0-9]+}/{int32_value:[a-zA-Z0-9]+} {{.ServiceName}} TestJson
 
 interceptor:
   - GET /hello TestInterceptor
@@ -773,15 +773,15 @@ func changeServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
   thrift_service_port: {{.ServicePort}}
 
 urlmapping:
-  - GET /hello/{your_Name:[a-zA-Z0-9]+} SayHello
-  - GET /hello SayHello
-  - GET /hellointerceptor SayHello
-  - GET /hello_preprocessor SayHello
-  - GET /hello_postprocessor SayHello
-  - GET /hello_hijacker SayHello
-  - GET /hello_convertor SayHello
-  - POST /testjson TestJson
-  - POST /testjson/{StringValue:[a-zA-Z0-9]+}/{int32_value:[a-zA-Z0-9]+} TestJson
+  - GET /hello/{your_Name:[a-zA-Z0-9]+} {{.ServiceName}} SayHello
+  - GET /hello {{.ServiceName}} SayHello
+  - GET /hellointerceptor {{.ServiceName}} SayHello
+  - GET /hello_preprocessor {{.ServiceName}} SayHello
+  - GET /hello_postprocessor {{.ServiceName}} SayHello
+  - GET /hello_hijacker {{.ServiceName}} SayHello
+  - GET /hello_convertor {{.ServiceName}} SayHello
+  - POST /testjson {{.ServiceName}} TestJson
+  - POST /testjson/{StringValue:[a-zA-Z0-9]+}/{int32_value:[a-zA-Z0-9]+} {{.ServiceName}} TestJson
 
 interceptor:
   - GET /hello Test1Interceptor

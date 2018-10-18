@@ -101,7 +101,7 @@ func (s *Server) watchConfig() {
 		c := &Config{
 			Viper:    *viper.New(),
 			File:     s.Config.File,
-			mappings: make(map[string][][3]string)}
+			mappings: make(map[string][][4]string)}
 		c.loadServiceConfig()
 		s.Config = c
 		s.reloadConfig <- true

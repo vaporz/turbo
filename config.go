@@ -55,7 +55,7 @@ type Config struct {
 	File          string
 	configs       map[string]string
 	fieldMappings map[string][]string
-	mappings      map[string][][3]string
+	mappings      map[string][][4]string
 }
 
 // NewConfig loads the config file at 'configFilePath', and returns a Config struct ptr
@@ -64,7 +64,7 @@ func NewConfig(rpcType, configFilePath string) *Config {
 	c := &Config{
 		Viper:    *viper.New(),
 		File:     configFilePath,
-		mappings: make(map[string][][3]string)}
+		mappings: make(map[string][][4]string)}
 	c.loadServiceConfig()
 	return c
 }
@@ -94,8 +94,8 @@ func (c *Config) loadUrlMap() {
 	c.mappings[urlServiceMaps] = c.loadMappings("urlmapping")
 }
 
-func (c *Config) loadMappings(key string) [][3]string {
-	mapping := make([][3]string, 0)
+func (c *Config) loadMappings(key string) [][4]string {
+	mapping := make([][4]string, 0)
 	lines := c.GetStringSlice(key)
 	for _, line := range lines {
 		mapping = appendMap(mapping, strings.TrimSpace(line))
@@ -103,22 +103,26 @@ func (c *Config) loadMappings(key string) [][3]string {
 	return mapping
 }
 
-func appendMap(mapping [][3]string, line string) [][3]string {
+func appendMap(mapping [][4]string, line string) [][4]string {
 	values := strings.Split(line, " ")
 	HTTPMethod := strings.TrimSpace(values[0])
 	url := strings.TrimSpace(values[1])
-	value := strings.TrimSpace(values[2])
-	return append(mapping, [3]string{HTTPMethod, url, value})
+	v1 := strings.TrimSpace(values[2])
+	var v2 string
+	if len(values) > 3 {
+		v2 = strings.TrimSpace(values[3])
+	}
+	return append(mapping, [4]string{HTTPMethod, url, v1, v2})
 }
 
-func (c *Config) loadConvertor() [][3]string {
-	mapping := make([][3]string, 0)
+func (c *Config) loadConvertor() [][4]string {
+	mapping := make([][4]string, 0)
 	lines := c.GetStringSlice("convertor")
 	for _, line := range lines {
 		values := strings.Split(strings.TrimSpace(line), " ")
 		name := strings.TrimSpace(values[0])
 		convertorName := strings.TrimSpace(values[1])
-		mapping = append(mapping, [3]string{name, convertorName})
+		mapping = append(mapping, [4]string{name, convertorName})
 	}
 	return mapping
 }
@@ -200,8 +204,9 @@ func (c *Config) GrpcServicePort() string {
 	return c.configs[grpcServicePort]
 }
 
-func (c *Config) ThriftServiceName() string {
-	return c.configs[thriftServiceName]
+func (c *Config) ThriftServiceNames() []string {
+	names := c.configs[thriftServiceName]
+	return strings.Split(names, ",")
 }
 
 func (c *Config) ThriftServiceHost() string {

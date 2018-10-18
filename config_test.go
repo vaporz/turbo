@@ -22,9 +22,9 @@ func TestConfig(t *testing.T) {
 	assert.Equal(t, "127.0.0.1", c.GrpcServiceHost())
 	assert.Equal(t, "50051", c.GrpcServicePort())
 
-	assert.Equal(t, "YourService", c.ThriftServiceName())
+	assert.Equal(t, "YourService", c.ThriftServiceNames()[0])
 	c.configs[thriftServiceName] = "test thrift"
-	assert.Equal(t, "test thrift", c.ThriftServiceName())
+	assert.Equal(t, "test thrift", c.ThriftServiceNames()[0])
 
 	assert.Equal(t, "127.0.0.1", c.ThriftServiceHost())
 	assert.Equal(t, "50052", c.ThriftServicePort())

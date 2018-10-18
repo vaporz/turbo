@@ -11,12 +11,13 @@ import (
 	"text/template"
 )
 
-var methodName = flag.String("n", "", "")
+var serviceMethodName = flag.String("n", "", "")
 
 func main() {
 	flag.Parse()
-	if len(strings.TrimSpace(*methodName)) > 0 {
-		str := buildParameterStr(*methodName)
+	if len(strings.TrimSpace(*serviceMethodName)) > 0 {
+		names := strings.Split(*serviceMethodName, ",")
+		str := buildParameterStr(names[0], names[1])
 		fmt.Print(str)
 	} else {
 		buildFields()
@@ -24,26 +25,30 @@ func main() {
 }
 
 func buildFields() {
-	i := new(g.TestService)
-	t := reflect.TypeOf(i).Elem()
-	numMethod := t.NumMethod()
-	items := make([]string, 0)
-	for i := 0; i < numMethod; i++ {
-		method := t.Method(i)
-		numIn := method.Type.NumIn()
-		for j := 0; j < numIn; j++ {
-			argType := method.Type.In(j)
-			argStr := argType.String()
-			if argType.Kind() == reflect.Ptr && argType.Elem().Kind() == reflect.Struct {
-				arr := strings.Split(argStr, ".")
-				name := arr[len(arr)-1:][0]
-				items = findItem(items, name, argType)
-			}
-		}
+	services := []interface{}{ 
+		new(g.TestService),
 	}
 	var list string
-	for _, s := range items {
-		list += s + "\n"
+	for _, i := range services {
+		t := reflect.TypeOf(i).Elem()
+		numMethod := t.NumMethod()
+		items := make([]string, 0)
+		for i := 0; i < numMethod; i++ {
+			method := t.Method(i)
+			numIn := method.Type.NumIn()
+			for j := 0; j < numIn; j++ {
+				argType := method.Type.In(j)
+				argStr := argType.String()
+				if argType.Kind() == reflect.Ptr && argType.Elem().Kind() == reflect.Struct {
+					arr := strings.Split(argStr, ".")
+					name := arr[len(arr)-1:][0]
+					items = findItem(items, name, argType)
+				}
+			}
+		}
+		for _, s := range items {
+			list += s + "\n"
+		}
 	}
 	writeFileWithTemplate(
 		"/Users/xiaozhang/goworkspace/src/github.com/vaporz/turbo/test/testservice/gen/thriftfields.yaml",
@@ -96,34 +101,34 @@ var fieldsYaml string = `thrift-fieldmapping:
 {{.List}}
 `
 
-func buildParameterStr(methodName string) string {
-	switch methodName {
-
-	case "TestJson":
-		var result string
-		args := g.TestServiceTestJsonArgs{}
-		at := reflect.TypeOf(args)
-		num := at.NumField()
-		for i := 0; i < num; i++ {
-			result += fmt.Sprintf(
-				"\n\t\t\tparams[%d].Interface().(%s),",
-				i, at.Field(i).Type.String())
+func buildParameterStr(serviceName, methodName string) string { 
+	if serviceName == "TestService" {
+		switch methodName { 
+		case "SayHello":
+			var result string
+			args := g.TestServiceSayHelloArgs{}
+			at := reflect.TypeOf(args)
+			num := at.NumField()
+			for i := 0; i < num; i++ {
+				result += fmt.Sprintf(
+					"\n\t\t\t\tparams[%d].Interface().(%s),",
+					i, at.Field(i).Type.String())
+			}
+			return result
+		case "TestJson":
+			var result string
+			args := g.TestServiceTestJsonArgs{}
+			at := reflect.TypeOf(args)
+			num := at.NumField()
+			for i := 0; i < num; i++ {
+				result += fmt.Sprintf(
+					"\n\t\t\t\tparams[%d].Interface().(%s),",
+					i, at.Field(i).Type.String())
+			}
+			return result
+		default:
+			return "error"
 		}
-		return result
-
-	case "SayHello":
-		var result string
-		args := g.TestServiceSayHelloArgs{}
-		at := reflect.TypeOf(args)
-		num := at.NumField()
-		for i := 0; i < num; i++ {
-			result += fmt.Sprintf(
-				"\n\t\t\tparams[%d].Interface().(%s),",
-				i, at.Field(i).Type.String())
-		}
-		return result
-
-	default:
-		return "error"
 	}
+	return "error"
 }

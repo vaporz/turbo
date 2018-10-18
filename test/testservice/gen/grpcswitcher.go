@@ -2,32 +2,37 @@
 package gen
 
 import (
-	g "github.com/vaporz/turbo/test/testservice/gen/proto"
-	"github.com/vaporz/turbo"
-	"net/http"
 	"errors"
+	"github.com/vaporz/turbo"
+	g "github.com/vaporz/turbo/test/testservice/gen/proto"
+	"net/http"
 )
 
 // GrpcSwitcher is a runtime func with which a server starts.
-var GrpcSwitcher = func(s turbo.Servable, methodName string, resp http.ResponseWriter, req *http.Request) (rpcResponse interface{}, err error) {
-	callOptions, header, trailer, peer := turbo.CallOptions(methodName, req)
-	switch methodName { 
-	case "SayHello":
-		request := &g.SayHelloRequest{ Values: &g.CommonValues{}, }
-		err = turbo.BuildRequest(s, request, req)
-		if err != nil {
-			return nil, err
+var GrpcSwitcher = func(s turbo.Servable, serviceName, methodName string, resp http.ResponseWriter, req *http.Request) (rpcResponse interface{}, err error) {
+	callOptions, header, trailer, peer := turbo.CallOptions(serviceName, methodName, req)
+	if serviceName == "TestService" {
+		switch methodName {
+		case "SayHello":
+			request := &g.SayHelloRequest{Values: &g.CommonValues{},}
+			err = turbo.BuildRequest(s, request, req)
+			if err != nil {
+				return nil, err
+			}
+			rpcResponse, err = s.Service("TestService").(g.TestServiceClient).SayHello(req.Context(), request, callOptions...)
+		case "TestJson":
+			request := &g.TestJsonRequest{}
+			err = turbo.BuildRequest(s, request, req)
+			if err != nil {
+				return nil, err
+			}
+			rpcResponse, err = s.Service("TestService").(g.TestServiceClient).TestJson(req.Context(), request, callOptions...)
+		default:
+			return nil, errors.New("No such method[" + methodName + "]")
 		}
-		rpcResponse, err = s.Service("TestService").(g.TestServiceClient).SayHello(req.Context(), request, callOptions...)
-	case "TestJson":
-		request := &g.TestJsonRequest{  }
-		err = turbo.BuildRequest(s, request, req)
-		if err != nil {
-			return nil, err
-		}
-		rpcResponse, err = s.Service("TestService").(g.TestServiceClient).TestJson(req.Context(), request, callOptions...)
-	default:
-		return nil, errors.New("No such method[" + methodName + "]")
+	}
+	if rpcResponse==nil && err==nil {
+		return nil, errors.New("No such service[" + serviceName + "]")
 	}
 	turbo.WithCallOptions(req, header, trailer, peer)
 	return

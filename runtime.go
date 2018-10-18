@@ -25,7 +25,7 @@ import (
 	"google.golang.org/grpc/peer"
 )
 
-type switcher func(s Servable, methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
+type switcher func(s Servable, serviceName, methodName string, resp http.ResponseWriter, req *http.Request) (interface{}, error)
 
 var switcherFunc switcher
 
@@ -34,8 +34,9 @@ func router(s Servable) *mux.Router {
 	for _, v := range s.ServerField().Config.mappings[urlServiceMaps] {
 		httpMethods := strings.Split(v[0], ",")
 		path := v[1]
-		methodName := v[2]
-		r.HandleFunc(path, handler(s, methodName)).Methods(httpMethods...)
+		serviceName := v[2]
+		methodName := v[3]
+		r.HandleFunc(path, handler(s, serviceName, methodName)).Methods(httpMethods...)
 	}
 	return r
 }
@@ -56,14 +57,14 @@ func components(req *http.Request) *Components {
 	return req.Context().Value(componentsKey).(*Components)
 }
 
-func handler(s Servable, methodName string) func(http.ResponseWriter, *http.Request) {
+func handler(s Servable, serviceName, methodName string) func(http.ResponseWriter, *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		copyComponentsPtr(s, req)
 		parseRequestForm(req)
 		interceptors := getInterceptors(req)
 		req, err := doBefore(&interceptors, resp, req)
 		if err == nil {
-			doRequest(s, methodName, resp, req)
+			doRequest(s, serviceName, methodName, resp, req)
 		} else {
 			components(req).errorHandlerFunc()(resp, req, err)
 		}
@@ -91,7 +92,7 @@ func doBefore(interceptors *[]Interceptor, resp http.ResponseWriter, req *http.R
 	return req, nil
 }
 
-func doRequest(s Servable, methodName string, resp http.ResponseWriter, req *http.Request) {
+func doRequest(s Servable, serviceName, methodName string, resp http.ResponseWriter, req *http.Request) {
 	if hijack := components(req).Hijacker(req); hijack != nil {
 		hijack(resp, req)
 		return
@@ -101,7 +102,7 @@ func doRequest(s Servable, methodName string, resp http.ResponseWriter, req *htt
 		components(req).errorHandlerFunc()(resp, req, err)
 		return
 	}
-	serviceResp, err := switcherFunc(s, methodName, resp, req)
+	serviceResp, err := switcherFunc(s, serviceName, methodName, resp, req)
 	if err != nil {
 		components(req).errorHandlerFunc()(resp, req, err)
 		return
@@ -115,7 +116,7 @@ type peerKey struct{}
 
 // CallOptions returns grpc CallOptions,
 // you can overwrite this func to build CallOptions for your needs.
-var CallOptions = func(methodName string, req *http.Request) ([]grpc.CallOption, *metadata.MD, *metadata.MD, *peer.Peer) {
+var CallOptions = func(serviceName, methodName string, req *http.Request) ([]grpc.CallOption, *metadata.MD, *metadata.MD, *peer.Peer) {
 	header := new(metadata.MD)
 	trailer := new(metadata.MD)
 	peer := &peer.Peer{}

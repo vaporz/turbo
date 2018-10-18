@@ -146,7 +146,7 @@ func (c *Creator) createServiceYaml(serviceRootPath, serviceName, configFileName
   thrift_service_port: 50052
 
 urlmapping:
-  - GET /hello SayHello
+  - GET /hello {{.ServiceName}} SayHello
 `)
 }
 
@@ -234,7 +234,7 @@ func main() {
 }
 
 func (c *Creator) generateThriftServiceMain() {
-	nameLower := strings.ToLower(c.c.ThriftServiceName())
+	nameLower := strings.ToLower(c.c.ThriftServiceNames()[0])
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/thriftservice/"+nameLower+".go",
 		struct {
@@ -305,13 +305,13 @@ func (s *{{.ServiceName}}) SayHello(ctx context.Context, req *proto.SayHelloRequ
 }
 
 func (c *Creator) generateThriftServiceImpl() {
-	nameLower := strings.ToLower(c.c.ThriftServiceName())
+	nameLower := strings.ToLower(c.c.ThriftServiceNames()[0])
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/thriftservice/impl/"+nameLower+"impl.go",
 		struct {
 			PkgPath     string
 			ServiceName string
-		}{c.PkgPath, c.c.ThriftServiceName()},
+		}{c.PkgPath, c.c.ThriftServiceNames()[0]},
 		`package impl
 
 import (
@@ -438,10 +438,8 @@ import (
 
 // ThriftClient returns a thrift client
 func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) map[string]interface{} {
-	return map[string]interface{}{
-{{range $i, $ServiceName := .ServiceNames}}
-		"{{$ServiceName}}": t.New{{$ServiceName}}ClientFactory(trans, f),
-{{end}}
+	return map[string]interface{}{ {{range $i, $ServiceName := .ServiceNames}}
+		"{{$ServiceName}}": t.New{{$ServiceName}}ClientFactory(trans, f),{{end}}
 	}
 }
 
@@ -465,7 +463,7 @@ func (i *ServiceInitializer) StopService(s turbo.Servable) {
 }
 
 func (c *Creator) generateThriftHTTPMain() {
-	nameLower := strings.ToLower(c.c.ThriftServiceName())
+	nameLower := strings.ToLower(c.c.ThriftServiceNames()[0])
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/thriftapi/"+nameLower+"api.go",
 		struct {
@@ -473,7 +471,7 @@ func (c *Creator) generateThriftHTTPMain() {
 			PkgPath        string
 			ConfigFilePath string
 		}{
-			c.c.ThriftServiceName(),
+			c.c.ThriftServiceNames()[0],
 			c.PkgPath,
 			c.c.ServiceRootPathAbsolute() + "/service.yaml"},
 		`package main
