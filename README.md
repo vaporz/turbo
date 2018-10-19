@@ -19,6 +19,7 @@ Please create an issue if you have encountered any problems or have any new idea
  * [PreProcessor](https://vaporz.github.io/0.2/en/preprocessor.html#preprocessor) and [PostProcessor](https://vaporz.github.io/0.2/en/postprocessor.html#postprocessor): customizable URL-RPC mapping process.
  * [Hijacker](https://vaporz.github.io/0.2/en/hijacker.html#hijacker): Take over requests, do anything you want!
  * [Convertor](https://vaporz.github.io/0.2/en/convertor.html#convertor): Tell Turbo how to set a struct.
+ * [Service Multiplexing](https://vaporz.github.io/master/en/multiplexing.html)
 ## Index
  * [Create a service on the fly](https://vaporz.github.io/0.2/en/create.html)
  * [Command line tools](https://vaporz.github.io/0.2/en/command.html)
@@ -33,6 +34,7 @@ Please create an issue if you have encountered any problems or have any new idea
  * [Error Handler](https://vaporz.github.io/0.2/en/errorhandler.html)
  * [Thrift support](https://vaporz.github.io/0.2/en/thrift.html)
  * [Configs in service.yaml](https://vaporz.github.io/0.2/en/config.html#config)
+ * [Service Multiplexing](https://vaporz.github.io/master/en/multiplexing.html)
 ## Requirements
 Golang version: >= 1.8.x  
 Thrift version: >= 0.10.0  

@@ -2,9 +2,9 @@ language: go
 sudo: required
 
 go:
-  - 1.8.x
   - 1.9.x
   - 1.10.x
+  - 1.11.x
 go_import_path: github.com/vaporz/turbo
 before_install:
   - ./.travis/install-thrift.sh
