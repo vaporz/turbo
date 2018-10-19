@@ -10,6 +10,7 @@ import (
 func GrpcClient(conn *grpc.ClientConn) map[string]interface{} {
 	return map[string]interface{}{
 		"TestService": proto.NewTestServiceClient(conn),
+		"MinionsService": proto.NewMinionsServiceClient(conn),
 	}
 }
 

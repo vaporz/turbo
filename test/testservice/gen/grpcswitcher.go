@@ -2,26 +2,39 @@
 package gen
 
 import (
-	"errors"
-	"github.com/vaporz/turbo"
 	g "github.com/vaporz/turbo/test/testservice/gen/proto"
+	"github.com/vaporz/turbo"
 	"net/http"
+	"errors"
 )
 
 // GrpcSwitcher is a runtime func with which a server starts.
 var GrpcSwitcher = func(s turbo.Servable, serviceName, methodName string, resp http.ResponseWriter, req *http.Request) (rpcResponse interface{}, err error) {
 	callOptions, header, trailer, peer := turbo.CallOptions(serviceName, methodName, req)
+	if serviceName == "MinionsService" {
+		switch methodName { 
+		case "Eat":
+			request := &g.EatRequest{  }
+			err = turbo.BuildRequest(s, request, req)
+			if err != nil {
+				return nil, err
+			}
+			rpcResponse, err = s.Service("MinionsService").(g.MinionsServiceClient).Eat(req.Context(), request, callOptions...)
+		default:
+			return nil, errors.New("No such method[" + methodName + "]")
+		}
+	}
 	if serviceName == "TestService" {
-		switch methodName {
+		switch methodName { 
 		case "SayHello":
-			request := &g.SayHelloRequest{Values: &g.CommonValues{},}
+			request := &g.SayHelloRequest{ Values: &g.CommonValues{}, }
 			err = turbo.BuildRequest(s, request, req)
 			if err != nil {
 				return nil, err
 			}
 			rpcResponse, err = s.Service("TestService").(g.TestServiceClient).SayHello(req.Context(), request, callOptions...)
 		case "TestJson":
-			request := &g.TestJsonRequest{}
+			request := &g.TestJsonRequest{  }
 			err = turbo.BuildRequest(s, request, req)
 			if err != nil {
 				return nil, err

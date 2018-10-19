@@ -10,8 +10,9 @@ import (
 )
 
 // RegisterServer registers a service struct to a server
-func RegisterServer(s *grpc.Server) {
+func RegisterServer(s *grpc.Server) { // todo move to main.go
 	proto.RegisterTestServiceServer(s, &TestService{})
+	proto.RegisterMinionsServiceServer(s, &MinionsService{})
 }
 
 // TestService is the struct which implements generated interface

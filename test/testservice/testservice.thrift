@@ -22,3 +22,11 @@ service TestService {
 
     TestJsonResponse testJson (1:TestJsonRequest request)
 }
+
+struct EatResponse {
+  1: string message,
+}
+
+service MinionsService {
+    EatResponse Eat (1:string food)
+}

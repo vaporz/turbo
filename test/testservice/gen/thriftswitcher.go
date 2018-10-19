@@ -11,6 +11,20 @@ import (
 
 // ThriftSwitcher is a runtime func with which a server starts.
 var ThriftSwitcher = func(s turbo.Servable, serviceName, methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
+	if serviceName == "MinionsService" {
+		switch methodName {
+		case "Eat":
+			params, err := turbo.BuildThriftRequest(s, gen.MinionsServiceEatArgs{}, req, buildStructArg)
+			if err != nil {
+				return nil, err
+			}
+			return s.Service("MinionsService").(*gen.MinionsServiceClient).Eat(
+				params[0].Interface().(string), )
+		default:
+			return nil, errors.New("No such method[" + methodName + "]")
+		}
+	}
+
 	if serviceName == "TestService" {
 		switch methodName {
 		case "SayHello":

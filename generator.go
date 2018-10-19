@@ -276,11 +276,11 @@ var fieldsYaml string = ` + "`" + `thrift-fieldmapping:
 ` + "`" + `
 
 func buildParameterStr(serviceName, methodName string) string { {{range $ServiceName, $Methods := .ServiceMethodMap}}
-	if serviceName == "{{$ServiceName}}" {
+	if serviceName == "{{- $ServiceName -}}" {
 		switch methodName { {{range $i, $MethodName := $Methods}}
 		case "{{$MethodName}}":
 			var result string
-			args := g.{{$ServiceName}}{{$MethodName}}Args{}
+			args := g.{{- $ServiceName -}}{{$MethodName}}Args{}
 			at := reflect.TypeOf(args)
 			num := at.NumField()
 			for i := 0; i < num; i++ {

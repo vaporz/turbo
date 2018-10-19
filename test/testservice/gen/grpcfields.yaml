@@ -1,4 +1,5 @@
 grpc-fieldmapping:
   - SayHelloRequest[CommonValues values,]
   - TestJsonRequest[]
+  - EatRequest[]
 

@@ -37,10 +37,10 @@ func NewThriftServer(initializer Initializable, configFilePath string) *ThriftSe
 }
 
 type thriftClientCreator func(trans thrift.TTransport, f thrift.TProtocolFactory) map[string]interface{}
+type processorRegister func() map[string]thrift.TProcessor
 
 // Start starts both HTTP server and Thrift service
-func (s *ThriftServer) Start(clientCreator thriftClientCreator, sw switcher,
-	registerTProcessor func() thrift.TProcessor) {
+func (s *ThriftServer) Start(clientCreator thriftClientCreator, sw switcher, registerTProcessor processorRegister) {
 	log.Info("Starting Turbo...")
 	s.Initializer.InitService(s)
 	s.thriftServer = s.startThriftServiceInternal(registerTProcessor, false)
@@ -57,7 +57,7 @@ func (s *ThriftServer) StartHTTPServer(clientCreator thriftClientCreator, sw swi
 }
 
 // StartThriftService starts a Thrift service
-func (s *ThriftServer) StartThriftService(registerTProcessor func() thrift.TProcessor) {
+func (s *ThriftServer) StartThriftService(registerTProcessor processorRegister) {
 	s.Initializer.InitService(s)
 	s.thriftServer = s.startThriftServiceInternal(registerTProcessor, true)
 }
@@ -69,14 +69,21 @@ func (s *ThriftServer) startThriftHTTPServerInternal(clientCreator thriftClientC
 	return startHTTPServer(s)
 }
 
-func (s *ThriftServer) startThriftServiceInternal(registerTProcessor func() thrift.TProcessor, alone bool) *thrift.TSimpleServer {
+func (s *ThriftServer) startThriftServiceInternal(registerTProcessor processorRegister, alone bool) *thrift.TSimpleServer {
 	port := s.Config.ThriftServicePort()
 	log.Infof("Starting Thrift Service at :%s...", port)
 	transport, err := thrift.NewTServerSocket(":" + port)
 	logPanicIf(err)
-	server := thrift.NewTSimpleServer4(registerTProcessor(), transport,
-		thrift.NewTTransportFactory(), thrift.NewTBinaryProtocolFactoryDefault())
-	go server.Serve()
+	processor := thrift.NewTMultiplexedProcessor()
+	for name, p := range registerTProcessor() {
+		processor.RegisterProcessor(name, p)
+	}
+	server := thrift.NewTSimpleServer4(processor, transport,
+		thrift.NewTTransportFactory(), thrift.NewTBinaryProtocolFactoryDefault()) // todo support start server using other modes
+	go func() {
+		err := server.Serve()
+		panicIf(err)
+	}()
 	log.Info("Thrift Service started")
 	return server
 }

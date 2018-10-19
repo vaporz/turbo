@@ -30,3 +30,15 @@ service TestService {
     rpc sayHello (SayHelloRequest) returns (SayHelloResponse) {}
     rpc testJson (TestJsonRequest) returns (TestJsonResponse) {}
 }
+
+message EatRequest {
+    string food = 1;
+}
+
+message EatResponse {
+    string message = 1;
+}
+
+service MinionsService {
+    rpc eat (EatRequest) returns (EatResponse) {}
+}

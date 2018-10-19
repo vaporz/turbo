@@ -320,8 +320,10 @@ import (
 )
 
 // TProcessor returns TProcessor
-func TProcessor() thrift.TProcessor {
-	return gen.New{{.ServiceName}}Processor({{.ServiceName}}{})
+func TProcessor() map[string]thrift.TProcessor {
+	return map[string]thrift.TProcessor{
+		"{{.ServiceName}}": gen.New{{.ServiceName}}Processor({{.ServiceName}}{}),
+	}
 }
 
 // {{.ServiceName}} is the struct which implements generated interface
@@ -397,7 +399,7 @@ import (
 func GrpcClient(conn *grpc.ClientConn) map[string]interface{} {
 	return map[string]interface{}{
 {{range $i, $ServiceName := .ServiceNames}}
-		"{{$ServiceName}}": proto.New{{$ServiceName}}Client(conn),
+		"{{- $ServiceName -}}": proto.New{{- $ServiceName -}}Client(conn),
 {{end}}
 	}
 }
@@ -425,9 +427,9 @@ func (c *Creator) generateThriftHTTPComponent() {
 	writeFileWithTemplate(
 		c.c.ServiceRootPathAbsolute()+"/thriftapi/component/components.go",
 		struct {
-			ServiceNames []string
+			ServiceName string
 			PkgPath      string
-		}{c.c.GrpcServiceNames(), c.PkgPath},
+		}{c.c.GrpcServiceNames()[0], c.PkgPath},
 		`package component
 
 import (
@@ -438,8 +440,9 @@ import (
 
 // ThriftClient returns a thrift client
 func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) map[string]interface{} {
-	return map[string]interface{}{ {{range $i, $ServiceName := .ServiceNames}}
-		"{{$ServiceName}}": t.New{{$ServiceName}}ClientFactory(trans, f),{{end}}
+	iprot := f.GetProtocol(trans)
+	return map[string]interface{}{
+		"{{- .ServiceName -}}": t.New{{- .ServiceName -}}ClientProtocol(trans, iprot, thrift.NewTMultiplexedProtocol(iprot, "{{- .ServiceName -}}")),
 	}
 }
 

@@ -7,7 +7,11 @@ import (
 )
 
 func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) map[string]interface{} {
-	return map[string]interface{}{"TestService":t.NewTestServiceClientFactory(trans, f)}
+	iprot := f.GetProtocol(trans)
+	return map[string]interface{}{
+		"TestService":    t.NewTestServiceClientProtocol(trans, iprot, thrift.NewTMultiplexedProtocol(iprot, "TestService")),
+		"MinionsService": t.NewMinionsServiceClientProtocol(trans, iprot, thrift.NewTMultiplexedProtocol(iprot, "MinionsService")),
+	}
 }
 
 type ServiceInitializer struct {

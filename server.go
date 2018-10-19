@@ -195,7 +195,7 @@ func stop(s Servable, httpServer *http.Server, grpcServer *grpc.Server, thriftSe
 	if thriftServer != nil {
 		s.(*ThriftServer).tClient.close()
 		thriftServer.Stop()
-		log.Info("Grpc Server stopped")
+		log.Info("Thrift Server stopped")
 	}
 	s.ServerField().Initializer.StopService(s)
 }

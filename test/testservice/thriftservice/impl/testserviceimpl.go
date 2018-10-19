@@ -8,8 +8,11 @@ import (
 )
 
 // TProcessor returns TProcessor
-func TProcessor() thrift.TProcessor {
-	return gen.NewTestServiceProcessor(TestService{})
+func TProcessor() map[string]thrift.TProcessor {
+	return map[string]thrift.TProcessor{
+		"TestService": gen.NewTestServiceProcessor(TestService{}),
+		"MinionsService": gen.NewMinionsServiceProcessor(MinionsService{}),
+	}
 }
 
 // TestService is the struct which implements generated interface

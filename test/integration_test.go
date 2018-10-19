@@ -138,9 +138,9 @@ func TestThriftService(t *testing.T) {
 	overwriteServiceYaml(httpPort, "50052", "production")
 
 	s := turbo.NewThriftServer(&testInitializer{}, "testservice/service.yaml")
+	turbo.SetOutput(os.Stdout)
 	s.Start(tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 	time.Sleep(time.Second * 2)
-	turbo.SetOutput(os.Stdout)
 
 	runCommonTests(t, s.Server, httpPort, "thrift")
 
@@ -328,9 +328,12 @@ import (
 	"git.apache.org/thrift.git/lib/go/thrift"
 )
 
-func TProcessor() thrift.TProcessor {
-	return gen.NewTestCreateServiceProcessor(TestCreateService{})
+func TProcessor() map[string]thrift.TProcessor {
+	return map[string]thrift.TProcessor{
+		"TestCreateService": gen.NewTestCreateServiceProcessor(TestCreateService{}),
+	}
 }
+
 
 type TestCreateService struct {
 }
@@ -394,6 +397,8 @@ func generate(t *testing.T, rpc string) {
 }
 
 func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
+	testPost(t, "http://localhost:"+httpPort+"/eat?food=banana",
+		`{"message":"Yummy!"}`)
 	testGet(t, "http://localhost:"+httpPort+"/hello",
 		`{"message":"[`+rpcType+` server]Hello, "}`)
 	testGet(t, "http://localhost:"+httpPort+"/hello?your_name=turbo",
@@ -661,7 +666,6 @@ var convertThriftCommonValues turbo.Convertor = func(req *http.Request) reflect.
 func overwriteServiceYaml(httpPort, servicePort, env string) {
 	type serviceYamlValues struct {
 		HttpPort    string
-		ServiceName string
 		ServicePort string
 		Env         string
 	}
@@ -672,22 +676,22 @@ func overwriteServiceYaml(httpPort, servicePort, env string) {
   http_port: {{.HttpPort}}
   environment: {{.Env}}
   turbo_log_path: log
-  grpc_service_name: {{.ServiceName}}
+  grpc_service_name: TestService,MinionsService
   grpc_service_host: 127.0.0.1
   grpc_service_port: {{.ServicePort}}
-  thrift_service_name: {{.ServiceName}}
+  thrift_service_name: TestService,MinionsService
   thrift_service_host: 127.0.0.1
   thrift_service_port: {{.ServicePort}}
 
 urlmapping:
-  - GET /hello/{your_Name:[a-zA-Z0-9]+} {{.ServiceName}} SayHello
-  - GET,POST /hello {{.ServiceName}} SayHello
-  - POST /testjson {{.ServiceName}} TestJson
-  - POST /testjson/{StringValue:[a-zA-Z0-9]+}/{int32_value:[a-zA-Z0-9]+} {{.ServiceName}} TestJson
+  - GET /hello/{your_Name:[a-zA-Z0-9]+} TestService SayHello
+  - GET,POST /hello TestService SayHello
+  - POST /testjson TestService TestJson
+  - POST /testjson/{StringValue:[a-zA-Z0-9]+}/{int32_value:[a-zA-Z0-9]+} TestService TestJson
+  - POST /eat MinionsService Eat
 `,
 		serviceYamlValues{
 			HttpPort:    httpPort,
-			ServiceName: "TestService",
 			ServicePort: servicePort,
 			Env:         env,
 		},

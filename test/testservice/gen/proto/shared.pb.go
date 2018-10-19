@@ -14,6 +14,8 @@ It has these top-level messages:
 	SayHelloResponse
 	TestJsonRequest
 	TestJsonResponse
+	EatRequest
+	EatResponse
 */
 package proto
 
