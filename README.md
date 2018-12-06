@@ -1,13 +1,16 @@
 # Turbo  [![Build Status](https://travis-ci.org/vaporz/turbo.svg?branch=master)](https://travis-ci.org/vaporz/turbo) [![Coverage Status](https://coveralls.io/repos/github/vaporz/turbo/badge.svg?branch=master)](https://coveralls.io/github/vaporz/turbo?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/vaporz/turbo)](https://goreportcard.com/report/github.com/vaporz/turbo) [![codebeat badge](https://codebeat.co/badges/7a166e48-dae1-454c-b925-4fbcd3f1f461)](https://codebeat.co/projects/github-com-vaporz-turbo-master)
+
+最新版本 | Latest Release: 0.2
+
+文档地址 | Documentation: https://vaporz.github.io
+
+-------------------------
+
 I'm very happy and ready to help you if you're intersted in Turbo, and want to try it.<br>
 Please create an issue if you have encountered any problems or have any new ideas. Thank you!<br>
 如果你对Turbo感兴趣，并想试一试，我非常乐意帮助你。<br>
 如遇到任何问题，或有新主意，请开issue，谢谢！<br>
 ![](https://github.com/vaporz/turbo/blob/image/Turbo.gif)(From movie "[Turbo](https://en.wikipedia.org/wiki/Turbo_(film))")
-
-最新版本 | Latest Release: 0.2
-
-文档地址 | Documentation: https://vaporz.github.io
 
 ## Features
  * Turbo generates a reverse-proxy server which translates a HTTP request into a grpc/Thrift request.  
@@ -36,5 +39,5 @@ Please create an issue if you have encountered any problems or have any new idea
  * [Configs in service.yaml](https://vaporz.github.io/0.2/en/config.html#config)
  * [Service Multiplexing](https://vaporz.github.io/master/en/multiplexing.html)
 ## Requirements
-Golang version: >= 1.8.x  
-Thrift version: >= 0.10.0  
+Golang version: >= 1.11.x  
+Thrift version: >= 0.11.0  

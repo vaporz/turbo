@@ -2,6 +2,7 @@
 package gen
 
 import (
+	"context"
 	"errors"
 	"github.com/vaporz/turbo"
 	"github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/gen"
@@ -10,29 +11,33 @@ import (
 )
 
 // ThriftSwitcher is a runtime func with which a server starts.
-var ThriftSwitcher = func(s turbo.Servable, serviceName, methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) {
+var ThriftSwitcher = func(s turbo.Servable, serviceName, methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) { 
 	if serviceName == "MinionsService" {
-		switch methodName {
+		ctx := context.Background()
+		switch methodName { 
 		case "Eat":
 			params, err := turbo.BuildThriftRequest(s, gen.MinionsServiceEatArgs{}, req, buildStructArg)
 			if err != nil {
 				return nil, err
 			}
 			return s.Service("MinionsService").(*gen.MinionsServiceClient).Eat(
+				ctx,
 				params[0].Interface().(string), )
 		default:
 			return nil, errors.New("No such method[" + methodName + "]")
 		}
 	}
-
+	
 	if serviceName == "TestService" {
-		switch methodName {
+		ctx := context.Background()
+		switch methodName { 
 		case "SayHello":
 			params, err := turbo.BuildThriftRequest(s, gen.TestServiceSayHelloArgs{}, req, buildStructArg)
 			if err != nil {
 				return nil, err
 			}
 			return s.Service("TestService").(*gen.TestServiceClient).SayHello(
+				ctx,
 				params[0].Interface().(*gen.CommonValues),
 				params[1].Interface().(string),
 				params[2].Interface().(int64),
@@ -51,12 +56,13 @@ var ThriftSwitcher = func(s turbo.Servable, serviceName, methodName string, resp
 				return nil, err
 			}
 			return s.Service("TestService").(*gen.TestServiceClient).TestJson(
+				ctx,
 				params[0].Interface().(*gen.TestJsonRequest), )
 		default:
 			return nil, errors.New("No such method[" + methodName + "]")
 		}
 	}
-
+	
 	if serviceResponse == nil && err == nil {
 		return nil, errors.New("No such service[" + serviceName + "]")
 	}
@@ -67,12 +73,12 @@ func buildStructArg(s turbo.Servable, typeName string, req *http.Request) (v ref
 	switch typeName {
 
 	case "CommonValues":
-		request := &gen.CommonValues{}
+		request := &gen.CommonValues{  }
 		turbo.BuildStruct(s, reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
 		return reflect.ValueOf(request), nil
 
 	case "TestJsonRequest":
-		request := &gen.TestJsonRequest{}
+		request := &gen.TestJsonRequest{  }
 		turbo.BuildStruct(s, reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
 		return reflect.ValueOf(request), nil
 

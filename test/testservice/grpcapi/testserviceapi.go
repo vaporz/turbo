@@ -1,13 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"github.com/vaporz/turbo"
 	"github.com/vaporz/turbo/test/testservice/gen"
 	"github.com/vaporz/turbo/test/testservice/grpcapi/component"
 	"os"
 	"os/signal"
 	"syscall"
-	"fmt"
 )
 
 func main() {

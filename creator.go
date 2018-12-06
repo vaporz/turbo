@@ -315,6 +315,7 @@ func (c *Creator) generateThriftServiceImpl() {
 		`package impl
 
 import (
+	"context"
 	"{{.PkgPath}}/gen/thrift/gen-go/gen"
 	"git.apache.org/thrift.git/lib/go/thrift"
 )
@@ -331,7 +332,7 @@ type {{.ServiceName}} struct {
 }
 
 // SayHello is an example entry point
-func (s {{.ServiceName}}) SayHello(yourName string) (r *gen.SayHelloResponse, err error) {
+func (s {{.ServiceName}}) SayHello(ctx context.Context, yourName string) (r *gen.SayHelloResponse, err error) {
 	return &gen.SayHelloResponse{Message: "[thrift server]Hello, " + yourName}, nil
 }
 `,

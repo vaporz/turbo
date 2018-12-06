@@ -324,6 +324,7 @@ service TestCreateService {
 		`package impl
 
 import (
+	"context"
 	"github.com/vaporz/turbo/test/testcreateservice/gen/thrift/gen-go/gen"
 	"git.apache.org/thrift.git/lib/go/thrift"
 )
@@ -338,7 +339,7 @@ func TProcessor() map[string]thrift.TProcessor {
 type TestCreateService struct {
 }
 
-func (s TestCreateService) SayHello(values *gen.CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64, uint64Value int64) (r *gen.SayHelloResponse, err error) {
+func (s TestCreateService) SayHello(ctx context.Context, values *gen.CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64, uint64Value int64) (r *gen.SayHelloResponse, err error) {
 	return &gen.SayHelloResponse{Message: "[thrift server]Hello, " + yourName}, nil
 }
 `,
@@ -412,7 +413,7 @@ func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?your_name=aaa",
 		`{"message":"[`+rpcType+` server]Hello, testtest"}`)
 	testPost(t, "http://localhost:"+httpPort+"/hello/testtest",
-		"404 page not found\n")
+		"") // 405 Method Not Allowed
 
 	s.Components.SetCommonInterceptor(component(s, "Test1Interceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",

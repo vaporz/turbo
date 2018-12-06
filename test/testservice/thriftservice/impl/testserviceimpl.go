@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"git.apache.org/thrift.git/lib/go/thrift"
@@ -20,7 +21,7 @@ type TestService struct {
 }
 
 // SayHello is an example entry point
-func (s TestService) SayHello(values *gen.CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64,
+func (s TestService) SayHello(ctx context.Context, values *gen.CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64,
 	uint64Value int64, int32Value int32, int16Value int16, stringList []string, i32List []int32, boolList []bool, doubleList []float64) (r *gen.SayHelloResponse, err error) {
 	if boolValue {
 		result := fmt.Sprintf("values.TransactionId=%d, yourName=%s,int64Value=%d, boolValue=%t, float64Value=%f, "+
@@ -35,6 +36,6 @@ func (s TestService) SayHello(values *gen.CommonValues, yourName string, int64Va
 	return &gen.SayHelloResponse{Message: "[thrift server]Hello, " + yourName}, nil
 }
 
-func (s TestService) TestJson(request *gen.TestJsonRequest) (r *gen.TestJsonResponse, err error) {
+func (s TestService) TestJson(ctx context.Context, request *gen.TestJsonRequest) (r *gen.TestJsonResponse, err error) {
 	return &gen.TestJsonResponse{Message: "[thrift server]json= " + request.String()}, nil
 }
