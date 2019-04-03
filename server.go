@@ -33,6 +33,7 @@ type Servable interface {
 	Service(serviceName string) interface{}
 	ServerField() *Server
 	Stop()
+	RegisterComponent(name string, component interface{})
 }
 
 // Server holds the data for a server

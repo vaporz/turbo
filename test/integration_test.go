@@ -520,22 +520,22 @@ type testInitializer struct {
 }
 
 func (t *testInitializer) InitService(s turbo.Servable) error {
-	s.ServerField().RegisterComponent("BaseInterceptor", &turbo.BaseInterceptor{})
-	s.ServerField().RegisterComponent("BeforeErrorInterceptor", &BeforeErrorInterceptor{})
-	s.ServerField().RegisterComponent("AfterErrorInterceptor", &AfterErrorInterceptor{})
-	s.ServerField().RegisterComponent("TestInterceptor", &TestInterceptor{})
-	s.ServerField().RegisterComponent("Test1Interceptor", &Test1Interceptor{})
-	s.ServerField().RegisterComponent("ContextValueInterceptor", &ContextValueInterceptor{})
-	s.ServerField().RegisterComponent("MetadataInterceptor", &MetadataInterceptor{})
-	s.ServerField().RegisterComponent("preProcessor", preProcessor)
-	s.ServerField().RegisterComponent("errorPreProcessor", errorPreProcessor)
-	s.ServerField().RegisterComponent("postProcessor", postProcessor)
-	s.ServerField().RegisterComponent("thriftPostProcessor", thriftPostProcessor)
-	s.ServerField().RegisterComponent("hijacker", hijacker)
-	s.ServerField().RegisterComponent("errorHandler", errorHandler)
-	s.ServerField().RegisterComponent("convertProtoCommonValues", convertProtoCommonValues)
-	s.ServerField().RegisterComponent("convertProtoSayHelloRequest", convertProtoSayHelloRequest)
-	s.ServerField().RegisterComponent("convertThriftCommonValues", convertThriftCommonValues)
+	s.RegisterComponent("BaseInterceptor", &turbo.BaseInterceptor{})
+	s.RegisterComponent("BeforeErrorInterceptor", &BeforeErrorInterceptor{})
+	s.RegisterComponent("AfterErrorInterceptor", &AfterErrorInterceptor{})
+	s.RegisterComponent("TestInterceptor", &TestInterceptor{})
+	s.RegisterComponent("Test1Interceptor", &Test1Interceptor{})
+	s.RegisterComponent("ContextValueInterceptor", &ContextValueInterceptor{})
+	s.RegisterComponent("MetadataInterceptor", &MetadataInterceptor{})
+	s.RegisterComponent("preProcessor", preProcessor)
+	s.RegisterComponent("errorPreProcessor", errorPreProcessor)
+	s.RegisterComponent("postProcessor", postProcessor)
+	s.RegisterComponent("thriftPostProcessor", thriftPostProcessor)
+	s.RegisterComponent("hijacker", hijacker)
+	s.RegisterComponent("errorHandler", errorHandler)
+	s.RegisterComponent("convertProtoCommonValues", convertProtoCommonValues)
+	s.RegisterComponent("convertProtoSayHelloRequest", convertProtoSayHelloRequest)
+	s.RegisterComponent("convertThriftCommonValues", convertThriftCommonValues)
 	return nil
 }
 
