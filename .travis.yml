@@ -2,24 +2,35 @@ language: go
 sudo: required
 
 go:
-  - 1.11.x
+  - 1.12.x
 go_import_path: github.com/vaporz/turbo
 before_install:
+  # execute all of the commands which need to be executed
+  # before installing dependencies
   - ./.travis/install-thrift.sh
   - ./.travis/install-protoc.sh 3.1.0
   - go get github.com/mattn/goveralls
-  - go get github.com/vaporz/turbo
-  - go install github.com/vaporz/turbo/protoc-gen-buildfields
-  - go get github.com/golang/protobuf/protoc-gen-go
-  - go install github.com/golang/protobuf/protoc-gen-go
-  - go get -u github.com/golang/dep/...
 
 install:
-  - dep ensure
+  # install all of the dependencies you need here
+  - export GO111MODULE=on
+  - export GOBIN="$HOME/local/bin"
+  - go get github.com/golang/protobuf/protoc-gen-go
+  - go get github.com/vaporz/turbo
+  - cd $GOPATH/src/github.com/vaporz/turbo
+  - make install
+
+before_script:
+# execute all of the commands which need to be executed
+# before running actual tests
+# for example:
+#- mysql -u root -e 'CREATE DATABASE test'
+#- bin/doctrine-migrations migrations:migrate
 
 script:
+  # execute all of the commands which should make the build pass or fail
   - $HOME/gopath/bin/goveralls -service=travis-ci -ignore=protoc-gen-buildfields/*,test/testservice/*,test/testservice/*/*,test/testservice/*/*/*,test/testservice/*/*/*/*/*,test/testservice/*/*/*/*/*/*,turbo/*,turbo/cmd/root.go
 
 env:
   global:
-  - "PATH=$PATH:$HOME/local/bin"
+    - "PATH=$PATH:$HOME/local/bin"

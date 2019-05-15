@@ -149,7 +149,7 @@ func (g *Generator) GenerateBuildThriftParameters() {
 		g.c.ServiceRootPathAbsolute()+"/gen/thrift/build.go",
 		struct {
 			PkgPath         string
-			ServiceNames     []string
+			ServiceNames    []string
 			ServiceRootPath string
 			// todo
 			ServiceMethodMap map[string][]string
