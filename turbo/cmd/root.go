@@ -11,7 +11,8 @@ import (
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use: "turbo",
+	Use:     "turbo",
+	Version: "v0.3.0",
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
