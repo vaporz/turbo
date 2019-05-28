@@ -1,8 +1,13 @@
 # Turbo  [![Build Status](https://travis-ci.org/vaporz/turbo.svg?branch=master)](https://travis-ci.org/vaporz/turbo) [![Coverage Status](https://coveralls.io/repos/github/vaporz/turbo/badge.svg?branch=master)](https://coveralls.io/github/vaporz/turbo?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/vaporz/turbo)](https://goreportcard.com/report/github.com/vaporz/turbo) [![codebeat badge](https://codebeat.co/badges/7a166e48-dae1-454c-b925-4fbcd3f1f461)](https://codebeat.co/projects/github-com-vaporz-turbo-master)
 
-最新版本 | Latest Release: 0.3
+
+最新版本 | Latest Release: v0.3.0-thrift0.9
 
 文档地址 | Documentation: https://vaporz.github.io
+
+## Requirements
+Golang version: >= 1.9.x  
+Thrift version: 0.9.0 
 
 -------------------------
 
@@ -37,7 +42,4 @@ Please create an issue if you have encountered any problems or have any new idea
  * [Error Handler](https://vaporz.github.io/0.2/en/errorhandler.html)
  * [Thrift support](https://vaporz.github.io/0.2/en/thrift.html)
  * [Configs in service.yaml](https://vaporz.github.io/0.2/en/config.html#config)
- * [Service Multiplexing](https://vaporz.github.io/master/en/multiplexing.html)
-## Requirements
-Golang version: >= 1.12.x  
-Thrift version: 0.11.0  
+ * [Service Multiplexing](https://vaporz.github.io/master/en/multiplexing.html) 
