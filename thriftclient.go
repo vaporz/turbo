@@ -28,8 +28,7 @@ func (t *thriftClient) connect(hostPort string) {
 	tSocket, err := thrift.NewTSocket(hostPort)
 	logPanicIf(err)
 
-	t.transport, err = thrift.NewTTransportFactory().GetTransport(tSocket)
-	logPanicIf(err)
+	t.transport = thrift.NewTTransportFactory().GetTransport(tSocket)
 
 	err = t.transport.Open()
 	logPanicIf(err)

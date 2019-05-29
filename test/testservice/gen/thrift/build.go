@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	g "github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/gen"
+	g "github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/services"
 	"io"
 	"os"
 	"reflect"
@@ -39,11 +39,8 @@ func buildFields() {
 			numIn := method.Type.NumIn()
 			for j := 0; j < numIn; j++ {
 				argType := method.Type.In(j)
-				argStr := argType.String()
 				if argType.Kind() == reflect.Ptr && argType.Elem().Kind() == reflect.Struct {
-					arr := strings.Split(argStr, ".")
-					name := arr[len(arr)-1:][0]
-					items = findItem(items, name, argType)
+					items = findItem(items, argType.Elem().PkgPath()+"."+argType.Elem().Name(), argType)
 				}
 			}
 		}
@@ -64,11 +61,9 @@ func findItem(items []string, name string, structType reflect.Type) []string {
 	for i := 0; i < numField; i++ {
 		fieldType := structType.Elem().Field(i)
 		if fieldType.Type.Kind() == reflect.Ptr && fieldType.Type.Elem().Kind() == reflect.Struct {
-			arr := strings.Split(fieldType.Type.String(), ".")
-			typeName := arr[len(arr)-1:][0]
 			argName := fieldType.Name
-			item += fmt.Sprintf("%s %s,", typeName, argName)
-			items = findItem(items, typeName, fieldType.Type)
+			item += fmt.Sprintf("%s %s,", fieldType.Type.Elem().PkgPath()+"."+"."+fieldType.Type.Elem().Name(), argName)
+			items = findItem(items, fieldType.Type.Elem().PkgPath()+"."+"."+fieldType.Type.Elem().Name(), fieldType.Type)
 		}
 	}
 	item += "]"

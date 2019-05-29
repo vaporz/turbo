@@ -1,13 +1,14 @@
 # Turbo  [![Build Status](https://travis-ci.org/vaporz/turbo.svg?branch=master)](https://travis-ci.org/vaporz/turbo) [![Coverage Status](https://coveralls.io/repos/github/vaporz/turbo/badge.svg?branch=master)](https://coveralls.io/github/vaporz/turbo?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/vaporz/turbo)](https://goreportcard.com/report/github.com/vaporz/turbo) [![codebeat badge](https://codebeat.co/badges/7a166e48-dae1-454c-b925-4fbcd3f1f461)](https://codebeat.co/projects/github-com-vaporz-turbo-master)
 
+本分支使用 Thrift v0.9.3版本。
 
-最新版本 | Latest Release: v0.3.0-thrift0.9
+最新版本 | Latest Release: v0.3.0-thrift0.9.3
 
 文档地址 | Documentation: https://vaporz.github.io
 
 ## Requirements
-Golang version: >= 1.9.x  
-Thrift version: 0.9.0 
+Golang version: >= 1.9.1  
+Thrift version: 0.9.3 
 
 -------------------------
 

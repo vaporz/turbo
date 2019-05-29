@@ -1,4 +1,4 @@
 thrift-fieldmapping:
-  - CommonValues[]
-  - TestJsonRequest[]
+  - github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/shared.CommonValues[]
+  - github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/services.TestJsonRequest[]
 

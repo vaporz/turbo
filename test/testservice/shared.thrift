@@ -1,4 +1,4 @@
-namespace go gen
+namespace go shared
 
 struct CommonValues {
   1: i64 transactionId,

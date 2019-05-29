@@ -1,4 +1,4 @@
-namespace go gen
+namespace go services
 include "shared.thrift"
 
 struct SayHelloResponse {

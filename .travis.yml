@@ -2,7 +2,7 @@ language: go
 sudo: required
 
 go:
-  - 1.12.x
+  - 1.9.x
 go_import_path: github.com/vaporz/turbo
 before_install:
   # execute all of the commands which need to be executed
@@ -13,14 +13,12 @@ before_install:
 
 install:
   # install all of the dependencies you need here
-  - export GO111MODULE=on
-  - export GOBIN="$HOME/local/bin"
   - go get github.com/golang/protobuf/protoc-gen-go
   - go get github.com/vaporz/turbo
   - cd $GOPATH/src/github.com/vaporz/turbo
   - make install
 
-before_script:
+#before_script:
 # execute all of the commands which need to be executed
 # before running actual tests
 # for example:
