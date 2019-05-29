@@ -2,10 +2,10 @@
 package gen
 
 import (
-	"context"
 	"errors"
 	"github.com/vaporz/turbo"
-	"github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/gen"
+	"github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/services"
+	"github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/shared"
 	"net/http"
 	"reflect"
 )
@@ -13,15 +13,14 @@ import (
 // ThriftSwitcher is a runtime func with which a server starts.
 var ThriftSwitcher = func(s turbo.Servable, serviceName, methodName string, resp http.ResponseWriter, req *http.Request) (serviceResponse interface{}, err error) { 
 	if serviceName == "MinionsService" {
-		ctx := context.Background()
 		switch methodName { 
 		case "Eat":
-			params, err := turbo.BuildThriftRequest(s, gen.MinionsServiceEatArgs{}, req, buildStructArg)
+			params, err := turbo.BuildThriftRequest(s, services.MinionsServiceEatArgs{}, req, buildStructArg)
 			if err != nil {
 				return nil, err
 			}
-			return s.Service("MinionsService").(*gen.MinionsServiceClient).Eat(
-				ctx,
+			return s.Service("MinionsService").(*services.MinionsServiceClient).Eat(
+				
 				params[0].Interface().(string), )
 		default:
 			return nil, errors.New("No such method[" + methodName + "]")
@@ -29,16 +28,15 @@ var ThriftSwitcher = func(s turbo.Servable, serviceName, methodName string, resp
 	}
 	
 	if serviceName == "TestService" {
-		ctx := context.Background()
 		switch methodName { 
 		case "SayHello":
-			params, err := turbo.BuildThriftRequest(s, gen.TestServiceSayHelloArgs{}, req, buildStructArg)
+			params, err := turbo.BuildThriftRequest(s, services.TestServiceSayHelloArgs{}, req, buildStructArg)
 			if err != nil {
 				return nil, err
 			}
-			return s.Service("TestService").(*gen.TestServiceClient).SayHello(
-				ctx,
-				params[0].Interface().(*gen.CommonValues),
+			return s.Service("TestService").(*services.TestServiceClient).SayHello(
+				
+				params[0].Interface().(*shared.CommonValues),
 				params[1].Interface().(string),
 				params[2].Interface().(int64),
 				params[3].Interface().(bool),
@@ -51,13 +49,13 @@ var ThriftSwitcher = func(s turbo.Servable, serviceName, methodName string, resp
 				params[10].Interface().([]bool),
 				params[11].Interface().([]float64), )
 		case "TestJson":
-			params, err := turbo.BuildThriftRequest(s, gen.TestServiceTestJsonArgs{}, req, buildStructArg)
+			params, err := turbo.BuildThriftRequest(s, services.TestServiceTestJsonArgs{}, req, buildStructArg)
 			if err != nil {
 				return nil, err
 			}
-			return s.Service("TestService").(*gen.TestServiceClient).TestJson(
-				ctx,
-				params[0].Interface().(*gen.TestJsonRequest), )
+			return s.Service("TestService").(*services.TestServiceClient).TestJson(
+				
+				params[0].Interface().(*services.TestJsonRequest), )
 		default:
 			return nil, errors.New("No such method[" + methodName + "]")
 		}
@@ -73,12 +71,12 @@ func buildStructArg(s turbo.Servable, typeName string, req *http.Request) (v ref
 	switch typeName {
 
 	case "CommonValues":
-		request := &gen.CommonValues{  }
+		request := &shared.CommonValues{  }
 		turbo.BuildStruct(s, reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
 		return reflect.ValueOf(request), nil
 
 	case "TestJsonRequest":
-		request := &gen.TestJsonRequest{  }
+		request := &services.TestJsonRequest{  }
 		turbo.BuildStruct(s, reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
 		return reflect.ValueOf(request), nil
 

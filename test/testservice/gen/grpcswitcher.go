@@ -26,13 +26,6 @@ var GrpcSwitcher = func(s turbo.Servable, serviceName, methodName string, resp h
 	}
 	if serviceName == "TestService" {
 		switch methodName { 
-		case "SayHello":
-			request := &g.SayHelloRequest{ Values: &g.CommonValues{}, }
-			err = turbo.BuildRequest(s, request, req)
-			if err != nil {
-				return nil, err
-			}
-			rpcResponse, err = s.Service("TestService").(g.TestServiceClient).SayHello(req.Context(), request, callOptions...)
 		case "TestJson":
 			request := &g.TestJsonRequest{  }
 			err = turbo.BuildRequest(s, request, req)
@@ -40,6 +33,13 @@ var GrpcSwitcher = func(s turbo.Servable, serviceName, methodName string, resp h
 				return nil, err
 			}
 			rpcResponse, err = s.Service("TestService").(g.TestServiceClient).TestJson(req.Context(), request, callOptions...)
+		case "SayHello":
+			request := &g.SayHelloRequest{ Values: &g.CommonValues{}, }
+			err = turbo.BuildRequest(s, request, req)
+			if err != nil {
+				return nil, err
+			}
+			rpcResponse, err = s.Service("TestService").(g.TestServiceClient).SayHello(req.Context(), request, callOptions...)
 		default:
 			return nil, errors.New("No such method[" + methodName + "]")
 		}

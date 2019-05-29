@@ -182,7 +182,7 @@ func (c *Creator) createThrift(serviceName string) {
 		struct {
 			ServiceName string
 		}{serviceName},
-		`namespace go gen
+		`namespace go services
 
 struct SayHelloResponse {
   1: string message,
@@ -315,15 +315,14 @@ func (c *Creator) generateThriftServiceImpl() {
 		`package impl
 
 import (
-	"context"
-	"{{.PkgPath}}/gen/thrift/gen-go/gen"
+	"{{.PkgPath}}/gen/thrift/gen-go/services"
 	"git.apache.org/thrift.git/lib/go/thrift"
 )
 
 // TProcessor returns TProcessor
 func TProcessor() map[string]thrift.TProcessor {
 	return map[string]thrift.TProcessor{
-		"{{.ServiceName}}": gen.New{{.ServiceName}}Processor({{.ServiceName}}{}),
+		"{{.ServiceName}}": services.New{{.ServiceName}}Processor({{.ServiceName}}{}),
 	}
 }
 
@@ -332,8 +331,8 @@ type {{.ServiceName}} struct {
 }
 
 // SayHello is an example entry point
-func (s {{.ServiceName}}) SayHello(ctx context.Context, yourName string) (r *gen.SayHelloResponse, err error) {
-	return &gen.SayHelloResponse{Message: "[thrift server]Hello, " + yourName}, nil
+func (s {{.ServiceName}}) SayHello(yourName string) (r *services.SayHelloResponse, err error) {
+	return &services.SayHelloResponse{Message: "[thrift server]Hello, " + yourName}, nil
 }
 `,
 	)
@@ -434,7 +433,7 @@ func (c *Creator) generateThriftHTTPComponent() {
 		`package component
 
 import (
-	t "{{.PkgPath}}/gen/thrift/gen-go/gen"
+	t "{{.PkgPath}}/gen/thrift/gen-go/services"
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/vaporz/turbo"
 )

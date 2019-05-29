@@ -10,7 +10,8 @@ import (
 	"github.com/vaporz/turbo"
 	"github.com/vaporz/turbo/test/testservice/gen"
 	"github.com/vaporz/turbo/test/testservice/gen/proto"
-	tgen "github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/gen"
+	"github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/services"
+	tgen "github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/shared"
 	gcomponent "github.com/vaporz/turbo/test/testservice/grpcapi/component"
 	gimpl "github.com/vaporz/turbo/test/testservice/grpcservice/impl"
 	tcompoent "github.com/vaporz/turbo/test/testservice/thriftapi/component"
@@ -291,7 +292,7 @@ message CommonValues {
 func overwriteThrift() {
 	writeFileWithTemplate(
 		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testcreateservice/shared.thrift",
-		`namespace go gen
+		`namespace go shared
 
 struct CommonValues {
   1: i64 transactionId,
@@ -305,7 +306,7 @@ struct HelloValues {
 	)
 	writeFileWithTemplate(
 		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testcreateservice/testcreateservice.thrift",
-		`namespace go gen
+		`namespace go services
 include "shared.thrift"
 
 struct SayHelloResponse {
@@ -324,14 +325,14 @@ service TestCreateService {
 		`package impl
 
 import (
-	"context"
-	"github.com/vaporz/turbo/test/testcreateservice/gen/thrift/gen-go/gen"
+	"github.com/vaporz/turbo/test/testcreateservice/gen/thrift/gen-go/shared"
+	"github.com/vaporz/turbo/test/testcreateservice/gen/thrift/gen-go/services"
 	"git.apache.org/thrift.git/lib/go/thrift"
 )
 
 func TProcessor() map[string]thrift.TProcessor {
 	return map[string]thrift.TProcessor{
-		"TestCreateService": gen.NewTestCreateServiceProcessor(TestCreateService{}),
+		"TestCreateService": services.NewTestCreateServiceProcessor(TestCreateService{}),
 	}
 }
 
@@ -339,8 +340,8 @@ func TProcessor() map[string]thrift.TProcessor {
 type TestCreateService struct {
 }
 
-func (s TestCreateService) SayHello(ctx context.Context, values *gen.CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64, uint64Value int64) (r *gen.SayHelloResponse, err error) {
-	return &gen.SayHelloResponse{Message: "[thrift server]Hello, " + yourName}, nil
+func (s TestCreateService) SayHello(values *shared.CommonValues, yourName string, int64Value int64, boolValue bool, float64Value float64, uint64Value int64) (r *services.SayHelloResponse, err error) {
+	return &services.SayHelloResponse{Message: "[thrift server]Hello, " + yourName}, nil
 }
 `,
 		nil,
@@ -634,7 +635,7 @@ var postProcessor turbo.Postprocessor = func(resp http.ResponseWriter, req *http
 }
 
 var thriftPostProcessor turbo.Postprocessor = func(resp http.ResponseWriter, req *http.Request, serviceResp interface{}, err error) {
-	r := serviceResp.(*tgen.SayHelloResponse)
+	r := serviceResp.(*services.SayHelloResponse)
 	resp.Write([]byte("postprocessor:" + r.Message))
 }
 

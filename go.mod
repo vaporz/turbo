@@ -3,7 +3,7 @@ module github.com/vaporz/turbo
 go 1.12
 
 require (
-	git.apache.org/thrift.git v0.0.0-20171203172758-327ebb6c2b6d
+	git.apache.org/thrift.git v0.0.0-20151001171628-53dd39833a08
 	github.com/bitly/go-simplejson v0.5.0
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/fsnotify/fsnotify v1.4.7

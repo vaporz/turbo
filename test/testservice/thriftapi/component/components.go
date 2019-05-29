@@ -3,7 +3,7 @@ package component
 import (
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/vaporz/turbo"
-	t "github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/gen"
+	t "github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/services"
 )
 
 func ThriftClient(trans thrift.TTransport, f thrift.TProtocolFactory) map[string]interface{} {

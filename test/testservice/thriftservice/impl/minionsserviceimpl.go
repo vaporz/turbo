@@ -1,17 +1,16 @@
 package impl
 
 import (
-	"context"
-	"github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/gen"
+	"github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/services"
 )
 
 type MinionsService struct {
 }
 
 // SayHello is an example entry point
-func (m MinionsService) Eat(ctx context.Context, food string) (r *gen.EatResponse, err error) {
+func (m MinionsService) Eat(food string) (r *services.EatResponse, err error) {
 	if food != "banana" {
-		return &gen.EatResponse{Message: "Uh..."}, nil
+		return &services.EatResponse{Message: "Uh..."}, nil
 	}
-	return &gen.EatResponse{Message: "Yummy!"}, nil
+	return &services.EatResponse{Message: "Yummy!"}, nil
 }
