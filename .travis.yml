@@ -16,8 +16,8 @@ install:
   - export GO111MODULE=on
   - export GOBIN="$HOME/local/bin"
   - go get github.com/golang/protobuf/protoc-gen-go
-  - go get github.com/vaporz/turbo
   - cd $GOPATH/src/github.com/vaporz/turbo
+  - go mod tidy
   - make install
 
 before_script:
