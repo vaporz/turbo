@@ -13,8 +13,6 @@ before_install:
 
 install:
   # install all of the dependencies you need here
-  - go get github.com/golang/protobuf/protoc-gen-go
-  - go get github.com/vaporz/turbo
   - cd $GOPATH/src/github.com/vaporz/turbo
   - make install
 
