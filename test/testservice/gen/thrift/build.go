@@ -27,7 +27,6 @@ func main() {
 func buildFields() {
 	services := []interface{}{ 
 		new(g.TestService),
-		new(g.MinionsService),
 	}
 	var list string
 	for _, i := range services {
@@ -103,23 +102,6 @@ var fieldsYaml string = `thrift-fieldmapping:
 `
 
 func buildParameterStr(serviceName, methodName string) string { 
-	if serviceName == "MinionsService" {
-		switch methodName { 
-		case "Eat":
-			var result string
-			args := g.MinionsServiceEatArgs{}
-			at := reflect.TypeOf(args)
-			num := at.NumField()
-			for i := 0; i < num; i++ {
-				result += fmt.Sprintf(
-					"\n\t\t\t\tparams[%d].Interface().(%s),",
-					i, at.Field(i).Type.String())
-			}
-			return result
-		default:
-			return "error"
-		}
-	}
 	if serviceName == "TestService" {
 		switch methodName { 
 		case "SayHello":

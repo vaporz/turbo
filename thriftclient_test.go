@@ -3,7 +3,7 @@ package turbo
 import (
 	"testing"
 
-	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/apache/thrift/lib/go/thrift"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/vaporz/turbo/test/testservice/gen/thrift/gen-go/gen"
 )
 

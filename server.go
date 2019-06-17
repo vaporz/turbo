@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/mux"
 	"github.com/spf13/viper"

@@ -317,7 +317,7 @@ func (c *Creator) generateThriftServiceImpl() {
 import (
 	"context"
 	"{{.PkgPath}}/gen/thrift/gen-go/gen"
-	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/apache/thrift/lib/go/thrift"
 )
 
 // TProcessor returns TProcessor
@@ -435,7 +435,7 @@ func (c *Creator) generateThriftHTTPComponent() {
 
 import (
 	t "{{.PkgPath}}/gen/thrift/gen-go/gen"
-	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/vaporz/turbo"
 )
 

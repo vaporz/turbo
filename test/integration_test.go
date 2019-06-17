@@ -326,7 +326,7 @@ service TestCreateService {
 import (
 	"context"
 	"github.com/vaporz/turbo/test/testcreateservice/gen/thrift/gen-go/gen"
-	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/apache/thrift/lib/go/thrift"
 )
 
 func TProcessor() map[string]thrift.TProcessor {

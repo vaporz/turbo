@@ -40,4 +40,4 @@ Please create an issue if you have encountered any problems or have any new idea
  * [Service Multiplexing](https://vaporz.github.io/master/en/multiplexing.html)
 ## Requirements
 Golang version: >= 1.12.x  
-Thrift version: 0.11.0  
+Thrift version: 0.12.0  
