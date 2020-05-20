@@ -1,0 +1,35 @@
+syntax = "proto3";
+package turbo;
+
+message TestPrimitives {
+	int64 Int64Value = 1;
+	sint32 Int32Value = 2;
+	uint64 Uint64Value = 3;
+	uint32 Uint32Value = 4;
+	float Float32Value = 5;
+	double Float64Value = 6;
+	bool BoolValue = 7;
+}
+
+message TestProtoStruct {
+	int64 Value = 1;
+}
+
+message TestTags {
+	TestTagsData Data = 1;
+}
+
+message TestTagsData {
+	string UploadFile = 1;
+	string UploadUrl = 2;
+	string MetadataOnly = 3;
+	int64 ContentTypeId = 4;
+	int64 CreativeApiId = 5;
+	sint32 Duration = 6;
+	float PhysicalDuration = 7;
+	sint32 Bitrate = 8;
+	sint32 Height = 9;
+	sint32 Width = 10;
+	float Fps = 11;
+	string Id3Tag = 12;
+}

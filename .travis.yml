@@ -2,7 +2,7 @@ language: go
 sudo: required
 
 go:
-  - 1.12.x
+  - 1.14.x
 go_import_path: github.com/vaporz/turbo
 before_install:
   # execute all of the commands which need to be executed

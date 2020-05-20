@@ -28,7 +28,8 @@ const (
 	filterProtoJsonInt64AsNumber  = "filter_proto_json_int64_as_number"
 	turboLogPath                  = "turbo_log_path"
 	environment                   = "environment"
-	serviceRootPath               = "service_root_path"
+	fileRootPath                  = "file_root_path"
+	packagePath                   = "package_path"
 
 	urlServiceMaps = "urlServiceMaps"
 	interceptors   = "interceptors"
@@ -38,11 +39,20 @@ const (
 	convertors     = "convertors"
 )
 
-// GOPATH inits the GOPATH turbo used.
-func GOPATH() string {
-	goPath := os.Getenv("GOPATH")
-	paths := strings.Split(goPath, ":")
-	return paths[0]
+//
+//// GOPATH inits the GOPATH turbo used.
+//func GOPATH() string {
+//	goPath := os.Getenv("GOPATH")
+//	paths := strings.Split(goPath, ":")
+//	return paths[0]
+//}
+
+func GetWD() string {
+	currentDir, e := os.Getwd()
+	if e != nil {
+		panic(e)
+	}
+	return currentDir
 }
 
 // RpcType should be "grpc" or "thrift"
@@ -136,7 +146,7 @@ var matchSlice = regexp.MustCompile("\\[(.+)\\]")
 
 func (c *Config) loadFieldMapping() {
 	c.SetConfigName(RpcType + "fields")
-	c.AddConfigPath(c.ServiceRootPathAbsolute() + "/gen")
+	c.AddConfigPath(c.ServiceRootPath() + "/gen")
 	err := c.ReadInConfig()
 	panicIf(err)
 	c.fieldMappings = make(map[string][]string)
@@ -170,24 +180,35 @@ func (c *Config) Env() string {
 	return c.configs[environment]
 }
 
-// ServiceRootPath returns "service_root_path" in config file,
-// "service_root_path" can be either an absolute path, or the package path of the service, e.g. github.com/xxx/yyy
-func (c *Config) ServiceRootPath() string {
-	return c.configs[serviceRootPath]
-}
-
-// ServiceRootPathAbsolute returns the absolute path to service's root,
-// if "service_root_path" in config file is an absolute path, it's returned directly,
-// if "service_root_path" is a relative path, $GOPATH+"/src/"+[service_root_path] is returned.
-func (c *Config) ServiceRootPathAbsolute() string {
-	p := c.configs[serviceRootPath]
+// FileRootPath returns the absolute path to the root of packages,
+func (c *Config) FileRootPath() string {
+	p := c.configs[fileRootPath]
 	if len(strings.TrimSpace(p)) == 0 {
-		panic("'service_root_path' in config file is not set!")
+		panic("'file_root_path' in config file is not set!")
 	}
 	if path.IsAbs(p) {
 		return p
 	} else {
-		return GOPATH() + "/src/" + p
+		panic("fileRootPath MUST be an absolute path, got: " + p + " ")
+	}
+}
+
+// PackagePath returns the base package name,
+func (c *Config) PackagePath() string {
+	p := c.configs[packagePath]
+	if len(strings.TrimSpace(p)) == 0 {
+		panic("'package_path' in config file is not set!")
+	}
+	return p
+}
+
+// ServiceRootPath returns the absolute path to service's root,
+func (c *Config) ServiceRootPath() string {
+	p := c.FileRootPath() + "/" + c.PackagePath()
+	if path.IsAbs(p) {
+		return p
+	} else {
+		panic("serviceRootPath MUST be an absolute path, got: " + p + " ")
 	}
 }
 

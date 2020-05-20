@@ -3,6 +3,7 @@ package turbo
 import (
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -27,8 +28,9 @@ func TestValidateServiceRootPath(t *testing.T) {
 	r = strings.NewReader("y\n")
 	g.validateServiceRootPath(r)
 
-	g = &Creator{PkgPath: "github.com/vaporz/turbo/test/a"}
-	p := GOPATH() + "/src/github.com/vaporz/turbo/test/a"
+	rp, _ := filepath.Abs("../../../")
+	g = &Creator{FileRootPath: rp, PkgPath: "github.com/vaporz/turbo/test/a"}
+	p := rp + "/github.com/vaporz/turbo/test/a"
 	os.MkdirAll(p, 0755)
 	g.validateServiceRootPath(r)
 	_, err := os.Stat(p)

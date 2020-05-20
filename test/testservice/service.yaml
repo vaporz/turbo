@@ -1,29 +1,19 @@
 config:
-  service_root_path: github.com/vaporz/turbo/test/testservice
-  http_port: 8085
+  file_root_path: /src
+  package_path: github.com/vaporz/turbo/test/testservice
+  http_port: 8082
   environment: production
-  turbo_log_path: log
-  grpc_service_name: TestService
+  turbo_log_path: 
+  grpc_service_name: TestService,MinionsService
   grpc_service_host: 127.0.0.1
-  grpc_service_port: 50055
-  thrift_service_name: TestService
+  grpc_service_port: 50052
+  thrift_service_name: TestService,MinionsService
   thrift_service_host: 127.0.0.1
-  thrift_service_port: 50055
+  thrift_service_port: 50052
 
 urlmapping:
   - GET /hello/{your_Name:[a-zA-Z0-9]+} TestService SayHello
-  - GET /hello TestService SayHello
-  - GET /hellointerceptor TestService SayHello
-  - GET /hello_preprocessor TestService SayHello
-  - GET /hello_postprocessor TestService SayHello
-  - GET /hello_hijacker TestService SayHello
-  - GET /hello_convertor TestService SayHello
+  - GET,POST /hello TestService SayHello
   - POST /testjson TestService TestJson
   - POST /testjson/{StringValue:[a-zA-Z0-9]+}/{int32_value:[a-zA-Z0-9]+} TestService TestJson
-
-interceptor:
-  - GET /hello Test1Interceptor
-preprocessor:
-  - GET /hello preProcessor
-postprocessor:
-  - GET /hello postProcessor
+  - POST /eat MinionsService Eat

@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	s := turbo.NewThriftServer(&component.ServiceInitializer{}, turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml")
+	s := turbo.NewThriftServer(&component.ServiceInitializer{}, "../service.yaml")
 	s.StartHTTPServer(component.ThriftClient, gen.ThriftSwitcher)
 
 	exit := make(chan os.Signal, 1)

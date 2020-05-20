@@ -7,6 +7,7 @@ package turbo
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -20,6 +21,7 @@ type Generator struct {
 	ConfigFileName string
 	Options        string
 	c              *Config
+	FilePaths      []string
 }
 
 // Generate proto/thrift code
@@ -27,7 +29,7 @@ func (g *Generator) Generate() {
 	if g.RpcType != "grpc" && g.RpcType != "thrift" {
 		panic("Invalid server type, should be (grpc|thrift)")
 	}
-	g.c = NewConfig(g.RpcType, GOPATH()+"/src/"+g.PkgPath+"/"+g.ConfigFileName+".yaml")
+	g.c = NewConfig(g.RpcType, findFileIn(g.FilePaths, g.ConfigFileName+".yaml"))
 	if g.RpcType == "grpc" {
 		g.GenerateProtobufStub()
 		g.c.loadFieldMapping()
@@ -38,6 +40,19 @@ func (g *Generator) Generate() {
 		g.c.loadFieldMapping()
 		g.GenerateThriftSwitcher()
 	}
+}
+
+func findFileIn(filePaths []string, file string) string {
+	pathsStr := ""
+	for _, p := range filePaths {
+		fullPath := p + "/" + file
+		_, err := os.Stat(fullPath)
+		if err == nil {
+			return fullPath
+		}
+		pathsStr += p + "\n"
+	}
+	panic("can not find " + file + " in any:\n" + pathsStr)
 }
 
 func writeFileWithTemplate(filePath string, data interface{}, text string) {
@@ -53,8 +68,8 @@ func writeFileWithTemplate(filePath string, data interface{}, text string) {
 
 // GenerateGrpcSwitcher generates "grpcswither.go"
 func (g *Generator) GenerateGrpcSwitcher() {
-	if _, err := os.Stat(g.c.ServiceRootPathAbsolute() + "/gen"); os.IsNotExist(err) {
-		os.Mkdir(g.c.ServiceRootPathAbsolute()+"/gen", 0755)
+	if _, err := os.Stat(g.c.ServiceRootPath() + "/gen"); os.IsNotExist(err) {
+		os.Mkdir(g.c.ServiceRootPath()+"/gen", 0755)
 	}
 	serviceMethodMap := methodNames(g.c.mappings[urlServiceMaps])
 	structFields := make(map[string][]string, len(serviceMethodMap))
@@ -66,7 +81,7 @@ func (g *Generator) GenerateGrpcSwitcher() {
 		structFields[s] = fields
 	}
 	writeFileWithTemplate(
-		g.c.ServiceRootPathAbsolute()+"/gen/grpcswitcher.go",
+		g.c.ServiceRootPath()+"/gen/grpcswitcher.go",
 		struct {
 			ServiceMethodMap map[string][]string
 			PkgPath          string
@@ -134,11 +149,11 @@ func (g *Generator) structFields(structName string) string {
 
 // GenerateProtobufStub generates protobuf stub codes
 func (g *Generator) GenerateProtobufStub() {
-	if _, err := os.Stat(g.c.ServiceRootPathAbsolute() + "/gen/proto"); os.IsNotExist(err) {
-		os.MkdirAll(g.c.ServiceRootPathAbsolute()+"/gen/proto", 0755)
+	if _, err := os.Stat(g.c.ServiceRootPath() + "/gen/proto"); os.IsNotExist(err) {
+		os.MkdirAll(g.c.ServiceRootPath()+"/gen/proto", 0755)
 	}
-	cmd := "protoc " + g.Options + " --go_out=plugins=grpc:" + g.c.ServiceRootPathAbsolute() + "/gen/proto" +
-		" --buildfields_out=service_root_path=" + g.c.ServiceRootPathAbsolute() + ":" + g.c.ServiceRootPathAbsolute() + "/gen/proto"
+	cmd := "protoc " + g.Options + " --go_out=plugins=grpc:" + g.c.ServiceRootPath() + "/gen/proto" +
+		" --buildfields_out=service_root_path=" + g.c.ServiceRootPath() + ":" + g.c.ServiceRootPath() + "/gen/proto"
 
 	executeCmd("bash", "-c", cmd)
 }
@@ -146,7 +161,7 @@ func (g *Generator) GenerateProtobufStub() {
 // GenerateBuildThriftParameters generates "build.go"
 func (g *Generator) GenerateBuildThriftParameters() {
 	writeFileWithTemplate(
-		g.c.ServiceRootPathAbsolute()+"/gen/thrift/build.go",
+		g.c.ServiceRootPath()+"/gen/thrift/build.go",
 		struct {
 			PkgPath         string
 			ServiceNames    []string
@@ -156,7 +171,7 @@ func (g *Generator) GenerateBuildThriftParameters() {
 		}{
 			g.PkgPath,
 			g.c.GrpcServiceNames(),
-			g.c.ServiceRootPathAbsolute(),
+			g.c.ServiceRootPath(),
 			methodNames(g.c.mappings[urlServiceMaps])},
 		buildThriftParameters,
 	)
@@ -164,7 +179,7 @@ func (g *Generator) GenerateBuildThriftParameters() {
 }
 
 func (g *Generator) runBuildThriftFields() {
-	cmd := "go run " + g.c.ServiceRootPathAbsolute() + "/gen/thrift/build.go"
+	cmd := "go run " + g.c.ServiceRootPath() + "/gen/thrift/build.go"
 	c := exec.Command("bash", "-c", cmd)
 	c.Stdin = os.Stdin
 	c.Stderr = os.Stderr
@@ -299,8 +314,8 @@ func buildParameterStr(serviceName, methodName string) string { {{range $Service
 
 // GenerateThriftSwitcher generates "thriftswitcher.go"
 func (g *Generator) GenerateThriftSwitcher() {
-	if _, err := os.Stat(g.c.ServiceRootPathAbsolute() + "/gen"); os.IsNotExist(err) {
-		os.Mkdir(g.c.ServiceRootPathAbsolute()+"/gen", 0755)
+	if _, err := os.Stat(g.c.ServiceRootPath() + "/gen"); os.IsNotExist(err) {
+		os.Mkdir(g.c.ServiceRootPath()+"/gen", 0755)
 	}
 	serviceMethodMap := methodNames(g.c.mappings[urlServiceMaps])
 	parameters := make(map[string][]string, len(serviceMethodMap))
@@ -320,7 +335,7 @@ func (g *Generator) GenerateThriftSwitcher() {
 		fields = append(fields, g.structFields(k))
 	}
 	writeFileWithTemplate(
-		g.c.ServiceRootPathAbsolute()+"/gen/thriftswitcher.go",
+		g.c.ServiceRootPath()+"/gen/thriftswitcher.go",
 		struct {
 			PkgPath            string
 			BuildArgsCases     string
@@ -344,7 +359,7 @@ func (g *Generator) GenerateThriftSwitcher() {
 }
 
 func (g *Generator) thriftParameters(serviceName, methodName string) string {
-	cmd := "go run " + g.c.ServiceRootPathAbsolute() + "/gen/thrift/build.go -n " + serviceName + "," + methodName
+	cmd := "go run " + g.c.ServiceRootPath() + "/gen/thrift/build.go -n " + serviceName + "," + methodName
 	buf := &bytes.Buffer{}
 	c := exec.Command("bash", "-c", cmd)
 	c.Stdin = os.Stdin
@@ -424,12 +439,13 @@ func buildStructArg(s turbo.Servable, typeName string, req *http.Request) (v ref
 
 // GenerateThriftStub generates Thrift stub codes
 func (g *Generator) GenerateThriftStub() {
-	if _, err := os.Stat(g.c.ServiceRootPathAbsolute() + "/gen/thrift"); os.IsNotExist(err) {
-		os.MkdirAll(g.c.ServiceRootPathAbsolute()+"/gen/thrift", 0755)
+	if _, err := os.Stat(g.c.ServiceRootPath() + "/gen/thrift"); os.IsNotExist(err) {
+		os.MkdirAll(g.c.ServiceRootPath()+"/gen/thrift", 0755)
 	}
 	nameLower := strings.ToLower(g.c.ThriftServiceNames()[0]) // todo change a thrift file name
 	cmd := "thrift " + g.Options + " -r --gen go:package_prefix=" + g.PkgPath + "/gen/thrift/gen-go/ -o" +
-		" " + g.c.ServiceRootPathAbsolute() + "/" + "gen/thrift " + g.c.ServiceRootPathAbsolute() + "/" + nameLower + ".thrift"
+		" " + g.c.ServiceRootPath() + "/" + "gen/thrift " + g.c.ServiceRootPath() + "/" + nameLower + ".thrift"
+	fmt.Println(cmd)
 	executeCmd("bash", "-c", cmd)
 }
 

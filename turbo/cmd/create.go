@@ -9,6 +9,7 @@ import (
 	"errors"
 	"github.com/spf13/cobra"
 	"github.com/vaporz/turbo"
+	"path/filepath"
 )
 
 var createCmd = &cobra.Command{
@@ -27,9 +28,14 @@ var createCmd = &cobra.Command{
 		if len(RpcType) == 0 || (RpcType != "grpc" && RpcType != "thrift") {
 			return errors.New("invalid value for -r, should be grpc or thrift")
 		}
+		p, e := filepath.Abs(FileRootPath)
+		if e != nil {
+			panic(e)
+		}
 		g := turbo.Creator{
-			RpcType: RpcType,
-			PkgPath: args[0],
+			RpcType:      RpcType,
+			PkgPath:      args[0],
+			FileRootPath: p,
 		}
 		g.CreateProject(args[1], force)
 		return nil
@@ -38,8 +44,12 @@ var createCmd = &cobra.Command{
 
 var force bool
 
+// FileRootPath is the root folder of the created package, "." by default(current directory)
+var FileRootPath string
+
 func init() {
 	createCmd.Flags().StringVarP(&RpcType, "rpctype", "r", "grpc", "[grpc|thrift]")
 	createCmd.Flags().BoolVarP(&force, "force", "f", false, "create service and override existing files")
+	createCmd.Flags().StringVarP(&FileRootPath, "rootpath", "p", ".", "the path to the directory where new packages will be created in")
 	RootCmd.AddCommand(createCmd)
 }

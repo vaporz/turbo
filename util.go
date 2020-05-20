@@ -9,16 +9,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	sjson "github.com/bitly/go-simplejson"
+	"github.com/golang/protobuf/jsonpb"
+	"github.com/golang/protobuf/proto"
+	"github.com/gorilla/mux"
 	"net/http"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
-
-	sjson "github.com/bitly/go-simplejson"
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/proto"
-	"github.com/gorilla/mux"
+	"unicode"
 )
 
 func logErrorIf(err error) {
@@ -174,6 +174,9 @@ func (m *Marshaler) FilterJsonWithStruct(jsonBytes []byte, structObj interface{}
 func (m *Marshaler) filterStruct(structJson *sjson.Json, t reflect.Type, v reflect.Value) {
 	numField := t.NumField()
 	for i := 0; i < numField; i++ {
+		if unicode.IsLower(rune(t.Field(i).Name[0])) {
+			continue
+		}
 		m.filterOf(t.Field(i).Type.Kind())(structJson, t.Field(i), v.Field(i))
 	}
 }

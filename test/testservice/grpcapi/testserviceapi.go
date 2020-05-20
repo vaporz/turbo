@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	s := turbo.NewGrpcServer(&component.ServiceInitializer{}, turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml")
+	s := turbo.NewGrpcServer(&component.ServiceInitializer{}, "../service.yaml")
 	s.StartHTTPServer(component.GrpcClient, gen.GrpcSwitcher)
 
 	exit := make(chan os.Signal, 1)

@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	s := turbo.NewGrpcServer(nil, turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml")
+	s := turbo.NewGrpcServer(nil, "../service.yaml")
 	s.StartGrpcService(impl.RegisterServer)
 
 	exit := make(chan os.Signal, 1)

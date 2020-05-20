@@ -47,6 +47,7 @@ var generateCmd = &cobra.Command{
 			PkgPath:        args[0],
 			ConfigFileName: "service",
 			Options:        options,
+			FilePaths:      FilePaths,
 		}
 		g.Generate()
 		return nil

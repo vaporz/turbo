@@ -3,6 +3,7 @@ package turbo
 import (
 	"os"
 	"reflect"
+	"runtime"
 	"testing"
 
 	sjson "github.com/bitly/go-simplejson"
@@ -11,8 +12,10 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	executeCmd("bash", "-c", "go install github.com/vaporz/turbo/turbo")
-	executeCmd("bash", "-c", "go install github.com/vaporz/turbo/protoc-gen-buildfields")
+	if runtime.GOOS != "windows" {
+		executeCmd("bash", "-c", "go install github.com/vaporz/turbo/turbo")
+		executeCmd("bash", "-c", "go install github.com/vaporz/turbo/protoc-gen-buildfields")
+	}
 	log = logger.StandardLogger()
 	os.Exit(m.Run())
 }
@@ -31,34 +34,20 @@ func TestIsCamelCase(t *testing.T) {
 	assert.Equal(t, false, IsNotCamelCase("CamelCase"))
 }
 
-type testPrimitives struct {
-	Int64Value   int64
-	Int32Value   int32
-	Uint64Value  uint64
-	Uint32Value  uint32
-	Float32Value float32
-	Float64Value float64
-	BoolValue    bool
-}
-
-func (t *testPrimitives) Reset()         {}
-func (t *testPrimitives) String() string { return "" }
-func (t *testPrimitives) ProtoMessage()  {}
-
-func TestPrimitives(t *testing.T) {
+func TestPrimitivesCases(t *testing.T) {
 	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true, Int64AsNumber: true}
-	ts := &testPrimitives{Int64Value: 111, Int32Value: 0, Float32Value: 1, BoolValue: true}
+	ts := &TestPrimitives{Int64Value: 111, Int32Value: 0, Float32Value: 1, BoolValue: true}
 	buf, _ := m.JSON(ts)
 	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Float64Value\":0,"+
 		"\"Int32Value\":0,\"Int64Value\":111,\"Uint32Value\":0,\"Uint64Value\":0}", string(buf))
 
-	ts = &testPrimitives{Int64Value: 0, Int32Value: 0, Float32Value: 1, BoolValue: true}
+	ts = &TestPrimitives{Int64Value: 0, Int32Value: 0, Float32Value: 1, BoolValue: true}
 	buf, _ = m.JSON(ts)
 	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Float64Value\":0,"+
 		"\"Int32Value\":0,\"Int64Value\":0,\"Uint32Value\":0,\"Uint64Value\":0}", string(buf))
 
 	m.Int64AsNumber = false
-	ts = &testPrimitives{Int64Value: 0, Int32Value: 0, Float32Value: 1, BoolValue: true}
+	ts = &TestPrimitives{Int64Value: 0, Int32Value: 0, Float32Value: 1, BoolValue: true}
 	buf, _ = m.JSON(ts)
 	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Float64Value\":0,"+
 		"\"Int32Value\":0,\"Int64Value\":\"0\",\"Uint32Value\":0,\"Uint64Value\":0}", string(buf))
@@ -66,7 +55,7 @@ func TestPrimitives(t *testing.T) {
 
 func TestPrimitives_Int64_As_Number_False(t *testing.T) {
 	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true}
-	ts := &testPrimitives{Int64Value: 111, Float32Value: 1, BoolValue: true}
+	ts := &TestPrimitives{Int64Value: 111, Float32Value: 1, BoolValue: true}
 	buf, _ := m.JSON(ts)
 	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Float64Value\":0,"+
 		"\"Int32Value\":0,\"Int64Value\":\"111\",\"Uint32Value\":0,\"Uint64Value\":0}", string(buf))
@@ -74,8 +63,9 @@ func TestPrimitives_Int64_As_Number_False(t *testing.T) {
 
 func TestPrimitives_Emit_Zerovalues_False(t *testing.T) {
 	m := Marshaler{FilterProtoJson: true, Int64AsNumber: true}
-	ts := &testPrimitives{Int64Value: 111, Float32Value: 1, BoolValue: true}
-	buf, _ := m.JSON(ts)
+	ts := &TestPrimitives{Int64Value: 111, Float32Value: 1, BoolValue: true}
+	buf, e := m.JSON(ts)
+	assert.Nil(t, e)
 	assert.Equal(t, "{\"BoolValue\":true,\"Float32Value\":1,\"Int64Value\":111}", string(buf))
 }
 
@@ -87,14 +77,6 @@ type testStruct struct {
 	PtrValue *args
 }
 
-type testProtoStruct struct {
-	value int64
-}
-
-func (t *testProtoStruct) Reset()         {}
-func (t *testProtoStruct) String() string { return "" }
-func (t *testProtoStruct) ProtoMessage()  {}
-
 func TestJSON(t *testing.T) {
 	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true}
 	ts := &testStruct{}
@@ -104,14 +86,14 @@ func TestJSON(t *testing.T) {
 
 func TestJSON_Proto_OPTION_TRUE(t *testing.T) {
 	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true, Int64AsNumber: true}
-	ts := &testProtoStruct{}
+	ts := &TestProtoStruct{}
 	buf, _ := m.JSON(ts)
-	assert.Equal(t, "{\"value\":0}", string(buf))
+	assert.Equal(t, "{\"Value\":0}", string(buf))
 }
 
 func TestJSON_Proto_OPTION_FALSE(t *testing.T) {
 	m := Marshaler{}
-	ts := &testProtoStruct{}
+	ts := &TestProtoStruct{}
 	buf, _ := m.JSON(ts)
 	assert.Equal(t, "{}", string(buf))
 }
@@ -455,32 +437,32 @@ func TestFilterComplexNestedStructWithTags(t *testing.T) {
 	*/
 }
 
-type TestTags struct {
-	Data *TestTagsData `protobuf:"bytes,1,opt,name=data" json:"data,omitempty"`
-}
-
-func (t *TestTags) Reset()         {}
-func (t *TestTags) String() string { return "" }
-func (t *TestTags) ProtoMessage()  {}
-
-type TestTagsData struct {
-	UploadFile       string  `protobuf:"bytes,1,opt,name=upload_file,json=uploadFile" json:"upload_file,omitempty"`
-	UploadUrl        string  `protobuf:"bytes,2,opt,name=upload_url,json=uploadUrl" json:"upload_url,omitempty"`
-	MetadataOnly     string  `protobuf:"bytes,3,opt,name=metadata_only,json=metadataOnly" json:"metadata_only,omitempty"`
-	ContentTypeId    int64   `protobuf:"varint,4,opt,name=content_type_id,json=contentTypeId" json:"content_type_id,omitempty"`
-	CreativeApiId    int64   `protobuf:"varint,5,opt,name=creative_api_id,json=creativeApiId" json:"creative_api_id,omitempty"`
-	Duration         int32   `protobuf:"varint,6,opt,name=duration" json:"duration,omitempty"`
-	PhysicalDuration float32 `protobuf:"fixed32,7,opt,name=physical_duration,json=physicalDuration" json:"physical_duration,omitempty"`
-	Bitrate          int32   `protobuf:"varint,8,opt,name=bitrate" json:"bitrate,omitempty"`
-	Height           int32   `protobuf:"varint,9,opt,name=height" json:"height,omitempty"`
-	Width            int32   `protobuf:"varint,10,opt,name=width" json:"width,omitempty"`
-	Fps              float32 `protobuf:"fixed32,11,opt,name=fps" json:"fps,omitempty"`
-	Id3Tag           string  `protobuf:"bytes,12,opt,name=id3tag" json:"id3tag,omitempty"`
-}
-
-func (t *TestTagsData) Reset()         {}
-func (t *TestTagsData) String() string { return "" }
-func (t *TestTagsData) ProtoMessage()  {}
+//type TestTags struct {
+//	Data *TestTagsData `protobuf:"bytes,1,opt,name=data" json:"data,omitempty"`
+//}
+//
+//func (t *TestTags) Reset()         {}
+//func (t *TestTags) String() string { return "" }
+//func (t *TestTags) ProtoMessage()  {}
+//
+//type TestTagsData struct {
+//	UploadFile       string  `protobuf:"bytes,1,opt,name=upload_file,json=uploadFile" json:"upload_file,omitempty"`
+//	UploadUrl        string  `protobuf:"bytes,2,opt,name=upload_url,json=uploadUrl" json:"upload_url,omitempty"`
+//	MetadataOnly     string  `protobuf:"bytes,3,opt,name=metadata_only,json=metadataOnly" json:"metadata_only,omitempty"`
+//	ContentTypeId    int64   `protobuf:"varint,4,opt,name=content_type_id,json=contentTypeId" json:"content_type_id,omitempty"`
+//	CreativeApiId    int64   `protobuf:"varint,5,opt,name=creative_api_id,json=creativeApiId" json:"creative_api_id,omitempty"`
+//	Duration         int32   `protobuf:"varint,6,opt,name=duration" json:"duration,omitempty"`
+//	PhysicalDuration float32 `protobuf:"fixed32,7,opt,name=physical_duration,json=physicalDuration" json:"physical_duration,omitempty"`
+//	Bitrate          int32   `protobuf:"varint,8,opt,name=bitrate" json:"bitrate,omitempty"`
+//	Height           int32   `protobuf:"varint,9,opt,name=height" json:"height,omitempty"`
+//	Width            int32   `protobuf:"varint,10,opt,name=width" json:"width,omitempty"`
+//	Fps              float32 `protobuf:"fixed32,11,opt,name=fps" json:"fps,omitempty"`
+//	Id3Tag           string  `protobuf:"bytes,12,opt,name=id3tag" json:"id3tag,omitempty"`
+//}
+//
+//func (t *TestTagsData) Reset()         {}
+//func (t *TestTagsData) String() string { return "" }
+//func (t *TestTagsData) ProtoMessage()  {}
 
 func TestFilterStructWithTag(t *testing.T) {
 	m := Marshaler{FilterProtoJson: true, EmitZeroValues: true, Int64AsNumber: true}
@@ -495,8 +477,9 @@ func TestFilterStructWithTag(t *testing.T) {
 		Width:            640,
 		Fps:              23}}
 	bytes, _ := m.JSON(ts)
-	assert.Equal(t, "{\"data\":{\"bitrate\":1322,\"content_type_id\":42,\"creative_api_id\":100,"+
-		"\"duration\":15,\"fps\":23,\"height\":360,\"id3tag\":\"\",\"metadata_only\":\"\","+
-		"\"physical_duration\":15.043999671936035,\"upload_file\":\"\",\"upload_url\":\"http://testlink.dev."+
-		"fwmrm.net/testlink/ui_asset/111_1311662179.mp4\",\"width\":640}}", string(bytes))
+	assert.Equal(t, "{\"Data\":{\"Bitrate\":1322,\"ContentTypeId\":42,\"CreativeApiId\":100," +
+		"\"Duration\":15,\"Fps\":23,\"Height\":360,\"Id3Tag\":\"\",\"MetadataOnly\":\"\"," +
+		"\"PhysicalDuration\":15.043999671936035,\"UploadFile\":\"\"," +
+		"\"UploadUrl\":\"http://testlink.dev.fwmrm.net/testlink/ui_asset/111_1311662179.mp4\",\"Width\":640}}",
+		string(bytes))
 }

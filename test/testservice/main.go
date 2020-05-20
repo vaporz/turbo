@@ -18,7 +18,7 @@ import (
 func main() {
 	//s := turbo.NewGrpcServer(&gcomponent.ServiceInitializer{}, turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testservice/service.yaml")
 	//s.Start(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
-	s := turbo.NewThriftServer(&tcomponent.ServiceInitializer{}, turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml")
+	s := turbo.NewThriftServer(&tcomponent.ServiceInitializer{}, "../service.yaml")
 	s.Start(tcomponent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor) // TODO change name, Start -> Start
 
 	exit := make(chan os.Signal, 1)

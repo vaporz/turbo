@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	s := turbo.NewThriftServer(nil, turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml")
+	s := turbo.NewThriftServer(nil, "../service.yaml")
 	s.StartThriftService(impl.TProcessor)
 
 	exit := make(chan os.Signal, 1)

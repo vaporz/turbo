@@ -1,17 +1,27 @@
 package turbo
 
 import (
+	"path/filepath"
 	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
+func getFileRootPath() string {
+	p, e := filepath.Abs("../../..")
+	if e != nil {
+		panic(e)
+	}
+	return p
+}
+
 func TestConfig(t *testing.T) {
 	c := NewConfig("grpc", "test/service_test.yaml")
+	c.configs[fileRootPath] = getFileRootPath()
 	assert.Equal(t, "production", c.Env())
 	assert.Equal(t, "grpc", RpcType)
-	assert.Equal(t, GOPATH()+"/src/"+"github.com/vaporz/turbo/test", c.ServiceRootPathAbsolute())
+	assert.Equal(t, getFileRootPath()+"/github.com/vaporz/turbo/test", c.ServiceRootPath())
 
 	assert.Equal(t, int64(8081), c.HTTPPort())
 

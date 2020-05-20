@@ -27,7 +27,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	os.RemoveAll(turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice")
+	os.RemoveAll(turbo.GetWD() + "/testcreateservice")
 	os.Exit(m.Run())
 }
 
@@ -35,7 +35,7 @@ func TestCreateGrpcService(t *testing.T) {
 	create(t, "grpc")
 	generate(t, "grpc")
 	overwriteProto()
-	os.RemoveAll(turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice/gen")
+	os.RemoveAll(turbo.GetWD() + "/testcreateservice/gen")
 	generate(t, "grpc")
 }
 
@@ -43,7 +43,7 @@ func TestCreateThriftService(t *testing.T) {
 	create(t, "thrift")
 	generate(t, "thrift")
 	overwriteThrift()
-	os.RemoveAll(turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice/gen")
+	os.RemoveAll(turbo.GetWD() + "/testcreateservice/gen")
 	generate(t, "thrift")
 	// recover grpc gen code
 	overwriteProto()
@@ -225,7 +225,7 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 	httpPort := "8085"
 	overwriteServiceYamlWithGrpcComponents(httpPort, "50055", "production")
 
-	s := turbo.NewGrpcServer(&testInitializer{}, turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml")
+	s := turbo.NewGrpcServer(&testInitializer{}, turbo.GetWD() + "/testservice/service.yaml")
 	_, err := s.Component("test")
 	assert.Equal(t, "no such component: test, forget to register?", err.Error())
 	s.StartGrpcService(gimpl.RegisterServer)
@@ -251,7 +251,7 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 
 func overwriteProto() {
 	writeFileWithTemplate(
-		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testcreateservice/testcreateservice.proto",
+		turbo.GetWD() + "/testcreateservice/testcreateservice.proto",
 		`syntax = "proto3";
 import "shared.proto";
 package proto;
@@ -276,7 +276,7 @@ service TestCreateService {
 		nil,
 	)
 	writeFileWithTemplate(
-		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testcreateservice/shared.proto",
+		turbo.GetWD() + "/testcreateservice/shared.proto",
 		`syntax = "proto3";
 package proto;
 
@@ -290,7 +290,7 @@ message CommonValues {
 
 func overwriteThrift() {
 	writeFileWithTemplate(
-		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testcreateservice/shared.thrift",
+		turbo.GetWD() + "/testcreateservice/shared.thrift",
 		`namespace go gen
 
 struct CommonValues {
@@ -304,7 +304,7 @@ struct HelloValues {
 		nil,
 	)
 	writeFileWithTemplate(
-		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testcreateservice/testcreateservice.thrift",
+		turbo.GetWD() + "/testcreateservice/testcreateservice.thrift",
 		`namespace go gen
 include "shared.thrift"
 
@@ -320,7 +320,7 @@ service TestCreateService {
 	)
 
 	writeFileWithTemplate(
-		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testcreateservice/thriftservice/impl/testcreateserviceimpl.go",
+		turbo.GetWD() + "/testcreateservice/thriftservice/impl/testcreateserviceimpl.go",
 		`package impl
 
 import (
@@ -361,7 +361,8 @@ func create(t *testing.T, rpc string) {
 	err = cmd.Execute()
 	assert.Contains(t, err.Error(), "invalid value for -r, should be grpc or thrift")
 
-	cmd.RootCmd.SetArgs([]string{"create", "github.com/vaporz/turbo/test/testcreateservice", "TestCreateService", "-r", rpc, "-f", "true"})
+	cmd.RootCmd.SetArgs([]string{"create", "github.com/vaporz/turbo/test/testcreateservice", "TestCreateService", "-r", rpc, "-f", "true",
+		"-p", "../../../../"})
 	err = cmd.Execute()
 	assert.Nil(t, err)
 	cmd.RpcType = ""
@@ -389,7 +390,7 @@ func generate(t *testing.T, rpc string) {
 	}
 
 	cmd.RootCmd.SetArgs([]string{"generate", "github.com/vaporz/turbo/test/testcreateservice", "-r", rpc,
-		"-I", turbo.GOPATH() + "/src/github.com/vaporz/turbo/test/testcreateservice"})
+		"-I", turbo.GetWD() + "/testcreateservice"})
 	err = cmd.Execute()
 	assert.Nil(t, err)
 
@@ -671,12 +672,13 @@ func overwriteServiceYaml(httpPort, servicePort, env string) {
 		Env         string
 	}
 	writeFileWithTemplate(
-		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml",
+		turbo.GetWD() + "/testservice/service.yaml",
 		`config:
-  service_root_path: github.com/vaporz/turbo/test/testservice
+  file_root_path: /src
+  package_path: github.com/vaporz/turbo/test/testservice
   http_port: {{.HttpPort}}
   environment: {{.Env}}
-  turbo_log_path: log
+  turbo_log_path: 
   grpc_service_name: TestService,MinionsService
   grpc_service_host: 127.0.0.1
   grpc_service_port: {{.ServicePort}}
@@ -705,16 +707,15 @@ func overwriteServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
 		ServiceName     string
 		ServicePort     string
 		Env             string
-		ServiceRootPath string
 	}
 	writeFileWithTemplate(
-		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml",
+		turbo.GetWD() + "/testservice/service.yaml",
 		`config:
-  service_root_path: github.com/vaporz/turbo/test/testservice
+  file_root_path: /src
+  package_path: github.com/vaporz/turbo/test/testservice
   http_port: {{.HttpPort}}
   environment: {{.Env}}
   turbo_log_path:
-  service_root_path: {{.ServiceRootPath}}
   grpc_service_name: {{.ServiceName}}
   grpc_service_host: 127.0.0.1
   grpc_service_port: {{.ServicePort}}
@@ -751,7 +752,6 @@ errorhandler: errorHandler
 			ServiceName:     "TestService",
 			ServicePort:     servicePort,
 			Env:             env,
-			ServiceRootPath: "github.com/vaporz/turbo/test/testservice",
 		},
 	)
 }
@@ -764,12 +764,13 @@ func changeServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
 		Env         string
 	}
 	writeFileWithTemplate(
-		turbo.GOPATH()+"/src/github.com/vaporz/turbo/test/testservice/service.yaml",
+		turbo.GetWD()+"/testservice/service.yaml",
 		`config:
-  service_root_path: github.com/vaporz/turbo/test/testservice
+  file_root_path: /src
+  package_path: github.com/vaporz/turbo/test/testservice
   http_port: {{.HttpPort}}
   environment: {{.Env}}
-  turbo_log_path: log
+  turbo_log_path: 
   grpc_service_name: {{.ServiceName}}
   grpc_service_host: 127.0.0.1
   grpc_service_port: {{.ServicePort}}

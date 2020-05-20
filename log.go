@@ -7,6 +7,7 @@ package turbo
 
 import (
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"runtime"
@@ -58,10 +59,11 @@ func (hook ContextHook) Fire(entry *logger.Entry) error {
 func setupLoggerFile(c *Config) {
 	logPath := c.configs[turboLogPath]
 	if len(strings.TrimSpace(logPath)) == 0 {
-		logPath = "log"
+		logger.SetOutput(ioutil.Discard)
+		return
 	}
 	if !path.IsAbs(logPath) && len(strings.TrimSpace(c.ServiceRootPath())) != 0 {
-		logPath = c.ServiceRootPathAbsolute() + "/" + logPath
+		logPath = c.ServiceRootPath() + "/" + logPath
 	}
 	logPath = path.Clean(logPath)
 	err := os.MkdirAll(logPath, 0755)
