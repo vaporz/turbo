@@ -107,7 +107,12 @@ func doRequest(s Servable, serviceName, methodName string, resp http.ResponseWri
 		components(req).errorHandlerFunc()(resp, req, err)
 		return
 	}
-	doPostprocessor(s, resp, req, serviceResp, err)
+	err = doPostprocessor(s, resp, req, serviceResp, err)
+	if err != nil {
+		components(req).errorHandlerFunc()(resp, req, err)
+		return
+	}
+	writeResponse(s, resp, req, serviceResp)
 }
 
 type headerKey struct{}
@@ -161,14 +166,18 @@ func doPreprocessor(resp http.ResponseWriter, req *http.Request) error {
 	return nil
 }
 
-func doPostprocessor(s Servable, resp http.ResponseWriter, req *http.Request, serviceResponse interface{}, err error) {
+func doPostprocessor(s Servable, resp http.ResponseWriter, req *http.Request, serviceResponse interface{}, err error) error {
 	// run Postprocessor, if any
-	post := components(req).Postprocessor(req)
-	if post != nil {
-		post(resp, req, serviceResponse, err)
-		return
+	if post := components(req).Postprocessor(req); post != nil {
+		if err := post(resp, req, serviceResponse, err); err != nil {
+			log.Println(err.Error())
+			return errors.New(fmt.Sprintf("turbo: encounter error in postprocessor for %s, error: %s", req.URL, err))
+		}
 	}
+	return nil
+}
 
+func writeResponse(s Servable, resp http.ResponseWriter, req *http.Request, serviceResponse interface{}){
 	// return as json
 	m := Marshaler{
 		FilterProtoJson: s.ServerField().Config.FilterProtoJson(),
@@ -177,6 +186,7 @@ func doPostprocessor(s Servable, resp http.ResponseWriter, req *http.Request, se
 	}
 	jsonBytes, err := m.JSON(serviceResponse)
 	if err == nil {
+		resp.Header().Add("Content-Type", "application/json")
 		resp.Write(jsonBytes)
 	} else {
 		log.Println(err.Error())

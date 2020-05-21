@@ -237,7 +237,7 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello", `intercepted:{"message":"[grpc server]Hello, "}`)
 	testGet(t, "http://localhost:"+httpPort+"/hellointerceptor", "interceptor_error:from errorHandler:error!")
 	testGet(t, "http://localhost:"+httpPort+"/hello_preprocessor", `preprocessor:{"message":"[grpc server]Hello, "}`)
-	testGet(t, "http://localhost:"+httpPort+"/hello_postprocessor", "postprocessor:[grpc server]Hello, ")
+	testGet(t, "http://localhost:"+httpPort+"/hello_postprocessor", `postprocessor:{"message":"[grpc server]Hello, "}`)
 	testGet(t, "http://localhost:"+httpPort+"/hello_hijacker", "hijacker")
 	testGet(t, "http://localhost:"+httpPort+"/hello_convertor?bool_value=true", `{"message":"{\"values\":{\"someId\":1111111},\"boolValue\":true}"}`)
 	testGet(t, "http://localhost:"+httpPort+"/hello_hijacker", "hijacker")
@@ -245,7 +245,7 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 
 	changeServiceYamlWithGrpcComponents(httpPort, "50055", "production")
 	time.Sleep(time.Millisecond * 1000)
-	testGet(t, "http://localhost:"+httpPort+"/hello", "test1_intercepted:preprocessor:postprocessor:[grpc server]Hello, ")
+	testGet(t, "http://localhost:"+httpPort+"/hello", `test1_intercepted:preprocessor:postprocessor:{"message":"[grpc server]Hello, "}`)
 	s.Stop()
 }
 
@@ -479,7 +479,7 @@ func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
 		s.Components.SetPostprocessor([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", component(s, "postProcessor").(turbo.Postprocessor))
 	}
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		`intercepted:preprocessor:postprocessor:[`+rpcType+` server]Hello, testtest`)
+		`intercepted:preprocessor:postprocessor:{"message":"[`+rpcType+` server]Hello, testtest"}`)
 
 	s.Components.SetHijacker([]string{}, "/hello/{your_name:[a-zA-Z0-9]+}", component(s, "hijacker").(turbo.Hijacker))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
@@ -629,14 +629,14 @@ var errorPreProcessor turbo.Preprocessor = func(resp http.ResponseWriter, req *h
 	return errors.New("error in preprocessor")
 }
 
-var postProcessor turbo.Postprocessor = func(resp http.ResponseWriter, req *http.Request, serviceResp interface{}, err error) {
-	r := serviceResp.(*proto.SayHelloResponse)
-	resp.Write([]byte("postprocessor:" + r.Message))
+var postProcessor turbo.Postprocessor = func(resp http.ResponseWriter, req *http.Request, serviceResp interface{}, err error) error {
+	resp.Write([]byte("postprocessor:"))
+	return nil
 }
 
-var thriftPostProcessor turbo.Postprocessor = func(resp http.ResponseWriter, req *http.Request, serviceResp interface{}, err error) {
-	r := serviceResp.(*tgen.SayHelloResponse)
-	resp.Write([]byte("postprocessor:" + r.Message))
+var thriftPostProcessor turbo.Postprocessor = func(resp http.ResponseWriter, req *http.Request, serviceResp interface{}, err error) error {
+	resp.Write([]byte("postprocessor:"))
+	return nil
 }
 
 var hijacker turbo.Hijacker = func(resp http.ResponseWriter, req *http.Request) {

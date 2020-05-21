@@ -103,7 +103,7 @@ func (c *Components) preprocessor(req *http.Request) Preprocessor {
 }
 
 // PostProcessor--------------
-type Postprocessor func(http.ResponseWriter, *http.Request, interface{}, error)
+type Postprocessor func(http.ResponseWriter, *http.Request, interface{}, error) error
 
 // ServeHTTP is an empty func, only for implementing http.Handler
 func (p Postprocessor) ServeHTTP(http.ResponseWriter, *http.Request) {}
