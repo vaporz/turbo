@@ -29,7 +29,7 @@ before_script:
 
 script:
   # execute all of the commands which should make the build pass or fail
-  - $HOME/gopath/bin/goveralls -service=travis-ci -ignore=protoc-gen-buildfields/*,test/testservice/*,test/testservice/*/*,test/testservice/*/*/*,test/testservice/*/*/*/*/*,test/testservice/*/*/*/*/*/*,turbo/*,turbo/cmd/root.go
+  - $HOME/gopath/bin/goveralls -service=travis-ci -ignore=protoc-gen-buildfields/*,test/testservice/*,test/testservice/*/*,test/testservice/*/*/*,test/testservice/*/*/*/*/*,test/testservice/*/*/*/*/*/*,turbo/*,turbo/cmd/root.go,*.pb.go
 
 env:
   global:
