@@ -22,8 +22,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-// TODO use dep
-
 // TODO try to use sync.Once
 
 // TODO Make Ctrl+C cancel the context.Context
@@ -181,6 +179,7 @@ func getComponentByName(s *Server, name string) interface{} {
 }
 
 func stop(s Servable, httpServer *http.Server, grpcServer *grpc.Server, thriftServer *thrift.TSimpleServer) {
+	s.ServerField().Initializer.StopService(s)
 	// if s.ServerField().exit is not closed, close it, return directly
 	if httpServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
@@ -198,7 +197,6 @@ func stop(s Servable, httpServer *http.Server, grpcServer *grpc.Server, thriftSe
 		thriftServer.Stop()
 		log.Info("Thrift Server stopped")
 	}
-	s.ServerField().Initializer.StopService(s)
 }
 
 // Initializable defines funcs run before service started and after service stopped
