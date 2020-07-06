@@ -181,6 +181,7 @@ func (c *Components) convertor(theType string) Convertor {
 type ErrorHandlerFunc func(http.ResponseWriter, *http.Request, error)
 
 func defaultErrorHandler(resp http.ResponseWriter, req *http.Request, err error) {
+	log.Error(err.Error())
 	http.Error(resp, err.Error(), http.StatusInternalServerError)
 }
 
