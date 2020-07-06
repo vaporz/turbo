@@ -177,7 +177,7 @@ func doPostprocessor(s Servable, resp http.ResponseWriter, req *http.Request, se
 	return nil
 }
 
-func writeResponse(s Servable, resp http.ResponseWriter, req *http.Request, serviceResponse interface{}){
+func writeResponse(s Servable, resp http.ResponseWriter, req *http.Request, serviceResponse interface{}) {
 	// return as json
 	m := Marshaler{
 		FilterProtoJson: s.ServerField().Config.FilterProtoJson(),
@@ -476,6 +476,9 @@ func BuildRequest(s Servable, v proto.Message, req *http.Request) error {
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(req.Body)
 		bodyStr := buf.String()
+		if bodyStr == "" {
+			bodyStr = "{}"
+		}
 		unmarshaler := &jsonpb.Unmarshaler{AllowUnknownFields: true}
 		err = unmarshaler.Unmarshal(strings.NewReader(bodyStr), v)
 		if err != nil {
