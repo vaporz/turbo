@@ -220,6 +220,9 @@ func BuildStruct(s Servable, theType reflect.Type, theValue reflect.Value, req *
 	fieldNum := theType.NumField()
 	for i := 0; i < fieldNum; i++ {
 		fieldName := theType.Field(i).Name
+		if fieldName[0] < 'A' || fieldName[0] > 'Z' {
+			continue
+		}
 		fieldValue := theValue.FieldByName(fieldName)
 		if fieldValue.Kind() == reflect.Ptr && fieldValue.Type().Elem().Kind() == reflect.Struct {
 			convertor := components(req).Convertor(fieldValue.Type().Elem().Name())
@@ -241,6 +244,9 @@ func BuildStruct(s Servable, theType reflect.Type, theValue reflect.Value, req *
 
 // setValue sets v to fieldValue according to fieldValue's Kind
 func setValue(fieldType reflect.Type, fieldValue reflect.Value, v string) error {
+	if len(v) == 0 {
+		return nil
+	}
 	var err error
 	switch k := fieldValue.Kind(); k {
 	case reflect.Int,
@@ -250,27 +256,42 @@ func setValue(fieldType reflect.Type, fieldValue reflect.Value, v string) error 
 		reflect.Int64:
 		var i int64
 		i, err = strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return err
+		}
 		fieldValue.SetInt(i)
 	case reflect.String:
 		fieldValue.SetString(v)
 	case reflect.Bool:
 		var b bool
 		b, err = strconv.ParseBool(v)
+		if err != nil {
+			return err
+		}
 		fieldValue.SetBool(b)
 	case reflect.Float32, reflect.Float64:
 		var f float64
 		f, err = strconv.ParseFloat(v, 64)
+		if err != nil {
+			return err
+		}
 		fieldValue.SetFloat(f)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		var u uint64
 		u, err = strconv.ParseUint(v, 10, 64)
+		if err != nil {
+			return err
+		}
 		fieldValue.SetUint(u)
 	case reflect.Slice:
 		err = setSliceValue(fieldType, fieldValue, v)
+		if err != nil {
+			return err
+		}
 	default:
 		return errors.New("turbo: not supported kind[" + k.String() + "]")
 	}
-	return err
+	return nil
 }
 
 func setSliceValue(fieldType reflect.Type, fieldValue reflect.Value, v string) error {
