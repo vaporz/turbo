@@ -132,9 +132,9 @@ func (c *Creator) createServiceYaml(serviceName, configFileName string) {
 	writeFileWithTemplate(
 		serviceRootPath+"/"+configFileName+".yaml",
 		struct {
-			FileRootPath    string
-			PkgPath     string
-			ServiceName string
+			FileRootPath string
+			PkgPath      string
+			ServiceName  string
 		}{c.FileRootPath, c.PkgPath, serviceName},
 		`config:
   environment: development
@@ -163,6 +163,7 @@ func (c *Creator) createProto(serviceName string) {
 		}{serviceName},
 		`syntax = "proto3";
 package proto;
+option go_package = "/;proto";
 
 message SayHelloRequest {
     string yourName = 1;
