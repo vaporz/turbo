@@ -375,7 +375,7 @@ func methodNames(urlServiceMaps [][4]string) map[string][]string {
 		if methodNamesMap[v[2]] == nil {
 			methodNamesMap[v[2]] = make(map[string]int)
 		}
-		methodNamesMap[v[2]][v[3]] = 0
+		methodNamesMap[v[2]][v[3]] = 0 //map [ServiceName] [MethodName] = 0
 	}
 	methodNames := make(map[string][]string)
 	for k, v := range methodNamesMap {

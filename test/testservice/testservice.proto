@@ -1,6 +1,7 @@
 syntax = "proto3";
 import "shared.proto";
 package proto;
+option go_package = "/;proto";
 
 message SayHelloRequest {
     CommonValues values = 1;

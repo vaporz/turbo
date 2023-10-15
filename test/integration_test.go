@@ -35,7 +35,7 @@ func TestCreateGrpcService(t *testing.T) {
 	create(t, "grpc")
 	generate(t, "grpc")
 	overwriteProto()
-	os.RemoveAll(turbo.GetWD() + "/testcreateservice/gen")
+	_ = os.RemoveAll(turbo.GetWD() + "/testcreateservice/gen")
 	generate(t, "grpc")
 }
 
@@ -43,7 +43,7 @@ func TestCreateThriftService(t *testing.T) {
 	create(t, "thrift")
 	generate(t, "thrift")
 	overwriteThrift()
-	os.RemoveAll(turbo.GetWD() + "/testcreateservice/gen")
+	_ = os.RemoveAll(turbo.GetWD() + "/testcreateservice/gen")
 	generate(t, "thrift")
 	// recover grpc gen code
 	overwriteProto()
@@ -225,7 +225,7 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 	httpPort := "8085"
 	overwriteServiceYamlWithGrpcComponents(httpPort, "50055", "production")
 
-	s := turbo.NewGrpcServer(&testInitializer{}, turbo.GetWD() + "/testservice/service.yaml")
+	s := turbo.NewGrpcServer(&testInitializer{}, turbo.GetWD()+"/testservice/service.yaml")
 	_, err := s.Component("test")
 	assert.Equal(t, "no such component: test, forget to register?", err.Error())
 	s.StartGrpcService(gimpl.RegisterServer)
@@ -251,10 +251,11 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 
 func overwriteProto() {
 	writeFileWithTemplate(
-		turbo.GetWD() + "/testcreateservice/testcreateservice.proto",
+		turbo.GetWD()+"/testcreateservice/testcreateservice.proto",
 		`syntax = "proto3";
 import "shared.proto";
 package proto;
+option go_package = "/;proto";
 
 message SayHelloRequest {
     CommonValues values = 1;
@@ -276,9 +277,10 @@ service TestCreateService {
 		nil,
 	)
 	writeFileWithTemplate(
-		turbo.GetWD() + "/testcreateservice/shared.proto",
+		turbo.GetWD()+"/testcreateservice/shared.proto",
 		`syntax = "proto3";
 package proto;
+option go_package = "/;proto";
 
 message CommonValues {
     int64 someId = 1;
@@ -290,7 +292,7 @@ message CommonValues {
 
 func overwriteThrift() {
 	writeFileWithTemplate(
-		turbo.GetWD() + "/testcreateservice/shared.thrift",
+		turbo.GetWD()+"/testcreateservice/shared.thrift",
 		`namespace go gen
 
 struct CommonValues {
@@ -304,7 +306,7 @@ struct HelloValues {
 		nil,
 	)
 	writeFileWithTemplate(
-		turbo.GetWD() + "/testcreateservice/testcreateservice.thrift",
+		turbo.GetWD()+"/testcreateservice/testcreateservice.thrift",
 		`namespace go gen
 include "shared.thrift"
 
@@ -320,7 +322,7 @@ service TestCreateService {
 	)
 
 	writeFileWithTemplate(
-		turbo.GetWD() + "/testcreateservice/thriftservice/impl/testcreateserviceimpl.go",
+		turbo.GetWD()+"/testcreateservice/thriftservice/impl/testcreateserviceimpl.go",
 		`package impl
 
 import (
@@ -672,7 +674,7 @@ func overwriteServiceYaml(httpPort, servicePort, env string) {
 		Env         string
 	}
 	writeFileWithTemplate(
-		turbo.GetWD() + "/testservice/service.yaml",
+		turbo.GetWD()+"/testservice/service.yaml",
 		`config:
   file_root_path: /src
   package_path: github.com/vaporz/turbo/test/testservice
@@ -703,13 +705,13 @@ urlmapping:
 
 func overwriteServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
 	type serviceYamlValues struct {
-		HttpPort        string
-		ServiceName     string
-		ServicePort     string
-		Env             string
+		HttpPort    string
+		ServiceName string
+		ServicePort string
+		Env         string
 	}
 	writeFileWithTemplate(
-		turbo.GetWD() + "/testservice/service.yaml",
+		turbo.GetWD()+"/testservice/service.yaml",
 		`config:
   file_root_path: /src
   package_path: github.com/vaporz/turbo/test/testservice
@@ -748,10 +750,10 @@ convertor:
 errorhandler: errorHandler
 `,
 		serviceYamlValues{
-			HttpPort:        httpPort,
-			ServiceName:     "TestService",
-			ServicePort:     servicePort,
-			Env:             env,
+			HttpPort:    httpPort,
+			ServiceName: "TestService",
+			ServicePort: servicePort,
+			Env:         env,
 		},
 	)
 }
