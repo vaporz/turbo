@@ -206,7 +206,7 @@ func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Req
 	return nil
 }
 
-//BuildStruct finds values from request, and set them to struct fields recursively
+// BuildStruct finds values from request, and set them to struct fields recursively
 func BuildStruct(s Servable, theType reflect.Type, theValue reflect.Value, req *http.Request) {
 	if theValue.Kind() == reflect.Invalid {
 		log.Info("value is invalid, please check grpc-fieldmapping")
@@ -493,7 +493,7 @@ func findValue(fieldName string, req *http.Request) (string, bool) {
 
 func BuildRequest(s Servable, v proto.Message, req *http.Request) error {
 	var err error
-	if contentTypes, ok := req.Header["Content-Type"]; ok && contentTypes[0] == "application/json" {
+	if contentTypes, ok := req.Header["Content-Type"]; ok && strings.Contains(contentTypes[0], "application/json") {
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(req.Body)
 		bodyStr := buf.String()
@@ -516,7 +516,7 @@ func BuildRequest(s Servable, v proto.Message, req *http.Request) error {
 func BuildThriftRequest(s Servable, args interface{}, req *http.Request, buildStructArg func(s Servable, typeName string, req *http.Request) (v reflect.Value, err error)) ([]reflect.Value, error) {
 	var err error
 	var params []reflect.Value
-	if contentTypes, ok := req.Header["Content-Type"]; ok && contentTypes[0] == "application/json" {
+	if contentTypes, ok := req.Header["Content-Type"]; ok && strings.Contains(contentTypes[0], "application/json") {
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(req.Body)
 		v := reflect.New(reflect.ValueOf(args).Field(0).Type().Elem()).Interface()

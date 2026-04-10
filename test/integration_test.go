@@ -188,7 +188,6 @@ func TestThriftService(t *testing.T) {
 
 	s.Stop()
 }
-
 func TestHTTPGrpcService(t *testing.T) {
 	httpPort := "8083"
 	overwriteServiceYaml(httpPort, "50053", "development")

@@ -7,7 +7,6 @@ package turbo
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -154,7 +153,6 @@ func (g *Generator) GenerateProtobufStub() {
 	}
 	cmd := "protoc " + g.Options + " --go_out=plugins=grpc:" + g.c.ServiceRootPath() + "/gen/proto" +
 		" --buildfields_out=service_root_path=" + g.c.ServiceRootPath() + ":" + g.c.ServiceRootPath() + "/gen/proto"
-
 	executeCmd("bash", "-c", cmd)
 }
 
@@ -445,7 +443,6 @@ func (g *Generator) GenerateThriftStub() {
 	nameLower := strings.ToLower(g.c.ThriftServiceNames()[0]) // todo change a thrift file name
 	cmd := "thrift " + g.Options + " -r --gen go:package_prefix=" + g.PkgPath + "/gen/thrift/gen-go/ -o" +
 		" " + g.c.ServiceRootPath() + "/" + "gen/thrift " + g.c.ServiceRootPath() + "/" + nameLower + ".thrift"
-	fmt.Println(cmd)
 	executeCmd("bash", "-c", cmd)
 }
 

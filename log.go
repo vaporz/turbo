@@ -24,10 +24,11 @@ var log *logger.Logger
 // the logging calls for levels returned from `Levels()` to block.
 //
 // The original hook interface is:
-// type Hook interface {
-//	 Levels() []Level
-//	 Fire(*Entry) error
-// }
+//
+//	type Hook interface {
+//		 Levels() []Level
+//		 Fire(*Entry) error
+//	}
 type ContextHook struct{}
 
 // Levels returns active log levels
@@ -57,7 +58,7 @@ func (hook ContextHook) Fire(entry *logger.Entry) error {
 
 func setupLoggerFile(c *Config) {
 	logPath := c.configs[turboLogPath]
-	wd, e := os.Getwd()
+	wd, e := os.Getwd() // todo 返回的不是exe文件所在的目录，而是执行文件时所处的目录
 	if e != nil {
 		panic(e)
 	}
