@@ -144,10 +144,10 @@ func (c *Creator) createServiceYaml(serviceName, configFileName string) {
   http_port: 8081
   grpc_service_name: {{.ServiceName}}
   grpc_service_host: 127.0.0.1
-  grpc_service_port: 50051
+  grpc_service_port: 50061
   thrift_service_name: {{.ServiceName}}
   thrift_service_host: 127.0.0.1
-  thrift_service_port: 50052
+  thrift_service_port: 50062
 
 urlmapping:
   - GET /hello {{.ServiceName}} SayHello

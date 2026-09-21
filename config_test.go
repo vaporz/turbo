@@ -30,14 +30,14 @@ func TestConfig(t *testing.T) {
 	assert.Equal(t, "test", c.GrpcServiceNames()[0])
 
 	assert.Equal(t, "127.0.0.1", c.GrpcServiceHost())
-	assert.Equal(t, "50051", c.GrpcServicePort())
+	assert.Equal(t, "50061", c.GrpcServicePort())
 
 	assert.Equal(t, "YourService", c.ThriftServiceNames()[0])
 	c.configs[thriftServiceName] = "test thrift"
 	assert.Equal(t, "test thrift", c.ThriftServiceNames()[0])
 
 	assert.Equal(t, "127.0.0.1", c.ThriftServiceHost())
-	assert.Equal(t, "50052", c.ThriftServicePort())
+	assert.Equal(t, "50062", c.ThriftServicePort())
 
 	assert.Equal(t, true, c.FilterProtoJson())
 	c.configs[filterProtoJson] = strconv.FormatBool(false)

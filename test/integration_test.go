@@ -6,6 +6,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"reflect"
+	"strings"
+	"testing"
+	"text/template"
+	"time"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/vaporz/turbo"
 	"github.com/vaporz/turbo/test/testservice/gen"
@@ -16,14 +25,6 @@ import (
 	tcompoent "github.com/vaporz/turbo/test/testservice/thriftapi/component"
 	timpl "github.com/vaporz/turbo/test/testservice/thriftservice/impl"
 	"github.com/vaporz/turbo/turbo/cmd"
-	"io"
-	"net/http"
-	"os"
-	"reflect"
-	"strings"
-	"testing"
-	"text/template"
-	"time"
 )
 
 func TestMain(m *testing.M) {
@@ -60,7 +61,7 @@ func component(s *turbo.Server, name string) interface{} {
 
 func TestGrpcService(t *testing.T) {
 	httpPort := "8081"
-	overwriteServiceYaml("8081", "50051", "development")
+	overwriteServiceYaml("8081", "50061", "development")
 
 	s := turbo.NewGrpcServer(&testInitializer{}, "testservice/service.yaml")
 	s.Start(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
@@ -119,7 +120,7 @@ func TestGrpcService(t *testing.T) {
 
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", component(s.Server, "MetadataInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		`{"message":"[grpc server]Hello, testtest"}metadata:header:headerval:trailer:trailerval:peer:127.0.0.1:50051`)
+		`{"message":"[grpc server]Hello, testtest"}metadata:header:headerval:trailer:trailerval:peer:127.0.0.1:50061`)
 	s.Components.Reset()
 
 	body := strings.NewReader(`{"values":{"someId":123}, "yourName":"a name", "boolValue":true}`)
@@ -135,7 +136,7 @@ func TestGrpcService(t *testing.T) {
 
 func TestThriftService(t *testing.T) {
 	httpPort := "8082"
-	overwriteServiceYaml(httpPort, "50052", "production")
+	overwriteServiceYaml(httpPort, "50062", "production")
 
 	s := turbo.NewThriftServer(&testInitializer{}, "testservice/service.yaml")
 	turbo.SetOutput(os.Stdout)
@@ -190,7 +191,7 @@ func TestThriftService(t *testing.T) {
 }
 func TestHTTPGrpcService(t *testing.T) {
 	httpPort := "8083"
-	overwriteServiceYaml(httpPort, "50053", "development")
+	overwriteServiceYaml(httpPort, "50063", "development")
 
 	s := turbo.NewGrpcServer(nil, "testservice/service.yaml")
 	s.StartGrpcService(gimpl.RegisterServer)
@@ -206,7 +207,7 @@ func TestHTTPGrpcService(t *testing.T) {
 
 func TestHTTPThriftService(t *testing.T) {
 	httpPort := "8084"
-	overwriteServiceYaml(httpPort, "50054", "development")
+	overwriteServiceYaml(httpPort, "50064", "development")
 
 	s := turbo.NewThriftServer(nil, "testservice/service.yaml")
 	s.StartThriftService(timpl.TProcessor)
@@ -222,7 +223,7 @@ func TestHTTPThriftService(t *testing.T) {
 
 func TestLoadComponentsFromConfig(t *testing.T) {
 	httpPort := "8085"
-	overwriteServiceYamlWithGrpcComponents(httpPort, "50055", "production")
+	overwriteServiceYamlWithGrpcComponents(httpPort, "50065", "production")
 
 	s := turbo.NewGrpcServer(&testInitializer{}, turbo.GetWD()+"/testservice/service.yaml")
 	_, err := s.Component("test")
@@ -242,7 +243,7 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello_hijacker", "hijacker")
 	testGet(t, "http://localhost:"+httpPort+"/hello/error", "from errorHandler:rpc error: code = Unknown desc = grpc error")
 
-	changeServiceYamlWithGrpcComponents(httpPort, "50055", "production")
+	changeServiceYamlWithGrpcComponents(httpPort, "50065", "production")
 	time.Sleep(time.Millisecond * 1000)
 	testGet(t, "http://localhost:"+httpPort+"/hello", `test1_intercepted:preprocessor:postprocessor:{"message":"[grpc server]Hello, "}`)
 	s.Stop()

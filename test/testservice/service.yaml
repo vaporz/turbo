@@ -6,10 +6,10 @@ config:
   turbo_log_path: 
   grpc_service_name: TestService
   grpc_service_host: 127.0.0.1
-  grpc_service_port: 50055
+  grpc_service_port: 50065
   thrift_service_name: TestService
   thrift_service_host: 127.0.0.1
-  thrift_service_port: 50055
+  thrift_service_port: 50065
 
 urlmapping:
   - GET /hello/{your_Name:[a-zA-Z0-9]+} TestService SayHello
