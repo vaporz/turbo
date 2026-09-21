@@ -13,6 +13,7 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/mux"
+	"io"
 	"net/http"
 	"reflect"
 	"regexp"
@@ -66,7 +67,32 @@ func ToSnakeCase(str string) string {
 // 2, find keys with upper case characters, and append their values to a lower case key
 // 3, merge route variables, route variables will come at the first place
 func parseRequestForm(req *http.Request) {
-	req.ParseForm()
+	// ★ 2026-09-21 修 T1：**解析表单不该让原始 body 消失** ✗
+	//
+	// 以前这里是**无条件** `req.ParseForm()` ✗ 而 Go 的 ParseForm 对
+	// `application/x-www-form-urlencoded` 会**读并消费** body ✗
+	// → 之后的**拦截器 / Hijacker** 里 `req.Body` 已空 ✗
+	// → **HMAC 验签**（七牛/微信/收钱吧回调）、签名校验、审计留痕**全做不了** ✗
+	// ⚠️ 而且**不报错** ✗ 只在"验签怎么都算不对"时才暴露 ✓（历史上只能靠改 Content-Type 绕开 ✗）
+	//
+	// 现在 ✓：
+	//   · **表单**请求：先把 body 读下来 → 解析 → **再复原** ✓（下游还能读 ✓）
+	//   · **非表单**（JSON 等）：**根本不碰 body** ✓ 只把 URL query 装进 req.Form ✓
+	//     （这两件事本来就是 `ParseForm()` 对 GET 做的 ✓ 所以绑定语义**没有变化** ✓）
+	if isFormURLEncoded(req) {
+		raw, err := io.ReadAll(req.Body)
+		if err != nil {
+			// 读不出来就退回老行为 ✓ —— 至少别把"表单解析"这件事弄丢 ✗
+			log.Error("turbo: failed to read request body for form parsing, fallback to ParseForm: ", err)
+			_ = req.ParseForm()
+		} else {
+			req.Body = io.NopCloser(bytes.NewReader(raw)) // 先复原 ✓ 让 ParseForm 能读到 ✓
+			_ = req.ParseForm()
+			req.Body = io.NopCloser(bytes.NewReader(raw)) // ★ 再复原 ✗ 这就是本修复的核心 ✓（下游能读 ✓）
+		}
+	} else {
+		req.Form = req.URL.Query()
+	}
 	// Should param keys be case-sensitive?
 	// Maybe no, "be liberal in what you accept and conservative in what you send".
 	// So, case-insensitive.
@@ -74,6 +100,14 @@ func parseRequestForm(req *http.Request) {
 	// https://stackoverflow.com/questions/7996919/should-url-be-case-sensitive
 	mergeUpperCaseKeysToLowerCase(req)
 	mergeMuxVars(req)
+}
+
+// isFormURLEncoded 这个请求的 body 是不是 urlencoded 表单 ✓
+//
+// ⚠️ 必须**带上参数一起判** ✗ —— `Content-Type` 常写成
+// `application/x-www-form-urlencoded; charset=utf-8` ✓ 用 `==` 会漏 ✗
+func isFormURLEncoded(req *http.Request) bool {
+	return strings.Contains(req.Header.Get("Content-Type"), "application/x-www-form-urlencoded")
 }
 
 func mergeUpperCaseKeysToLowerCase(req *http.Request) {
