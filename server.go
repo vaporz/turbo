@@ -185,6 +185,9 @@ func (s *Server) loadComponents() *Components {
 		c.WithErrorHandler(getComponentByName(s, s.Config.ErrorHandler()).(ErrorHandlerFunc))
 		log.Info("errorhandler:", s.Config.ErrorHandler())
 	}
+	// The audit runs on every load: at startup a violation refuses to start, and
+	// on reload it is an error that keeps the running configuration in place.
+	panicIf(auditRoutes(s.Config.mappings, c.commonInterceptors, c.registeredComponents, s.Config.authConfig()))
 	return c
 }
 
