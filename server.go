@@ -40,7 +40,7 @@ type Server struct {
 	Config *Config
 	// Components holds the mappings of url to component
 	Components   *Components
-	reloadConfig chan bool
+	reloadConfig chan *Config
 	exit         chan os.Signal
 	// Initializer implements Initializable
 	Initializer Initializable
@@ -79,14 +79,21 @@ func watchConfigReload(s Servable) {
 	go func() {
 		for {
 			select {
-			case <-s.ServerField().reloadConfig:
+			case previous := <-s.ServerField().reloadConfig:
 				if s.ServerField().httpServer == nil {
 					continue
 				}
 				log.Info("Reloading configuration...")
-				newComponents := s.ServerField().loadComponentsNoPanic()
-				newRouter := router(s)
-				s.ServerField().httpServer.Handler = newRouter
+				newComponents, err := s.ServerField().loadComponentsErr()
+				if err != nil {
+					// Never install a routing table that could not be built: the
+					// server keeps serving the configuration already in effect,
+					// and keeps watching for the next change.
+					s.ServerField().Config = previous
+					log.Error("turbo: configuration reload failed, keeping the running configuration: ", err)
+					continue
+				}
+				s.ServerField().httpServer.Handler = router(s)
 				s.ServerField().Components = newComponents
 				log.Info("Configuration reloaded")
 			}
@@ -101,14 +108,21 @@ func (s *Server) watchConfig() {
 			Viper:    *viper.New(),
 			File:     s.Config.File,
 			mappings: make(map[string][][4]string)}
-		c.loadServiceConfig()
+		if err := c.loadServiceConfigErr(); err != nil {
+			// The change is ignored rather than fatal. It used to panic here, in
+			// the goroutine that watches the file, where nothing recovered it and
+			// the whole process died.
+			log.Error("turbo: ignoring configuration change, it cannot be loaded: ", err)
+			return
+		}
+		previous := s.Config
 		s.Config = c
-		s.reloadConfig <- true
+		s.reloadConfig <- previous
 	})
 }
 
 func (s *Server) initChans() {
-	s.reloadConfig = make(chan bool)
+	s.reloadConfig = make(chan *Config)
 	s.exit = make(chan os.Signal, 1)
 }
 
@@ -127,13 +141,17 @@ func startHTTPServer(s Servable) *http.Server {
 	return hs
 }
 
-func (s *Server) loadComponentsNoPanic() *Components {
+// loadComponentsErr builds the components the current configuration describes,
+// reporting an error instead of panicking. A configuration that names a
+// component nobody registered cannot be turned into a working routing table, and
+// the caller must be able to keep the one that already works.
+func (s *Server) loadComponentsErr() (components *Components, err error) {
 	defer func() {
-		if err := recover(); err != nil {
-			log.Error("reload Components failed, err=", err)
+		if r := recover(); r != nil {
+			components, err = nil, fmt.Errorf("invalid configuration %s: %v", s.Config.File, r)
 		}
 	}()
-	return s.loadComponents()
+	return s.loadComponents(), nil
 }
 
 func (s *Server) loadComponents() *Components {

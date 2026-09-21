@@ -585,6 +585,47 @@ func TestParameterBindingThrift(t *testing.T) {
 		strings.NewReader("your_name=from-form"), greeting+`from-server"}`)
 }
 
+// TestFailedConfigReloadKeepsServing pins T14: a configuration change that cannot
+// be loaded must not be able to take down a server that is already serving. Both
+// ways a reload used to fail are covered, because each was fatal in its own way:
+// a component that was never registered left the server holding no components at
+// all, and a file that does not parse panicked inside the watcher goroutine,
+// where nothing recovered it.
+func TestFailedConfigReloadKeepsServing(t *testing.T) {
+	httpPort := "8088"
+	cfg := testConfigPath(t)
+	writeRawConfig(t, cfg, rawServiceYaml(httpPort, "50068", ""))
+
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
+	s.StartGrpcService(gimpl.RegisterServer)
+	time.Sleep(time.Millisecond * 300)
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Millisecond * 300)
+	defer s.Stop()
+
+	base := "http://localhost:" + httpPort
+	before := `{"message":"[grpc server]Hello, before"}`
+	testGet(t, base+"/hello?your_name=before", before)
+
+	// a reload that names a component nobody registered must be rejected whole
+	writeRawConfig(t, cfg, rawServiceYaml(httpPort, "50068",
+		"interceptor:\n  - GET /hello NoSuchInterceptor\n"))
+	time.Sleep(time.Millisecond * 500)
+
+	// so must a file that does not parse at all
+	writeRawConfig(t, cfg, "config: [this is not\n  - valid yaml")
+	time.Sleep(time.Millisecond * 500)
+
+	// the running server never lost the configuration it already had
+	testGet(t, base+"/hello?your_name=before", before)
+
+	// and the reloader is still alive rather than wedged by the failures
+	writeRawConfig(t, cfg, rawServiceYaml(httpPort, "50068",
+		"preprocessor:\n  - GET /hello preProcessor\n"))
+	testGetEventually(t, base+"/hello?your_name=after",
+		`preprocessor:{"message":"[grpc server]Hello, after"}`, time.Second*10)
+}
+
 func testGet(t *testing.T, url, expected string) {
 	resp, err := http.Get(url)
 	if err != nil {
@@ -902,8 +943,41 @@ errorhandler: errorHandler
 	)
 }
 
-// overwriteServiceYamlForBinding writes a config with an explicit binding mode
-// and routes /helloinject through an interceptor that injects a value.
+// writeRawConfig writes content to path as is, so a test can describe a
+// configuration that is invalid on purpose.
+func writeRawConfig(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatalf("cannot write %s: %v", path, err)
+	}
+}
+
+// rawServiceYaml renders a service.yaml for the test service whose component
+// sections are supplied verbatim by the caller. It is not a text/template on
+// purpose: an invalid configuration has to survive being written unchanged.
+func rawServiceYaml(httpPort, servicePort, components string) string {
+	return `config:
+  file_root_path: /src
+  package_path: github.com/vaporz/turbo/test/testservice
+  http_port: ` + httpPort + `
+  environment: development
+  turbo_log_path:
+  grpc_service_name: TestService
+  grpc_service_host: 127.0.0.1
+  grpc_service_port: ` + servicePort + `
+  thrift_service_name: TestService
+  thrift_service_host: 127.0.0.1
+  thrift_service_port: ` + servicePort + `
+
+urlmapping:
+  - GET /hello TestService SayHello
+  - POST /hello TestService SayHello
+
+` + components
+}
+
+// overwriteServiceYamlForBinding writes a config that routes /helloinject
+// through an interceptor which injects a value.
 func overwriteServiceYamlForBinding(file, httpPort, servicePort string) {
 	type serviceYamlValues struct {
 		HttpPort    string

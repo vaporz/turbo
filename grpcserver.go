@@ -27,7 +27,7 @@ func NewGrpcServer(initializer Initializable, configFilePath string) *GrpcServer
 		Server: &Server{
 			Config:       NewConfig("grpc", configFilePath),
 			Components:   new(Components),
-			reloadConfig: make(chan bool),
+			reloadConfig: make(chan *Config),
 			Initializer:  initializer,
 		},
 		gClient: new(grpcClient),

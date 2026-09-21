@@ -26,7 +26,7 @@ func NewThriftServer(initializer Initializable, configFilePath string) *ThriftSe
 		Server: &Server{
 			Config:       NewConfig("thrift", configFilePath),
 			Components:   new(Components),
-			reloadConfig: make(chan bool),
+			reloadConfig: make(chan *Config),
 			Initializer:  initializer,
 		},
 		tClient: new(thriftClient),
