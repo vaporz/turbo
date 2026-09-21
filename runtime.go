@@ -181,7 +181,7 @@ func doPreprocessor(resp http.ResponseWriter, req *http.Request) error {
 	if pre := components(req).Preprocessor(req); pre != nil {
 		if err := pre(resp, req); err != nil {
 			log.Println(err.Error())
-			return errors.New(fmt.Sprintf("turbo: encounter error in preprocessor for %s, error: %s", req.URL, err))
+			return fmt.Errorf("turbo: encounter error in preprocessor for %s, error: %w", req.URL, err)
 		}
 	}
 	return nil
@@ -192,7 +192,7 @@ func doPostprocessor(s Servable, resp http.ResponseWriter, req *http.Request, se
 	if post := components(req).Postprocessor(req); post != nil {
 		if err := post(resp, req, serviceResponse, err); err != nil {
 			log.Println(err.Error())
-			return errors.New(fmt.Sprintf("turbo: encounter error in postprocessor for %s, error: %s", req.URL, err))
+			return fmt.Errorf("turbo: encounter error in postprocessor for %s, error: %w", req.URL, err)
 		}
 	}
 	return nil
@@ -386,7 +386,7 @@ func BuildArgs(s Servable, argsType reflect.Type, argsValue reflect.Value, req *
 			structName := valueType.Elem().Name()
 			v, err := buildStructArg(s, structName, req)
 			if err != nil {
-				return nil, errors.New(fmt.Sprintf("turbo: failed to BuildArgs, error:%s", err))
+				return nil, fmt.Errorf("turbo: failed to BuildArgs, error:%w", err)
 			}
 			params[i] = v
 			continue
@@ -497,8 +497,9 @@ func BuildRequest(s Servable, v proto.Message, req *http.Request) error {
 		unmarshaler := &jsonpb.Unmarshaler{AllowUnknownFields: true}
 		err = unmarshaler.Unmarshal(strings.NewReader(bodyStr), v)
 		if err != nil {
-			return errors.New(fmt.Sprintf("turbo: failed to BuildRequest for json api, "+
-				"request body: %s, error: %s", bodyStr, err))
+			// the caller sent a body that cannot be used, which is a client error
+			return WithStatus(fmt.Errorf("turbo: failed to BuildRequest for json api, "+
+				"request body: %s, error: %s", bodyStr, err), http.StatusBadRequest)
 		}
 		rawBody := jsonObjectKeys(bodyStr)
 		bindJSONGaps(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody)
@@ -521,8 +522,8 @@ func BuildThriftRequest(s Servable, args interface{}, req *http.Request, buildSt
 		// TODO [2] refactor error, define own errors?
 		if err != nil {
 			// TODO use fmt.Errorf()
-			return params, errors.New(fmt.Sprintf("turbo: failed to BuildThriftRequest for json api, "+
-				"request body: %s, error: %s", buf.String(), err))
+			return params, WithStatus(fmt.Errorf("turbo: failed to BuildThriftRequest for json api, "+
+				"request body: %s, error: %s", buf.String(), err), http.StatusBadRequest)
 		}
 		rawBody := jsonObjectKeys(buf.String())
 		bindJSONGaps(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody)
