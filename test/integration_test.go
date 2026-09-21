@@ -648,6 +648,63 @@ func (b *syncBuffer) String() string {
 	return b.buf.String()
 }
 
+// TestErrorStatusCodes pins T9. The HTTP status is what everything in front of a
+// service reads -- a gateway, an alert rule, a dashboard -- and answering every
+// failure with 500 makes a caller's mistake look like a broken service. An error
+// can now carry the status it deserves, and the default handler honours it.
+func TestErrorStatusCodes(t *testing.T) {
+	httpPort := "8091"
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, httpPort, "50071", "development")
+
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
+	s.StartGrpcService(gimpl.RegisterServer)
+	time.Sleep(time.Millisecond * 300)
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Millisecond * 300)
+	defer s.Stop()
+
+	base := "http://localhost:" + httpPort
+
+	// a service failure that says nothing about the status is still a 500, and
+	// the body is unchanged
+	resp, err := http.Get(base + "/hello/error")
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	assert.Equal(t, "rpc error: code = Unknown desc = grpc error\n", readResp(resp))
+	resp.Body.Close()
+
+	// a handler that knows what went wrong can say so
+	s.Components.SetPreprocessor([]string{"GET"}, "/hello", statusPreProcessor)
+	resp, err = http.Get(base + "/hello?your_name=x")
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusTeapot, resp.StatusCode)
+	assert.Equal(t, "turbo: encounter error in preprocessor for /hello?your_name=x, error: teapot\n", readResp(resp))
+	resp.Body.Close()
+
+	// the first matching declaration is the one that runs, so the next case needs
+	// a clean component set to be reached at all
+	s.Components.Reset()
+
+	// an error that says nothing keeps falling back to 500
+	s.Components.SetPreprocessor([]string{"GET"}, "/hello", plainErrorPreProcessor)
+	resp, err = http.Get(base + "/hello?your_name=x")
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	resp.Body.Close()
+
+	s.Components.Reset()
+
+	// a body the server cannot use is the caller's mistake, not a service failure
+	resp, err = http.Post(base+"/hello", "application/json", strings.NewReader("{aaaaa"))
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	body := readResp(resp)
+	resp.Body.Close()
+	assert.Contains(t, body, "turbo: failed to BuildRequest for json api")
+	assert.Contains(t, body, "invalid character 'a'")
+}
+
 // TestRouteAuditRefusesUnprotectedRoutes pins T4②. Declaring which interceptors
 // authenticate a request turns the route audit into an enforcement: a
 // configuration that would serve a route without one is refused. At startup that
@@ -904,6 +961,16 @@ var preProcessor turbo.Preprocessor = func(resp http.ResponseWriter, req *http.R
 var errorPreProcessor turbo.Preprocessor = func(resp http.ResponseWriter, req *http.Request) error {
 	resp.Write([]byte("error_preprocessor:"))
 	return errors.New("error in preprocessor")
+}
+
+// statusPreProcessor fails with an error that says which status the response
+// should carry; plainErrorPreProcessor fails without saying anything.
+var statusPreProcessor turbo.Preprocessor = func(resp http.ResponseWriter, req *http.Request) error {
+	return turbo.Errorf(http.StatusTeapot, "teapot")
+}
+
+var plainErrorPreProcessor turbo.Preprocessor = func(resp http.ResponseWriter, req *http.Request) error {
+	return errors.New("plain failure")
 }
 
 var postProcessor turbo.Postprocessor = func(resp http.ResponseWriter, req *http.Request, serviceResp interface{}, err error) error {
