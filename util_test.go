@@ -1,9 +1,13 @@
 package turbo
 
 import (
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"reflect"
 	"runtime"
+	"strings"
 	"testing"
 
 	sjson "github.com/bitly/go-simplejson"
@@ -477,9 +481,58 @@ func TestFilterStructWithTag(t *testing.T) {
 		Width:            640,
 		Fps:              23}}
 	bytes, _ := m.JSON(ts)
-	assert.Equal(t, "{\"Data\":{\"Bitrate\":1322,\"ContentTypeId\":42,\"CreativeApiId\":100," +
-		"\"Duration\":15,\"Fps\":23,\"Height\":360,\"Id3Tag\":\"\",\"MetadataOnly\":\"\"," +
-		"\"PhysicalDuration\":15.043999671936035,\"UploadFile\":\"\"," +
+	assert.Equal(t, "{\"Data\":{\"Bitrate\":1322,\"ContentTypeId\":42,\"CreativeApiId\":100,"+
+		"\"Duration\":15,\"Fps\":23,\"Height\":360,\"Id3Tag\":\"\",\"MetadataOnly\":\"\","+
+		"\"PhysicalDuration\":15.043999671936035,\"UploadFile\":\"\","+
 		"\"UploadUrl\":\"http://testlink.dev.fwmrm.net/testlink/ui_asset/111_1311662179.mp4\",\"Width\":640}}",
 		string(bytes))
+}
+
+// ── T1 回归：解析表单**不能**让原始 body 消失 ✗（2026-09-21 ✓）──────────────────
+//
+// 背景 ✓：`parseRequestForm` 以前是**无条件** `req.ParseForm()` ✗
+//
+//	而 Go 的 `ParseForm()` 对 `application/x-www-form-urlencoded` 会**读并消费** body ✗
+//	→ 之后的**拦截器 / Hijacker** 里 `req.Body` 已经空了 ✗
+//	→ **HMAC 验签**（七牛/微信/收钱吧回调）、签名校验、审计留痕**全都做不了** ✗
+//
+// ⚠️ 这个坑最阴的地方：**不报错** ✗ 只在"验签怎么都算不对"时才暴露 ✓
+//
+// 🔴 本条测试**在修复之前必须是红的** ✓（我已实测确认 ✓ 见 PR 说明 ✓）
+func TestParseRequestFormMustKeepBodyReadable(t *testing.T) {
+	const formBody = "your_name=turbo&bool_value=true"
+	req := httptest.NewRequest(http.MethodPost, "/hello?from=query", strings.NewReader(formBody))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	parseRequestForm(req)
+
+	// ① 老能力**不能弄坏** ✗：绑定照旧 ✓（query 与 form 都要进 req.Form ✓）
+	assert.Equal(t, "turbo", req.Form.Get("your_name"))
+	assert.Equal(t, "true", req.Form.Get("bool_value"))
+	assert.Equal(t, "query", req.Form.Get("from"))
+
+	// ② ★ 本 PR 的核心：body 还能**再读一次** ✓
+	//    修复前这里是 `""` ✗（这正是 T1 本身 ✓）
+	got, err := io.ReadAll(req.Body)
+	assert.NoError(t, err)
+	assert.Equal(t, formBody, string(got))
+}
+
+// T1 的另一半（**守住不回归** ✓）：非表单请求的 body 本来就不该被动 ✗
+//
+// ⚠️ 这条在修复前后**都应该是绿的** ✓ —— 它是一条"别改坏"的护栏 ✓
+//
+//	（`ParseForm()` 只对 urlencoded 消费 body ✓ JSON/multipart 它不碰 ✓）
+func TestParseRequestFormMustNotTouchNonFormBody(t *testing.T) {
+	const jsonBody = `{"your_name":"turbo"}`
+	req := httptest.NewRequest(http.MethodPost, "/hello?from=query", strings.NewReader(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	parseRequestForm(req)
+
+	assert.Equal(t, "query", req.Form.Get("from"))
+
+	got, err := io.ReadAll(req.Body)
+	assert.NoError(t, err)
+	assert.Equal(t, jsonBody, string(got))
 }
