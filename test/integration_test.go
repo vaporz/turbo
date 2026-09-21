@@ -648,6 +648,60 @@ func (b *syncBuffer) String() string {
 	return b.buf.String()
 }
 
+// TestRouteAuditRefusesUnprotectedRoutes pins T4②. Declaring which interceptors
+// authenticate a request turns the route audit into an enforcement: a
+// configuration that would serve a route without one is refused. At startup that
+// means the server does not come up; on reload it means the running
+// configuration stays exactly as it was.
+func TestRouteAuditRefusesUnprotectedRoutes(t *testing.T) {
+	httpPort := "8090"
+	cfg := testConfigPath(t)
+	auth := "auth:\n  interceptors:\n    - TestInterceptor\n"
+	writeRawConfig(t, cfg, rawServiceYaml(httpPort, "50070",
+		"interceptor:\n  - GET /hello TestInterceptor\n  - POST /hello TestInterceptor\n")+auth)
+
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
+	s.StartGrpcService(gimpl.RegisterServer)
+	time.Sleep(time.Millisecond * 300)
+
+	logged := &syncBuffer{}
+	turbo.SetOutput(logged)
+	defer turbo.SetOutput(os.Stdout)
+
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Millisecond * 300)
+	defer s.Stop()
+
+	base := "http://localhost:" + httpPort
+	guarded := `intercepted:{"message":"[grpc server]Hello, ok"}`
+	testGet(t, base+"/hello?your_name=ok", guarded)
+	assert.Contains(t, logged.String(), "route audit: GET /hello -> TestService.SayHello")
+	assert.Contains(t, logged.String(), "authenticated")
+
+	// an interceptor that is not declared as an auth interceptor leaves the route
+	// effectively unprotected, so this configuration is refused
+	writeRawConfig(t, cfg, rawServiceYaml(httpPort, "50070",
+		"interceptor:\n  - GET /hello Test1Interceptor\n  - POST /hello Test1Interceptor\n")+auth)
+	time.Sleep(time.Millisecond * 800)
+	testGet(t, base+"/hello?your_name=ok", guarded)
+	assert.Contains(t, logged.String(), "refusing this configuration")
+	assert.Contains(t, logged.String(), "UNPROTECTED")
+
+	// and so is one that forgot the interceptor line altogether, which is the
+	// mistake this audit exists for
+	writeRawConfig(t, cfg, rawServiceYaml(httpPort, "50070", "")+auth)
+	time.Sleep(time.Millisecond * 800)
+	testGet(t, base+"/hello?your_name=ok", guarded)
+
+	// at startup the same violation means the server does not come up at all
+	refusedCfg := testConfigPath(t)
+	writeRawConfig(t, refusedCfg, rawServiceYaml("8092", "50072", "")+auth)
+	refused := turbo.NewGrpcServer(&testInitializer{}, refusedCfg)
+	assert.Panics(t, func() {
+		refused.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	})
+}
+
 // TestFailedConfigReloadKeepsServing pins T14: a configuration change that cannot
 // be loaded must not be able to take down a server that is already serving. Both
 // ways a reload used to fail are covered, because each was fatal in its own way:
