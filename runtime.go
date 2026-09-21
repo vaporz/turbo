@@ -31,14 +31,35 @@ var switcherFunc switcher
 
 func router(s Servable) *mux.Router {
 	r := mux.NewRouter()
-	for _, v := range s.ServerField().Config.mappings[urlServiceMaps] {
+	routes := s.ServerField().Config.mappings[urlServiceMaps]
+	for _, v := range routes {
 		httpMethods := strings.Split(v[0], ",")
 		path := v[1]
 		serviceName := v[2]
 		methodName := v[3]
+		log.Infof("route: %s %s -> %s.%s", v[0], path, serviceName, methodName)
 		r.HandleFunc(path, handler(s, serviceName, methodName)).Methods(httpMethods...)
 	}
+	log.Infof("turbo: %d route(s) registered", len(routes))
+	r.NotFoundHandler = notFoundHandler()
 	return r
+}
+
+// notFoundHandler answers requests that reached the server but matched no route.
+// turbo used to answer them without a trace, which makes the two situations one
+// has to tell apart look identical from the outside: a request that never
+// arrived, and a request that arrived and was dropped. That is how an allow-list
+// in front of a service (a reverse proxy, for example) hides a missing route.
+//
+// The response is unchanged; only the log line is new.
+func notFoundHandler() http.HandlerFunc {
+	return func(resp http.ResponseWriter, req *http.Request) {
+		// The query is deliberately left out: it may carry a token or a
+		// signature, and the path is what identifies the missing route.
+		log.Errorf("turbo: 404 no route for %s %s, host=%s, remote=%s, user-agent=%q",
+			req.Method, req.URL.Path, req.Host, req.RemoteAddr, req.UserAgent())
+		http.NotFound(resp, req)
+	}
 }
 
 type key int

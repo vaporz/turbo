@@ -11,6 +11,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"text/template"
 	"time"
@@ -583,6 +584,68 @@ func TestParameterBindingThrift(t *testing.T) {
 	testGet(t, base+"/helloinject?your_name=from-query", greeting+`from-server"}`)
 	testPostWithContentType(t, base+"/helloinject", "application/x-www-form-urlencoded",
 		strings.NewReader("your_name=from-form"), greeting+`from-server"}`)
+}
+
+// TestRouteTableAndNotFoundAreObservable pins T12. Two things used to be
+// invisible: which routes a router actually serves, and a request that matched
+// none of them. Both matter exactly when something in front of the service is
+// dropping requests -- then "it never arrived" and "it arrived and was dropped"
+// look identical from the outside.
+func TestRouteTableAndNotFoundAreObservable(t *testing.T) {
+	httpPort := "8089"
+	cfg := testConfigPath(t)
+	writeRawConfig(t, cfg, rawServiceYaml(httpPort, "50069", ""))
+
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
+	s.StartGrpcService(gimpl.RegisterServer)
+	time.Sleep(time.Millisecond * 300)
+
+	// capture the log before the HTTP server is started, because that is when the
+	// routing table is reported
+	logged := &syncBuffer{}
+	turbo.SetOutput(logged)
+	defer turbo.SetOutput(os.Stdout)
+
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Millisecond * 300)
+	defer s.Stop()
+
+	base := "http://localhost:" + httpPort
+	testGet(t, base+"/hello?your_name=world", `{"message":"[grpc server]Hello, world"}`)
+
+	assert.Contains(t, logged.String(), "route: GET /hello -> TestService.SayHello")
+	assert.Contains(t, logged.String(), "route: POST /hello -> TestService.SayHello")
+	assert.Contains(t, logged.String(), "turbo: 2 route(s) registered")
+
+	// a request nobody handles is reported, and still answered the same way
+	resp, err := http.Get(base + "/no/such/path?token=secret")
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	assert.Equal(t, "404 page not found\n", readResp(resp))
+	resp.Body.Close()
+
+	reported := logged.String()
+	assert.Contains(t, reported, "404 no route for GET /no/such/path")
+	assert.NotContains(t, reported, "token=secret", "the query must not be logged")
+}
+
+// syncBuffer collects log output written by request handlers, which run in their
+// own goroutines.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
 }
 
 // TestFailedConfigReloadKeepsServing pins T14: a configuration change that cannot
