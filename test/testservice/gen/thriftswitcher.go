@@ -74,12 +74,16 @@ func buildStructArg(s turbo.Servable, typeName string, req *http.Request) (v ref
 
 	case "CommonValues":
 		request := &gen.CommonValues{  }
-		turbo.BuildStruct(s, reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
+		if err := turbo.BuildStructErr(s, reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req); err != nil {
+			return v, err
+		}
 		return reflect.ValueOf(request), nil
 
 	case "TestJsonRequest":
 		request := &gen.TestJsonRequest{  }
-		turbo.BuildStruct(s, reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
+		if err := turbo.BuildStructErr(s, reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req); err != nil {
+			return v, err
+		}
 		return reflect.ValueOf(request), nil
 
 	default:
