@@ -61,9 +61,10 @@ func component(s *turbo.Server, name string) interface{} {
 
 func TestGrpcService(t *testing.T) {
 	httpPort := "8081"
-	overwriteServiceYaml("8081", "50061", "development")
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, "8081", "50061", "development")
 
-	s := turbo.NewGrpcServer(&testInitializer{}, "testservice/service.yaml")
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
 	s.Start(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
 	time.Sleep(time.Millisecond * 1000)
 
@@ -136,9 +137,10 @@ func TestGrpcService(t *testing.T) {
 
 func TestThriftService(t *testing.T) {
 	httpPort := "8082"
-	overwriteServiceYaml(httpPort, "50062", "production")
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, httpPort, "50062", "production")
 
-	s := turbo.NewThriftServer(&testInitializer{}, "testservice/service.yaml")
+	s := turbo.NewThriftServer(&testInitializer{}, cfg)
 	turbo.SetOutput(os.Stdout)
 	s.Start(tcompoent.ThriftClient, gen.ThriftSwitcher, timpl.TProcessor)
 	time.Sleep(time.Second * 2)
@@ -191,9 +193,10 @@ func TestThriftService(t *testing.T) {
 }
 func TestHTTPGrpcService(t *testing.T) {
 	httpPort := "8083"
-	overwriteServiceYaml(httpPort, "50063", "development")
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, httpPort, "50063", "development")
 
-	s := turbo.NewGrpcServer(nil, "testservice/service.yaml")
+	s := turbo.NewGrpcServer(nil, cfg)
 	s.StartGrpcService(gimpl.RegisterServer)
 	time.Sleep(time.Millisecond * 300)
 
@@ -207,9 +210,10 @@ func TestHTTPGrpcService(t *testing.T) {
 
 func TestHTTPThriftService(t *testing.T) {
 	httpPort := "8084"
-	overwriteServiceYaml(httpPort, "50064", "development")
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, httpPort, "50064", "development")
 
-	s := turbo.NewThriftServer(nil, "testservice/service.yaml")
+	s := turbo.NewThriftServer(nil, cfg)
 	s.StartThriftService(timpl.TProcessor)
 	time.Sleep(time.Millisecond * 500)
 
@@ -223,9 +227,10 @@ func TestHTTPThriftService(t *testing.T) {
 
 func TestLoadComponentsFromConfig(t *testing.T) {
 	httpPort := "8085"
-	overwriteServiceYamlWithGrpcComponents(httpPort, "50065", "production")
+	cfg := testConfigPath(t)
+	overwriteServiceYamlWithGrpcComponents(cfg, httpPort, "50065", "production")
 
-	s := turbo.NewGrpcServer(&testInitializer{}, turbo.GetWD()+"/testservice/service.yaml")
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
 	_, err := s.Component("test")
 	assert.Equal(t, "no such component: test, forget to register?", err.Error())
 	s.StartGrpcService(gimpl.RegisterServer)
@@ -243,9 +248,10 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello_hijacker", "hijacker")
 	testGet(t, "http://localhost:"+httpPort+"/hello/error", "from errorHandler:rpc error: code = Unknown desc = grpc error")
 
-	changeServiceYamlWithGrpcComponents(httpPort, "50065", "production")
-	time.Sleep(time.Millisecond * 1000)
-	testGet(t, "http://localhost:"+httpPort+"/hello", `test1_intercepted:preprocessor:postprocessor:{"message":"[grpc server]Hello, "}`)
+	changeServiceYamlWithGrpcComponents(cfg, httpPort, "50065", "production")
+	testGetEventually(t, "http://localhost:"+httpPort+"/hello",
+		`test1_intercepted:preprocessor:postprocessor:{"message":"[grpc server]Hello, "}`,
+		time.Second*10)
 	s.Stop()
 }
 
@@ -519,6 +525,35 @@ func testGet(t *testing.T, url, expected string) {
 	assert.Equal(t, expected, readResp(resp))
 }
 
+// testGetEventually polls url until its response body equals expected, then
+// returns. Config hot reloading is asynchronous: an fsnotify event triggers a
+// viper callback, which hands the new config to a reload goroutine that finally
+// swaps the router. Asserting after a fixed sleep therefore races with that
+// chain -- on slow filesystems (e.g. WSL DrvFs) the swap can take longer than
+// the sleep, and the assertion observes the previous routing table instead.
+// Polling also tolerates the intermediate states produced while the config file
+// is being rewritten. It fails only if the expectation never materializes.
+func testGetEventually(t *testing.T, url, expected string, timeout time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	var actual string
+	for {
+		resp, err := http.Get(url)
+		if err == nil {
+			actual = readResp(resp)
+			resp.Body.Close()
+			if actual == expected {
+				return
+			}
+		}
+		if !time.Now().Before(deadline) {
+			break
+		}
+		time.Sleep(time.Millisecond * 50)
+	}
+	assert.Equal(t, expected, actual, "config hot reload did not take effect within %s", timeout)
+}
+
 type testInitializer struct {
 }
 
@@ -667,14 +702,41 @@ var convertThriftCommonValues turbo.Convertor = func(req *http.Request) reflect.
 	return reflect.ValueOf(result)
 }
 
-func overwriteServiceYaml(httpPort, servicePort, env string) {
+// testConfigPath returns a config file path used by this test alone.
+//
+// Every server started during the suite installs a config file watcher, and a
+// server's watcher is never torn down -- neither by Stop() nor by the reload
+// that replaces its Config. When all tests share a single config file, every
+// rewrite therefore fires a hot reload in every server that was ever started,
+// including servers that were already stopped and whose components are gone:
+// those reloads panic, loadComponentsNoPanic recovers and leaves that server's
+// Components nil, and the running server that owns the file can end up never
+// observing its own reload. A per-test file keeps the tests isolated (and keeps
+// the checked-in testservice/service.yaml from being rewritten by a test run).
+//
+// The file lives in t.TempDir() rather than under testservice/, because the hot
+// reload under test is driven by inotify: on a DrvFs mount (for example a repo
+// checked out under /mnt/d in WSL) events are dropped, and the watcher then
+// never reports the change at all.
+func testConfigPath(t *testing.T) string {
+	t.Helper()
+	f, err := os.CreateTemp(t.TempDir(), "service_*.yaml")
+	if err != nil {
+		t.Fatalf("cannot create config file: %v", err)
+	}
+	path := f.Name()
+	f.Close()
+	return path
+}
+
+func overwriteServiceYaml(file, httpPort, servicePort, env string) {
 	type serviceYamlValues struct {
 		HttpPort    string
 		ServicePort string
 		Env         string
 	}
 	writeFileWithTemplate(
-		turbo.GetWD()+"/testservice/service.yaml",
+		file,
 		`config:
   file_root_path: /src
   package_path: github.com/vaporz/turbo/test/testservice
@@ -703,7 +765,7 @@ urlmapping:
 	)
 }
 
-func overwriteServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
+func overwriteServiceYamlWithGrpcComponents(file, httpPort, servicePort, env string) {
 	type serviceYamlValues struct {
 		HttpPort    string
 		ServiceName string
@@ -711,7 +773,7 @@ func overwriteServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
 		Env         string
 	}
 	writeFileWithTemplate(
-		turbo.GetWD()+"/testservice/service.yaml",
+		file,
 		`config:
   file_root_path: /src
   package_path: github.com/vaporz/turbo/test/testservice
@@ -758,7 +820,7 @@ errorhandler: errorHandler
 	)
 }
 
-func changeServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
+func changeServiceYamlWithGrpcComponents(file, httpPort, servicePort, env string) {
 	type serviceYamlValues struct {
 		HttpPort    string
 		ServiceName string
@@ -766,7 +828,7 @@ func changeServiceYamlWithGrpcComponents(httpPort, servicePort, env string) {
 		Env         string
 	}
 	writeFileWithTemplate(
-		turbo.GetWD()+"/testservice/service.yaml",
+		file,
 		`config:
   file_root_path: /src
   package_path: github.com/vaporz/turbo/test/testservice

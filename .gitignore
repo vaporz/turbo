@@ -4,4 +4,6 @@ log/
 .glide.yaml.swp
 test/testcreateservice/
 test/testservice/testservice
+# test runs open <cwd>/turbo.log when turbo_log_path is empty
+turbo.log
 doc/build/
