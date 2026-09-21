@@ -6,6 +6,7 @@
 package turbo
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"regexp"
@@ -84,12 +85,28 @@ func (c *Config) ErrorHandler() string {
 }
 
 func (c *Config) loadServiceConfig() {
+	panicIf(c.loadServiceConfigErr())
+}
+
+// loadServiceConfigErr loads the configuration, reporting a failure instead of
+// panicking. The same code runs when a running server reloads its configuration,
+// and there a file that is half written or malformed must not take the server
+// down: the caller decides whether to fail fast (startup) or to keep serving the
+// configuration already in effect (reload).
+func (c *Config) loadServiceConfigErr() (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("invalid configuration %s: %v", c.File, r)
+		}
+	}()
 	c.SetConfigFile(c.File)
-	err := c.ReadInConfig()
-	panicIf(err)
+	if err := c.ReadInConfig(); err != nil {
+		return err
+	}
 	c.loadUrlMap()
 	c.loadConfigs()
 	c.loadComponents()
+	return nil
 }
 
 func (c *Config) loadComponents() {
