@@ -255,6 +255,44 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 	s.Stop()
 }
 
+// TestParameterBinding pins the precedence binding resolves conflicts with:
+// injected > path > body > query/form. The last two assertions are the ones that
+// describe what changed: a JSON request no longer ignores the URL, and a request
+// body can no longer override a value the server verified.
+func TestParameterBinding(t *testing.T) {
+	httpPort := "8086"
+	cfg := testConfigPath(t)
+	overwriteServiceYamlForBinding(cfg, httpPort, "50066")
+
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
+	s.StartGrpcService(gimpl.RegisterServer)
+	time.Sleep(time.Millisecond * 300)
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Millisecond * 300)
+	defer s.Stop()
+
+	base := "http://localhost:" + httpPort
+	greeting := `{"message":"[grpc server]Hello, `
+
+	// the query reaches the binding path
+	testGet(t, base+"/hello?your_name=from-query", greeting+`from-query"}`)
+
+	// the body wins over the query for the fields it carries
+	testPostWithContentType(t, base+"/hello?your_name=from-query", "application/json",
+		strings.NewReader(`{"yourName":"from-body"}`), greeting+`from-body"}`)
+
+	// an injected value was verified by the server, so a body cannot override it
+	testPostWithContentType(t, base+"/helloinject?your_name=from-query", "application/json",
+		strings.NewReader(`{"yourName":"from-body"}`), greeting+`from-server"}`)
+
+	// nor can a query value
+	testGet(t, base+"/helloinject?your_name=from-query", greeting+`from-server"}`)
+
+	// a JSON request used to ignore the URL completely
+	testPostWithContentType(t, base+"/hello?your_name=from-query", "application/json",
+		strings.NewReader(`{}`), greeting+`from-query"}`)
+}
+
 func overwriteProto() {
 	writeFileWithTemplate(
 		turbo.GetWD()+"/testcreateservice/testcreateservice.proto",
@@ -515,6 +553,38 @@ func readResp(resp *http.Response) string {
 	return bytes.String()
 }
 
+// TestParameterBindingModesThrift covers the thrift binding path for the form
+// branch, which carried the same precedence bug as the grpc one and needed the
+// same fix. JSON requests are deliberately not exercised: turbo's thrift JSON
+// branch returns a single reflect.Value while the generated switcher indexes one
+// per method argument, so a thrift JSON request panics before reaching binding
+// at all. That is a separate defect, reported separately.
+func TestParameterBindingThrift(t *testing.T) {
+	httpPort := "8087"
+	cfg := testConfigPath(t)
+	overwriteServiceYamlForBinding(cfg, httpPort, "50067")
+
+	s := turbo.NewThriftServer(&testInitializer{}, cfg)
+	s.StartThriftService(timpl.TProcessor)
+	time.Sleep(time.Millisecond * 500)
+	s.StartHTTPServer(tcompoent.ThriftClient, gen.ThriftSwitcher)
+	time.Sleep(time.Millisecond * 500)
+	defer s.Stop()
+
+	base := "http://localhost:" + httpPort
+	greeting := `{"message":"[thrift server]Hello, `
+
+	// both the query and a form body reach the binding path
+	testGet(t, base+"/hello?your_name=from-query", greeting+`from-query"}`)
+	testPostWithContentType(t, base+"/hello", "application/x-www-form-urlencoded",
+		strings.NewReader("your_name=from-form"), greeting+`from-form"}`)
+
+	// an injected value wins over both
+	testGet(t, base+"/helloinject?your_name=from-query", greeting+`from-server"}`)
+	testPostWithContentType(t, base+"/helloinject", "application/x-www-form-urlencoded",
+		strings.NewReader("your_name=from-form"), greeting+`from-server"}`)
+}
+
 func testGet(t *testing.T, url, expected string) {
 	resp, err := http.Get(url)
 	if err != nil {
@@ -564,6 +634,7 @@ func (t *testInitializer) InitService(s turbo.Servable) error {
 	s.RegisterComponent("TestInterceptor", &TestInterceptor{})
 	s.RegisterComponent("Test1Interceptor", &Test1Interceptor{})
 	s.RegisterComponent("ContextValueInterceptor", &ContextValueInterceptor{})
+	s.RegisterComponent("InjectInterceptor", &InjectInterceptor{})
 	s.RegisterComponent("MetadataInterceptor", &MetadataInterceptor{})
 	s.RegisterComponent("preProcessor", preProcessor)
 	s.RegisterComponent("errorPreProcessor", errorPreProcessor)
@@ -641,6 +712,17 @@ func (l *ContextValueInterceptor) Before(resp http.ResponseWriter, req *http.Req
 	ctx = context.WithValue(ctx, "uint64value", "456")
 	resp.Write([]byte("test1_intercepted:"))
 	*req = *req.WithContext(ctx)
+	return nil
+}
+
+// InjectInterceptor stores a value the server itself established, the way a
+// real service verifies a signature or resolves a device code before binding.
+type InjectInterceptor struct {
+	turbo.BaseInterceptor
+}
+
+func (i *InjectInterceptor) Before(resp http.ResponseWriter, req *http.Request) error {
+	turbo.InjectParam(req, "your_Name", "from-server")
 	return nil
 }
 
@@ -816,6 +898,45 @@ errorhandler: errorHandler
 			ServiceName: "TestService",
 			ServicePort: servicePort,
 			Env:         env,
+		},
+	)
+}
+
+// overwriteServiceYamlForBinding writes a config with an explicit binding mode
+// and routes /helloinject through an interceptor that injects a value.
+func overwriteServiceYamlForBinding(file, httpPort, servicePort string) {
+	type serviceYamlValues struct {
+		HttpPort    string
+		ServicePort string
+	}
+	writeFileWithTemplate(
+		file,
+		`config:
+  file_root_path: /src
+  package_path: github.com/vaporz/turbo/test/testservice
+  http_port: {{.HttpPort}}
+  environment: development
+  turbo_log_path:
+  grpc_service_name: TestService
+  grpc_service_host: 127.0.0.1
+  grpc_service_port: {{.ServicePort}}
+  thrift_service_name: TestService
+  thrift_service_host: 127.0.0.1
+  thrift_service_port: {{.ServicePort}}
+
+urlmapping:
+  - GET /hello TestService SayHello
+  - POST /hello TestService SayHello
+  - GET /helloinject TestService SayHello
+  - POST /helloinject TestService SayHello
+
+interceptor:
+  - GET /helloinject InjectInterceptor
+  - POST /helloinject InjectInterceptor
+`,
+		serviceYamlValues{
+			HttpPort:    httpPort,
+			ServicePort: servicePort,
 		},
 	)
 }

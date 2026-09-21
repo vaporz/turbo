@@ -1,0 +1,100 @@
+/*
+ * Copyright © 2017 Xiao Zhang <zzxx513@gmail.com>.
+ * Use of this source code is governed by an MIT-style
+ * license that can be found in the LICENSE file.
+ */
+package turbo
+
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/gorilla/mux"
+	"github.com/stretchr/testify/assert"
+)
+
+// bindingRequest builds a request whose Form holds the query, optionally with
+// path variables captured by the route.
+func bindingRequest(target string, pathVars map[string]string) *http.Request {
+	req := httptest.NewRequest(http.MethodGet, target, nil)
+	req.Form = req.URL.Query()
+	if pathVars != nil {
+		req = mux.SetURLVars(req, pathVars)
+	}
+	return req
+}
+
+func TestInjectParamIsVisibleUnderEveryFieldSpelling(t *testing.T) {
+	req := bindingRequest("/hello", nil)
+	InjectParam(req, "device_code", "A3")
+
+	for _, fieldName := range []string{"DeviceCode", "device_code", "deviceCode", "DEVICE_CODE"} {
+		value, ok := InjectedValue(fieldName, req)
+		assert.True(t, ok, fieldName)
+		assert.Equal(t, "A3", value, fieldName)
+	}
+	_, ok := InjectedValue("SomethingElse", req)
+	assert.False(t, ok)
+}
+
+func TestInjectParamAccumulatesAcrossCalls(t *testing.T) {
+	req := bindingRequest("/hello", nil)
+	InjectParam(req, "first", "1")
+	InjectParam(req, "second", "2")
+
+	first, ok := InjectedValue("First", req)
+	assert.True(t, ok)
+	assert.Equal(t, "1", first)
+	second, ok := InjectedValue("Second", req)
+	assert.True(t, ok)
+	assert.Equal(t, "2", second)
+}
+
+func TestInjectedValueAlsoReadsPlainContextValues(t *testing.T) {
+	req := bindingRequest("/hello", nil)
+	*req = *req.WithContext(context.WithValue(req.Context(), "device_code", "from-context"))
+
+	value, ok := InjectedValue("DeviceCode", req)
+	assert.True(t, ok)
+	assert.Equal(t, "from-context", value)
+}
+
+func TestFindValuePrefersInjectedValues(t *testing.T) {
+	req := bindingRequest("/hello?your_name=from-query", nil)
+	// the injected spelling deliberately differs from the query spelling
+	InjectParam(req, "your_Name", "from-server")
+
+	// an injected value is the only one the client did not supply
+	value, ok := findValue("YourName", req)
+	assert.True(t, ok)
+	assert.Equal(t, "from-server", value)
+
+	// without an injection the query is used
+	queryOnly := bindingRequest("/hello?your_name=from-query", nil)
+	value, ok = findValue("YourName", queryOnly)
+	assert.True(t, ok)
+	assert.Equal(t, "from-query", value)
+
+	_, ok = findValue("Missing", queryOnly)
+	assert.False(t, ok)
+}
+
+func TestJSONObjectKeysDescribeWhatTheBodyCarried(t *testing.T) {
+	raw := jsonObjectKeys(`{"yourName":"a name","nested":{"int64Value":7}}`)
+	assert.True(t, rawHas(raw, "YourName"))
+	assert.True(t, rawHas(raw, "YOURNAME"))
+	assert.False(t, rawHas(raw, "SomeOtherField"))
+
+	nested := rawSub(raw, "Nested")
+	assert.NotNil(t, nested)
+	assert.True(t, rawHas(nested, "Int64Value"))
+	assert.False(t, rawHas(nested, "Missing"))
+
+	// bodies that are not a JSON object mention no field at all
+	assert.Nil(t, jsonObjectKeys(""))
+	assert.Nil(t, jsonObjectKeys("   "))
+	assert.Nil(t, jsonObjectKeys("{oops"))
+	assert.Nil(t, jsonObjectKeys(`[1,2,3]`))
+}
