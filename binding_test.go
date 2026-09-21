@@ -98,3 +98,36 @@ func TestJSONObjectKeysDescribeWhatTheBodyCarried(t *testing.T) {
 	assert.Nil(t, jsonObjectKeys("{oops"))
 	assert.Nil(t, jsonObjectKeys(`[1,2,3]`))
 }
+
+func TestFormValueIsSpellingInsensitive(t *testing.T) {
+	for _, query := range []string{"yourName=x", "your_name=x", "YOURNAME=x", "YoUrNaMe=x"} {
+		req := bindingRequest("/hello?"+query, nil)
+		value, ok := formValue("YourName", req)
+		assert.True(t, ok, query)
+		assert.Equal(t, "x", value, query)
+	}
+
+	// the spellings a field has always been probed with are tried first, so two
+	// keys that normalise to one name cannot change the answer by accident
+	req := bindingRequest("/hello?your_name=turbo&yourname=xxx", nil)
+	value, ok := formValue("YourName", req)
+	assert.True(t, ok)
+	assert.Equal(t, "xxx", value)
+}
+
+func TestFindValuePrefersThePathWhateverTheSpelling(t *testing.T) {
+	// the route declares {your_Name}; the caller may spell the query any way,
+	// and it must not decide which source wins
+	for _, query := range []string{"your_name=from-query", "yourName=from-query", "YOURNAME=from-query"} {
+		req := bindingRequest("/hello/vaporz?"+query, map[string]string{"your_Name": "from-path"})
+		value, ok := findValue("YourName", req)
+		assert.True(t, ok, query)
+		assert.Equal(t, "from-path", value, query)
+	}
+
+	// without a route variable the query is used
+	req := bindingRequest("/hello?yourName=from-query", nil)
+	value, ok := findValue("YourName", req)
+	assert.True(t, ok)
+	assert.Equal(t, "from-query", value)
+}

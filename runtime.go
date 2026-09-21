@@ -556,16 +556,20 @@ func setPathParams(theType reflect.Type, theValue reflect.Value, req *http.Reque
 	}
 }
 
+// findPathParamValue looks a field up in the route variables. The lookup is
+// spelling insensitive: a route declared as {your_Name} has to fill a field
+// called YourName whatever spelling a service author chose in the configuration.
 func findPathParamValue(fieldName string, pathParams map[string]string) (string, bool) {
-	lowerCasesName := strings.ToLower(fieldName)
-	v, ok := pathParams[lowerCasesName]
-	if ok && len(v) > 0 {
-		return v, true
+	for _, key := range lookupKeys(fieldName) {
+		if v, ok := pathParams[key]; ok && len(v) > 0 {
+			return v, true
+		}
 	}
-	snakeCaseName := ToSnakeCase(fieldName)
-	v, ok = pathParams[snakeCaseName]
-	if ok && len(v) > 0 {
-		return v, true
+	wanted := normalizeKey(fieldName)
+	for key, v := range pathParams {
+		if normalizeKey(key) == wanted && len(v) > 0 {
+			return v, true
+		}
 	}
 	return "", false
 }

@@ -454,11 +454,16 @@ func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
 		`{"message":"[`+rpcType+` server]Hello, turbo"}`)
 	testGet(t, "http://localhost:"+httpPort+"/hello?your_name=turbo&yourname=xxx",
 		`{"message":"[`+rpcType+` server]Hello, xxx"}`)
+	// a route variable wins over the query whatever spelling the caller used:
+	// both of these used to let the query win, purely because yourName and
+	// yourname are merged into req.Form under a key the path was not stored in
 	testGet(t, "http://localhost:"+httpPort+"/hello/vaporz?yourName=turbo&yourname=xxx",
-		`{"message":"[`+rpcType+` server]Hello, xxx"}`)
+		`{"message":"[`+rpcType+` server]Hello, vaporz"}`)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		`{"message":"[`+rpcType+` server]Hello, testtest"}`)
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?your_name=aaa",
+		`{"message":"[`+rpcType+` server]Hello, testtest"}`)
+	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?YOURNAME=aaa",
 		`{"message":"[`+rpcType+` server]Hello, testtest"}`)
 	testPost(t, "http://localhost:"+httpPort+"/hello/testtest",
 		"") // 405 Method Not Allowed
@@ -470,7 +475,7 @@ func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
 	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/", component(s, "TestInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?yourName=testname",
-		`intercepted:{"message":"[`+rpcType+` server]Hello, testname"}`)
+		`intercepted:{"message":"[`+rpcType+` server]Hello, testtest"}`)
 
 	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/", component(s, "TestInterceptor").(turbo.Interceptor))
@@ -584,6 +589,46 @@ func TestParameterBindingThrift(t *testing.T) {
 	testGet(t, base+"/helloinject?your_name=from-query", greeting+`from-server"}`)
 	testPostWithContentType(t, base+"/helloinject", "application/x-www-form-urlencoded",
 		strings.NewReader("your_name=from-form"), greeting+`from-server"}`)
+}
+
+// TestPathWinsOverQueryWhateverTheSpelling pins T18. A route variable used to
+// lose to a query parameter whenever the caller spelled the query differently
+// from the route, because both end up in req.Form under one particular key and
+// binding probed that key before the other. Which source wins is now decided by
+// the source, not by the spelling.
+func TestPathWinsOverQueryWhateverTheSpelling(t *testing.T) {
+	httpPort := "8094"
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, httpPort, "50074", "development")
+
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
+	s.StartGrpcService(gimpl.RegisterServer)
+	time.Sleep(time.Millisecond * 300)
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Millisecond * 300)
+	defer s.Stop()
+
+	base := "http://localhost:" + httpPort
+	greeting := `{"message":"[grpc server]Hello, `
+
+	// the route declares {your_Name}; every spelling of the query loses to it
+	for _, query := range []string{"your_name", "yourName", "YOURNAME", "YourName"} {
+		testGet(t, base+"/hello/vaporz?"+query+"=from-query", greeting+`vaporz"}`)
+	}
+
+	// the query is still used when the route carries no such variable
+	testGet(t, base+"/hello?yourName=from-query", greeting+`from-query"}`)
+
+	// and a JSON request resolves the same way
+	for _, body := range []string{`{}`, `{"yourName":"from-body"}`} {
+		req, err := http.NewRequest("GET", base+"/hello/vaporz?yourName=from-query", strings.NewReader(body))
+		assert.Nil(t, err)
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := http.DefaultClient.Do(req)
+		assert.Nil(t, err)
+		assert.Equal(t, greeting+`vaporz"}`, readResp(resp))
+		resp.Body.Close()
+	}
 }
 
 // TestRouteTableAndNotFoundAreObservable pins T12. Two things used to be

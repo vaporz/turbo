@@ -10,7 +10,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"reflect"
+	"sort"
 	"strings"
+
+	"github.com/gorilla/mux"
 )
 
 // Parameter binding considers every source a request can carry a value in and
@@ -109,8 +112,22 @@ func lookupKeys(fieldName string) []string {
 	return []string{fieldName, strings.ToLower(fieldName), ToSnakeCase(fieldName)}
 }
 
+// pathValue looks fieldName up in the variables the route captured. mux.Vars is
+// safe to read here: parseRequestForm copies the variables into req.Form but
+// leaves the map itself alone.
+func pathValue(fieldName string, req *http.Request) (string, bool) {
+	if req == nil {
+		return "", false
+	}
+	return findPathParamValue(fieldName, mux.Vars(req))
+}
+
 // formValue looks fieldName up in req.Form, which holds the query for every
-// request and additionally the form body for form requests.
+// request and additionally the form body for form requests. The spellings a
+// field has always been probed with are tried first, so the value a caller gets
+// cannot change merely because two keys normalise to the same name; only then
+// does a spelling insensitive pass run, so that yourName, your_name and
+// YOURNAME all reach the same field.
 func formValue(fieldName string, req *http.Request) (string, bool) {
 	if req == nil || req.Form == nil {
 		return "", false
@@ -120,17 +137,36 @@ func formValue(fieldName string, req *http.Request) (string, bool) {
 			return v[0], true
 		}
 	}
+	return normalisedFormValue(fieldName, req)
+}
+
+// normalisedFormValue compares keys with their spelling removed. Keys are visited
+// in sorted order so that the result does not depend on map iteration order.
+func normalisedFormValue(fieldName string, req *http.Request) (string, bool) {
+	wanted := normalizeKey(fieldName)
+	keys := make([]string, 0, len(req.Form))
+	for key := range req.Form {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		if normalizeKey(key) != wanted {
+			continue
+		}
+		if v := req.Form[key]; len(v) > 0 {
+			return v[0], true
+		}
+	}
 	return "", false
 }
 
-// findValue resolves a field of a form request: an injected value wins over
-// everything else, which is the whole point -- it is the only source the client
-// did not supply.
-//
-// Everything else keeps the historical order. Path variables are not read here
-// on purpose: parseRequestForm has already merged them into req.Form, in front
-// of any value sharing their key, so consulting mux.Vars again would give the
-// path a weight the rest of the framework does not give it.
+// findValue resolves a field: an injected value wins over everything else,
+// because it is the only source the client did not supply, and the path wins
+// over the query, because the route already matched on it. The path is read from
+// the route variables rather than from req.Form, so which source wins no longer
+// depends on the spelling the caller happened to use -- a query parameter was
+// merged into req.Form under one particular spelling, and if the caller chose
+// another one the route variable used to lose.
 func findValue(fieldName string, req *http.Request) (string, bool) {
 	if injected, ok := InjectedValue(fieldName, req); ok {
 		if form, ok := formValue(fieldName, req); ok && form != injected {
@@ -138,6 +174,9 @@ func findValue(fieldName string, req *http.Request) (string, bool) {
 				fieldName, injected, form)
 		}
 		return injected, true
+	}
+	if value, ok := pathValue(fieldName, req); ok {
+		return value, true
 	}
 	return formValue(fieldName, req)
 }

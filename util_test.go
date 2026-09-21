@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	sjson "github.com/bitly/go-simplejson"
+	"github.com/gorilla/mux"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -535,4 +536,21 @@ func TestParseRequestFormMustNotTouchNonFormBody(t *testing.T) {
 	got, err := io.ReadAll(req.Body)
 	assert.NoError(t, err)
 	assert.Equal(t, jsonBody, string(got))
+}
+
+func TestMergeMuxVarsKeepsTheRouteVariables(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/hello/vaporz?your_name=query", nil)
+	req.Form = req.URL.Query()
+	req = mux.SetURLVars(req, map[string]string{"your_Name": "vaporz"})
+
+	mergeMuxVars(req)
+
+	// the route variable is copied into req.Form, in front of the query value, so
+	// that a caller reading req.Form directly still sees the path first
+	assert.Equal(t, []string{"vaporz", "query"}, req.Form["your_name"])
+
+	// and mux keeps handing the variable back. Removing it from mux.Vars -- which
+	// is what this used to do whenever the lower cased route name collided with a
+	// query parameter -- is how the query was able to win over the path.
+	assert.Equal(t, map[string]string{"your_Name": "vaporz"}, mux.Vars(req))
 }

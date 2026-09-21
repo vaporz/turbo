@@ -125,28 +125,28 @@ func mergeUpperCaseKeysToLowerCase(req *http.Request) {
 	}
 }
 
+// mergeMuxVars copies the route variables into req.Form, in front of a value
+// sharing their key, because a path parameter has always been readable from
+// req.Form.
+//
+// It no longer rewrites mux.Vars itself. Deleting or lower casing entries there
+// made the map mux hands back depend on which query parameters happened to be
+// present, so a route variable could vanish before binding ever looked at it --
+// which is exactly how the query was able to win over the path when the client
+// spelled it differently.
 func mergeMuxVars(req *http.Request) {
 	muxVars := mux.Vars(req)
-	if muxVars == nil || len(muxVars) == 0 {
+	if len(muxVars) == 0 {
 		return
 	}
-	for k, v := range muxVars {
-		lowerCased := strings.ToLower(k)
-		if k == lowerCased {
+	for key, value := range muxVars {
+		lowerCased := strings.ToLower(key)
+		if values, ok := req.Form[lowerCased]; ok {
+			// route parameters come first
+			req.Form[lowerCased] = append([]string{value}, values...)
 			continue
 		}
-		muxVars[lowerCased] = v
-		delete(muxVars, k)
-	}
-	for key, valueArr := range req.Form {
-		if v, ok := muxVars[key]; ok {
-			// route params comes first
-			req.Form[key] = append([]string{v}, valueArr...)
-			delete(muxVars, key)
-		}
-	}
-	for key, value := range muxVars {
-		req.Form[key] = []string{value}
+		req.Form[lowerCased] = []string{value}
 	}
 }
 
