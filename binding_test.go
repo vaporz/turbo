@@ -100,19 +100,30 @@ func TestJSONObjectKeysDescribeWhatTheBodyCarried(t *testing.T) {
 }
 
 func TestFormValueIsSpellingInsensitive(t *testing.T) {
-	for _, query := range []string{"yourName=x", "your_name=x", "YOURNAME=x", "YoUrNaMe=x"} {
+	// Deliberate decision (2026-09-21): spellings of a parameter name that differ
+	// only in case or in underscores name the same parameter. Treating yourname
+	// and your_name as two parameters was rejected -- turbo already fed both into
+	// the same field, and a client library that rewrites one spelling into the
+	// other would otherwise silently change the value a service reads. The cost is
+	// that two parameters differing only by underscores cannot coexist; see
+	// Turbo-优化候选清单.md §14.6.
+	for _, query := range []string{
+		"yourName=x", "yourname=x", "your_name=x", "YOURNAME=x", "YoUrNaMe=x", "your_n_ame=x",
+	} {
 		req := bindingRequest("/hello?"+query, nil)
 		value, ok := formValue("YourName", req)
 		assert.True(t, ok, query)
 		assert.Equal(t, "x", value, query)
 	}
 
-	// the spellings a field has always been probed with are tried first, so two
-	// keys that normalise to one name cannot change the answer by accident
-	req := bindingRequest("/hello?your_name=turbo&yourname=xxx", nil)
-	value, ok := formValue("YourName", req)
-	assert.True(t, ok)
-	assert.Equal(t, "xxx", value)
+	// when two keys name the same parameter, the spelling a field has always been
+	// probed with first wins, and the order they appear in does not matter
+	for _, query := range []string{"your_name=turbo&yourname=xxx", "yourname=xxx&your_name=turbo"} {
+		req := bindingRequest("/hello?"+query, nil)
+		value, ok := formValue("YourName", req)
+		assert.True(t, ok, query)
+		assert.Equal(t, "xxx", value, query)
+	}
 }
 
 func TestFindValuePrefersThePathWhateverTheSpelling(t *testing.T) {
