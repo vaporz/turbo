@@ -464,33 +464,6 @@ func reflectSliceValue(fieldType reflect.Type, fieldValue reflect.Value, v strin
 	return s, nil
 }
 
-func findValue(fieldName string, req *http.Request) (string, bool) {
-	lowerCasesName := strings.ToLower(fieldName)
-	snakeCaseName := ToSnakeCase(fieldName)
-
-	v, ok := req.Form[lowerCasesName]
-	if ok && len(v) > 0 {
-		return v[0], true
-	}
-	v, ok = req.Form[snakeCaseName]
-	if ok && len(v) > 0 {
-		return v[0], true
-	}
-	ctxValue := req.Context().Value(fieldName)
-	if ctxValue != nil {
-		return ctxValue.(string), true
-	}
-	ctxValue = req.Context().Value(lowerCasesName)
-	if ctxValue != nil {
-		return ctxValue.(string), true
-	}
-	ctxValue = req.Context().Value(snakeCaseName)
-	if ctxValue != nil {
-		return ctxValue.(string), true
-	}
-	return "", false
-}
-
 func BuildRequest(s Servable, v proto.Message, req *http.Request) error {
 	var err error
 	if contentTypes, ok := req.Header["Content-Type"]; ok && strings.Contains(contentTypes[0], "application/json") {
@@ -506,7 +479,10 @@ func BuildRequest(s Servable, v proto.Message, req *http.Request) error {
 			return errors.New(fmt.Sprintf("turbo: failed to BuildRequest for json api, "+
 				"request body: %s, error: %s", bodyStr, err))
 		}
+		rawBody := jsonObjectKeys(bodyStr)
+		bindJSONGaps(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody)
 		setPathParams(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
+		bindJSONInjected(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody)
 	} else {
 		BuildStruct(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
 	}
@@ -527,7 +503,10 @@ func BuildThriftRequest(s Servable, args interface{}, req *http.Request, buildSt
 			return params, errors.New(fmt.Sprintf("turbo: failed to BuildThriftRequest for json api, "+
 				"request body: %s, error: %s", buf.String(), err))
 		}
+		rawBody := jsonObjectKeys(buf.String())
+		bindJSONGaps(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody)
 		setPathParams(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
+		bindJSONInjected(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody)
 		params = make([]reflect.Value, 1)
 		params[0] = reflect.ValueOf(v)
 	} else {
