@@ -6,6 +6,7 @@
 package turbo
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -45,15 +46,22 @@ func TestLegacyProtocGenGo(t *testing.T) {
 	assert.False(t, legacyProtocGenGo("protoc-gen-go v1.3.5\n"))
 }
 
-func TestCheckToolchainRefusesAModernProtocGenGo(t *testing.T) {
-	// protoc-gen-go v1.4 removed --go_out=plugins=grpc, which turbo generates
-	// with; the point of the check is to say that, instead of letting protoc
-	// report an unknown flag somewhere else
+func TestCheckToolchainWarnsAboutAModernProtocGenGo(t *testing.T) {
+	// A modern protoc-gen-go may still generate with plugins=grpc -- v1.26.0 and
+	// v1.31.0 do -- so the check warns rather than refusing: refusing here stopped
+	// a toolchain that works.
 	dir := t.TempDir()
 	fake := filepath.Join(dir, "protoc-gen-go")
-	assert.NoError(t, os.WriteFile(fake, []byte("#!/bin/sh\necho 'protoc-gen-go v1.28.1'\n"), 0755))
+	assert.NoError(t, os.WriteFile(fake, []byte("#!/bin/sh\necho 'protoc-gen-go v1.31.0'\n"), 0755))
 	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
 
+	logged := &bytes.Buffer{}
+	previous := log.Out
+	log.SetOutput(logged)
+	defer log.SetOutput(previous)
+
 	g := &Generator{RpcType: "grpc", FilePaths: []string{t.TempDir()}}
-	assert.Panics(t, func() { g.checkToolchain() })
+	assert.NotPanics(t, func() { g.checkToolchain() })
+	assert.Contains(t, logged.String(), "protoc-gen-go reports protoc-gen-go v1.31.0")
+	assert.Contains(t, logged.String(), "v1.3.5")
 }

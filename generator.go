@@ -45,10 +45,11 @@ func ValidateIncludePaths(paths []string) error {
 	return nil
 }
 
-// legacyProtocGenGo reports whether the installed protoc-gen-go still supports
-// --go_out=plugins=grpc, which is what turbo generates with. protoc-gen-go
-// removed that option in v1.4, and what a caller then sees is a protoc error far
-// away from the cause.
+// legacyProtocGenGo reports whether the installed protoc-gen-go is the old one,
+// which certainly supports --go_out=plugins=grpc, the option turbo generates
+// with. A modern binary may or may not: v1.26.0 and v1.31.0 both generate with
+// it, so unlike the first version of this check the answer is only used to decide
+// whether to warn.
 //
 // A legacy plugin answers --version with "this program should be run by protoc";
 // a modern one prints "protoc-gen-go v1.x.y".
@@ -85,10 +86,16 @@ func (g *Generator) checkToolchain() {
 
 	pluginVersion, _ := exec.Command("protoc-gen-go", "--version").CombinedOutput()
 	if !legacyProtocGenGo(string(pluginVersion)) {
-		panic(fmt.Errorf("turbo: the installed protoc-gen-go is too new (%s). turbo generates with "+
-			"--go_out=plugins=grpc, which protoc-gen-go removed in v1.4; install v1.3.5 "+
-			"(go install github.com/golang/protobuf/protoc-gen-go@v1.3.5)",
-			strings.TrimSpace(string(pluginVersion))))
+		// Whether this release still accepts plugins=grpc cannot be told from the
+		// version string: protoc-gen-go v1.26.0 and v1.31.0 both generate with it,
+		// while the option is on its way out. Refusing here refused toolchains that
+		// work, so say what to do if protoc objects instead of standing in the way.
+		log.Warnf("turbo: protoc-gen-go reports %s. turbo generates with --go_out=plugins=grpc, "+
+			"and releases differ on whether they still accept it (v1.26.0 does, v1.31.0 answers "+
+			"'plugins are not supported'). If protoc fails on that option, install v1.3.5 "+
+			"(go install github.com/golang/protobuf/protoc-gen-go@v1.3.5) or generate the stubs "+
+			"with protoc-gen-go-grpc yourself",
+			strings.TrimSpace(string(pluginVersion)))
 	}
 }
 
