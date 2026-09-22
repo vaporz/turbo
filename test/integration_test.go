@@ -450,8 +450,14 @@ func generate(t *testing.T, rpc string) {
 }
 
 func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
-	testPost(t, "http://localhost:"+httpPort+"/eat?food=banana",
-		`{"message":"Yummy!"}`)
+	// the grpc fixture answers Eat with a field whose proto name and JSON name
+	// differ (owner_openid / ownerOpenid), so this is also the default-spelling
+	// half of T11: without the option, the proto name is what comes out
+	eat := `{"message":"Yummy!"}`
+	if rpcType == "grpc" {
+		eat = `{"message":"Yummy!","owner_openid":"openid-1"}`
+	}
+	testPost(t, "http://localhost:"+httpPort+"/eat?food=banana", eat)
 	testGet(t, "http://localhost:"+httpPort+"/hello",
 		`{"message":"[`+rpcType+` server]Hello, "}`)
 	testGet(t, "http://localhost:"+httpPort+"/hello?your_name=turbo",
@@ -878,12 +884,11 @@ func setJSONFieldNames(t *testing.T, path, value string) {
 	}
 }
 
-// TestJSONFieldNamesIntegration pins T11 on a running server. The key spelling
-// itself is asserted where it is observable -- a response message that carries a
-// field whose proto name differs from its JSON name; the test service has none,
-// so the integration level checks what it can: the option is accepted, it does
-// not change the request path, and a value it cannot understand is refused
-// rather than guessed at.
+// TestJSONFieldNamesIntegration pins T11 end to end. The fixture's EatResponse
+// carries owner_openid, a field whose proto name and JSON name differ, so the
+// spelling the option picks is visible in a real HTTP response: the default run
+// (asserted in runCommonTests) writes the proto name, and this one, started with
+// json_field_names: camel, writes the JSON name of the very same field.
 func TestJSONFieldNamesIntegration(t *testing.T) {
 	httpPort := "8109"
 	cfg := testConfigPath(t)
@@ -896,6 +901,9 @@ func TestJSONFieldNamesIntegration(t *testing.T) {
 	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
 	time.Sleep(time.Millisecond * 300)
 	defer s.Stop()
+
+	testPost(t, "http://localhost:"+httpPort+"/eat?food=banana",
+		`{"message":"Yummy!","ownerOpenid":"openid-1"}`)
 
 	// the option does not disturb the normal path
 	testGet(t, "http://localhost:"+httpPort+"/hello?your_name=ok", `{"message":"[grpc server]Hello, ok"}`)

@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"text/template"
 )
@@ -480,10 +481,14 @@ func methodNames(urlServiceMaps [][4]string) map[string][]string {
 	}
 	methodNames := make(map[string][]string)
 	for k, v := range methodNamesMap {
-		methods := make([]string, 0)
+		methods := make([]string, 0, len(v))
 		for m := range v {
 			methods = append(methods, m)
 		}
+		// sorted, so that regenerating a service produces the same file: the map
+		// above has no order, and an unsorted list reorders the generated switch
+		// cases differently on every run
+		sort.Strings(methods)
 		methodNames[k] = methods
 	}
 	return methodNames
