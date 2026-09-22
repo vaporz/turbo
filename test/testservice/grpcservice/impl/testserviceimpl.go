@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/vaporz/turbo/test/testservice/gen/proto"
-	"golang.org/x/net/context"
+	"context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )

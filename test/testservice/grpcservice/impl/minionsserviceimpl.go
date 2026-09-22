@@ -2,7 +2,7 @@ package impl
 
 import (
 	"github.com/vaporz/turbo/test/testservice/gen/proto"
-	"golang.org/x/net/context"
+	"context"
 )
 
 type MinionsService struct {

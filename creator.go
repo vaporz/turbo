@@ -287,7 +287,7 @@ func (c *Creator) generateGrpcServiceImpl() {
 		`package impl
 
 import (
-	"golang.org/x/net/context"
+	"context"
 	"{{.PkgPath}}/gen/proto"
 	"google.golang.org/grpc"
 )
