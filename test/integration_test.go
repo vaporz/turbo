@@ -7,9 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -61,9 +63,10 @@ func component(s *turbo.Server, name string) interface{} {
 }
 
 func TestGrpcService(t *testing.T) {
-	httpPort := "8081"
+	httpPort := freePort(t)
+	servicePort := freePort(t)
 	cfg := testConfigPath(t)
-	overwriteServiceYaml(cfg, "8081", "50061", "development")
+	overwriteServiceYaml(cfg, httpPort, servicePort, "development")
 
 	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
 	s.Start(gcomponent.GrpcClient, gen.GrpcSwitcher, gimpl.RegisterServer)
@@ -119,7 +122,7 @@ func TestGrpcService(t *testing.T) {
 
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", component(s.Server, "MetadataInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
-		`{"message":"[grpc server]Hello, testtest"}metadata:header:headerval:trailer:trailerval:peer:127.0.0.1:50061`)
+		`{"message":"[grpc server]Hello, testtest"}metadata:header:headerval:trailer:trailerval:peer:127.0.0.1:`+servicePort)
 	s.Components.Reset()
 
 	body := strings.NewReader(`{"values":{"someId":123}, "yourName":"a name", "boolValue":true}`)
@@ -134,9 +137,9 @@ func TestGrpcService(t *testing.T) {
 }
 
 func TestThriftService(t *testing.T) {
-	httpPort := "8082"
+	httpPort := freePort(t)
 	cfg := testConfigPath(t)
-	overwriteServiceYaml(cfg, httpPort, "50062", "production")
+	overwriteServiceYaml(cfg, httpPort, freePort(t), "production")
 
 	s := turbo.NewThriftServer(&testInitializer{}, cfg)
 	turbo.SetOutput(os.Stdout)
@@ -194,9 +197,9 @@ func TestThriftService(t *testing.T) {
 	s.Stop()
 }
 func TestHTTPGrpcService(t *testing.T) {
-	httpPort := "8083"
+	httpPort := freePort(t)
 	cfg := testConfigPath(t)
-	overwriteServiceYaml(cfg, httpPort, "50063", "development")
+	overwriteServiceYaml(cfg, httpPort, freePort(t), "development")
 
 	s := turbo.NewGrpcServer(nil, cfg)
 	s.StartGrpcService(gimpl.RegisterServer)
@@ -211,9 +214,9 @@ func TestHTTPGrpcService(t *testing.T) {
 }
 
 func TestHTTPThriftService(t *testing.T) {
-	httpPort := "8084"
+	httpPort := freePort(t)
 	cfg := testConfigPath(t)
-	overwriteServiceYaml(cfg, httpPort, "50064", "development")
+	overwriteServiceYaml(cfg, httpPort, freePort(t), "development")
 
 	s := turbo.NewThriftServer(nil, cfg)
 	s.StartThriftService(timpl.TProcessor)
@@ -228,9 +231,9 @@ func TestHTTPThriftService(t *testing.T) {
 }
 
 func TestLoadComponentsFromConfig(t *testing.T) {
-	httpPort := "8085"
+	httpPort := freePort(t)
 	cfg := testConfigPath(t)
-	overwriteServiceYamlWithGrpcComponents(cfg, httpPort, "50065", "production")
+	overwriteServiceYamlWithGrpcComponents(cfg, httpPort, freePort(t), "production")
 
 	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
 	_, err := s.Component("test")
@@ -250,7 +253,7 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello_hijacker", "hijacker")
 	testGet(t, "http://localhost:"+httpPort+"/hello/error", "from errorHandler:rpc error: code = Unknown desc = grpc error")
 
-	changeServiceYamlWithGrpcComponents(cfg, httpPort, "50065", "production")
+	changeServiceYamlWithGrpcComponents(cfg, httpPort, freePort(t), "production")
 	testGetEventually(t, "http://localhost:"+httpPort+"/hello",
 		`test1_intercepted:preprocessor:postprocessor:{"message":"[grpc server]Hello, "}`,
 		time.Second*10)
@@ -262,9 +265,9 @@ func TestLoadComponentsFromConfig(t *testing.T) {
 // describe what changed: a JSON request no longer ignores the URL, and a request
 // body can no longer override a value the server verified.
 func TestParameterBinding(t *testing.T) {
-	httpPort := "8086"
+	httpPort := freePort(t)
 	cfg := testConfigPath(t)
-	overwriteServiceYamlForBinding(cfg, httpPort, "50066")
+	overwriteServiceYamlForBinding(cfg, httpPort, freePort(t))
 
 	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
 	s.StartGrpcService(gimpl.RegisterServer)
@@ -575,9 +578,9 @@ func readResp(resp *http.Response) string {
 // per method argument, so a thrift JSON request panics before reaching binding
 // at all. That is a separate defect, reported separately.
 func TestParameterBindingThrift(t *testing.T) {
-	httpPort := "8087"
+	httpPort := freePort(t)
 	cfg := testConfigPath(t)
-	overwriteServiceYamlForBinding(cfg, httpPort, "50067")
+	overwriteServiceYamlForBinding(cfg, httpPort, freePort(t))
 
 	s := turbo.NewThriftServer(&testInitializer{}, cfg)
 	s.StartThriftService(timpl.TProcessor)
@@ -606,9 +609,9 @@ func TestParameterBindingThrift(t *testing.T) {
 // binding probed that key before the other. Which source wins is now decided by
 // the source, not by the spelling.
 func TestPathWinsOverQueryWhateverTheSpelling(t *testing.T) {
-	httpPort := "8094"
+	httpPort := freePort(t)
 	cfg := testConfigPath(t)
-	overwriteServiceYaml(cfg, httpPort, "50074", "development")
+	overwriteServiceYaml(cfg, httpPort, freePort(t), "development")
 
 	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
 	s.StartGrpcService(gimpl.RegisterServer)
@@ -645,9 +648,9 @@ func TestPathWinsOverQueryWhateverTheSpelling(t *testing.T) {
 // answering 200 makes that request indistinguishable from one that never carried
 // the parameter, so the caller has no way to learn.
 func TestInvalidParameterIsRejected(t *testing.T) {
-	httpPort := "8096"
+	httpPort := freePort(t)
 	cfg := testConfigPath(t)
-	overwriteServiceYaml(cfg, httpPort, "50076", "development")
+	overwriteServiceYaml(cfg, httpPort, freePort(t), "development")
 
 	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
 	s.StartGrpcService(gimpl.RegisterServer)
@@ -671,9 +674,9 @@ func TestInvalidParameterIsRejected(t *testing.T) {
 // TestInvalidParameterIsRejectedThrift covers the thrift binding path, which
 // swallowed the same failure inside BuildArgs.
 func TestInvalidParameterIsRejectedThrift(t *testing.T) {
-	httpPort := "8097"
+	httpPort := freePort(t)
 	cfg := testConfigPath(t)
-	overwriteServiceYaml(cfg, httpPort, "50077", "development")
+	overwriteServiceYaml(cfg, httpPort, freePort(t), "development")
 
 	s := turbo.NewThriftServer(&testInitializer{}, cfg)
 	s.StartThriftService(timpl.TProcessor)
@@ -707,7 +710,7 @@ func testRejectedParameter(t *testing.T, url string) string {
 func TestRequestsDuringReloadAreRaceFree(t *testing.T) {
 	httpPort := "8107"
 	cfg := testConfigPath(t)
-	overwriteServiceYaml(cfg, httpPort, "50087", "development")
+	overwriteServiceYaml(cfg, httpPort, freePort(t), "development")
 
 	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
 	s.StartGrpcService(gimpl.RegisterServer)
@@ -738,9 +741,9 @@ func TestRequestsDuringReloadAreRaceFree(t *testing.T) {
 	}
 
 	for i := 0; i < 4; i++ {
-		changeServiceYamlWithGrpcComponents(cfg, httpPort, "50087", "production")
+		changeServiceYamlWithGrpcComponents(cfg, httpPort, freePort(t), "production")
 		time.Sleep(time.Millisecond * 150)
-		overwriteServiceYaml(cfg, httpPort, "50087", "development")
+		overwriteServiceYaml(cfg, httpPort, freePort(t), "development")
 		time.Sleep(time.Millisecond * 150)
 	}
 	close(stop)
@@ -753,7 +756,7 @@ func TestRequestsDuringReloadAreRaceFree(t *testing.T) {
 func TestStoppedServerIgnoresConfigChanges(t *testing.T) {
 	httpPort := "8108"
 	cfg := testConfigPath(t)
-	overwriteServiceYaml(cfg, httpPort, "50088", "development")
+	overwriteServiceYaml(cfg, httpPort, freePort(t), "development")
 
 	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
 	s.StartGrpcService(gimpl.RegisterServer)
@@ -768,7 +771,7 @@ func TestStoppedServerIgnoresConfigChanges(t *testing.T) {
 	s.Stop()
 	time.Sleep(time.Millisecond * 200)
 
-	changeServiceYamlWithGrpcComponents(cfg, httpPort, "50088", "production")
+	changeServiceYamlWithGrpcComponents(cfg, httpPort, freePort(t), "production")
 	time.Sleep(time.Millisecond * 800)
 	assert.NotContains(t, logged.String(), "Reloading configuration...")
 }
@@ -782,7 +785,7 @@ func TestStoppedServerIgnoresConfigChanges(t *testing.T) {
 func TestThriftJSONBodyNamesArguments(t *testing.T) {
 	httpPort := "8106"
 	cfg := testConfigPath(t)
-	overwriteServiceYaml(cfg, httpPort, "50086", "development")
+	overwriteServiceYaml(cfg, httpPort, freePort(t), "development")
 
 	s := turbo.NewThriftServer(&testInitializer{}, cfg)
 	s.StartThriftService(timpl.TProcessor)
@@ -839,7 +842,7 @@ func TestThriftJSONBodyNamesArguments(t *testing.T) {
 func TestInterceptorChainRunsGlobalAndRouteLevel(t *testing.T) {
 	httpPort := "8102"
 	cfg := testConfigPath(t)
-	overwriteServiceYaml(cfg, httpPort, "50082", "development")
+	overwriteServiceYaml(cfg, httpPort, freePort(t), "development")
 
 	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
 	s.StartGrpcService(gimpl.RegisterServer)
@@ -863,9 +866,9 @@ func TestInterceptorChainRunsGlobalAndRouteLevel(t *testing.T) {
 // dropping requests -- then "it never arrived" and "it arrived and was dropped"
 // look identical from the outside.
 func TestRouteTableAndNotFoundAreObservable(t *testing.T) {
-	httpPort := "8089"
+	httpPort := freePort(t)
 	cfg := testConfigPath(t)
-	writeRawConfig(t, cfg, rawServiceYaml(httpPort, "50069", ""))
+	writeRawConfig(t, cfg, rawServiceYaml(httpPort, freePort(t), ""))
 
 	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
 	s.StartGrpcService(gimpl.RegisterServer)
@@ -924,9 +927,9 @@ func (b *syncBuffer) String() string {
 // failure with 500 makes a caller's mistake look like a broken service. An error
 // can now carry the status it deserves, and the default handler honours it.
 func TestErrorStatusCodes(t *testing.T) {
-	httpPort := "8091"
+	httpPort := freePort(t)
 	cfg := testConfigPath(t)
-	overwriteServiceYaml(cfg, httpPort, "50071", "development")
+	overwriteServiceYaml(cfg, httpPort, freePort(t), "development")
 
 	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
 	s.StartGrpcService(gimpl.RegisterServer)
@@ -982,10 +985,10 @@ func TestErrorStatusCodes(t *testing.T) {
 // means the server does not come up; on reload it means the running
 // configuration stays exactly as it was.
 func TestRouteAuditRefusesUnprotectedRoutes(t *testing.T) {
-	httpPort := "8090"
+	httpPort := freePort(t)
 	cfg := testConfigPath(t)
 	auth := "auth:\n  interceptors:\n    - TestInterceptor\n"
-	writeRawConfig(t, cfg, rawServiceYaml(httpPort, "50070",
+	writeRawConfig(t, cfg, rawServiceYaml(httpPort, freePort(t),
 		"interceptor:\n  - GET /hello TestInterceptor\n  - POST /hello TestInterceptor\n")+auth)
 
 	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
@@ -1008,7 +1011,7 @@ func TestRouteAuditRefusesUnprotectedRoutes(t *testing.T) {
 
 	// an interceptor that is not declared as an auth interceptor leaves the route
 	// effectively unprotected, so this configuration is refused
-	writeRawConfig(t, cfg, rawServiceYaml(httpPort, "50070",
+	writeRawConfig(t, cfg, rawServiceYaml(httpPort, freePort(t),
 		"interceptor:\n  - GET /hello Test1Interceptor\n  - POST /hello Test1Interceptor\n")+auth)
 	time.Sleep(time.Millisecond * 800)
 	testGet(t, base+"/hello?your_name=ok", guarded)
@@ -1017,13 +1020,13 @@ func TestRouteAuditRefusesUnprotectedRoutes(t *testing.T) {
 
 	// and so is one that forgot the interceptor line altogether, which is the
 	// mistake this audit exists for
-	writeRawConfig(t, cfg, rawServiceYaml(httpPort, "50070", "")+auth)
+	writeRawConfig(t, cfg, rawServiceYaml(httpPort, freePort(t), "")+auth)
 	time.Sleep(time.Millisecond * 800)
 	testGet(t, base+"/hello?your_name=ok", guarded)
 
 	// at startup the same violation means the server does not come up at all
 	refusedCfg := testConfigPath(t)
-	writeRawConfig(t, refusedCfg, rawServiceYaml("8092", "50072", "")+auth)
+	writeRawConfig(t, refusedCfg, rawServiceYaml(freePort(t), freePort(t), "")+auth)
 	refused := turbo.NewGrpcServer(&testInitializer{}, refusedCfg)
 	assert.Panics(t, func() {
 		refused.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
@@ -1037,9 +1040,9 @@ func TestRouteAuditRefusesUnprotectedRoutes(t *testing.T) {
 // all, and a file that does not parse panicked inside the watcher goroutine,
 // where nothing recovered it.
 func TestFailedConfigReloadKeepsServing(t *testing.T) {
-	httpPort := "8088"
+	httpPort := freePort(t)
 	cfg := testConfigPath(t)
-	writeRawConfig(t, cfg, rawServiceYaml(httpPort, "50068", ""))
+	writeRawConfig(t, cfg, rawServiceYaml(httpPort, freePort(t), ""))
 
 	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
 	s.StartGrpcService(gimpl.RegisterServer)
@@ -1053,7 +1056,7 @@ func TestFailedConfigReloadKeepsServing(t *testing.T) {
 	testGet(t, base+"/hello?your_name=before", before)
 
 	// a reload that names a component nobody registered must be rejected whole
-	writeRawConfig(t, cfg, rawServiceYaml(httpPort, "50068",
+	writeRawConfig(t, cfg, rawServiceYaml(httpPort, freePort(t),
 		"interceptor:\n  - GET /hello NoSuchInterceptor\n"))
 	time.Sleep(time.Millisecond * 500)
 
@@ -1065,7 +1068,7 @@ func TestFailedConfigReloadKeepsServing(t *testing.T) {
 	testGet(t, base+"/hello?your_name=before", before)
 
 	// and the reloader is still alive rather than wedged by the failures
-	writeRawConfig(t, cfg, rawServiceYaml(httpPort, "50068",
+	writeRawConfig(t, cfg, rawServiceYaml(httpPort, freePort(t),
 		"preprocessor:\n  - GET /hello preProcessor\n"))
 	testGetEventually(t, base+"/hello?your_name=after",
 		`preprocessor:{"message":"[grpc server]Hello, after"}`, time.Second*10)
@@ -1327,6 +1330,20 @@ var convertThriftCommonValues turbo.Convertor = func(req *http.Request) reflect.
 // reload under test is driven by inotify: on a DrvFs mount (for example a repo
 // checked out under /mnt/d in WSL) events are dropped, and the watcher then
 // never reports the change at all.
+// freePort asks the operating system for a port nobody is listening on. The
+// suite used to hardcode them, so two runs that overlapped -- or a listener the
+// previous run had not released yet -- failed with "address already in use"
+// instead of testing anything.
+func freePort(t *testing.T) string {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("cannot find a free port: %v", err)
+	}
+	defer listener.Close()
+	return strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
+}
+
 func testConfigPath(t *testing.T) string {
 	t.Helper()
 	f, err := os.CreateTemp(t.TempDir(), "service_*.yaml")
