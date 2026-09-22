@@ -177,6 +177,7 @@ func TestThriftService(t *testing.T) {
 		`{"message":"[thrift server]values.TransactionId=222222, yourName=testtest,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0, stringList=[], i32List=[], boolList=[], doubleList=[]"}`)
 	s.Components.Reset()
 
+	// testJson takes a single argument, so the body is that argument
 	body := strings.NewReader(`{"StringValue":"123", "int32Value":456, "boolvalue":true}`)
 	testPostWithContentType(t, "http://localhost:"+httpPort+"/testjson", "application/json", body,
 		`{"message":"[thrift server]json= TestJsonRequest({StringValue:123 Int32Value:456 BoolValue:true})"}`)
@@ -187,7 +188,8 @@ func TestThriftService(t *testing.T) {
 
 	body = strings.NewReader(`{ttttt`)
 	testPostWithContentType(t, "http://localhost:"+httpPort+"/testjson/123/456", "application/json", body,
-		"turbo: failed to BuildThriftRequest for json api, request body: {ttttt, error: invalid character 't' looking for beginning of object key string\n")
+		"turbo: the request body is not a JSON object holding the fields of Request: "+
+			"invalid character 't' looking for beginning of object key string\n")
 
 	s.Stop()
 }
@@ -697,6 +699,65 @@ func testRejectedParameter(t *testing.T, url string) string {
 	resp.Body.Close()
 	assert.Contains(t, body, "turbo: cannot bind")
 	return body
+}
+
+// TestThriftJSONBodyNamesArguments pins T17. A thrift method takes a list of
+// arguments, so its JSON body names them -- the same names the generated Args
+// struct carries in its tags, and the same ones the form branch binds to. The
+// old implementation unmarshalled the whole body into the first argument and
+// returned a single value, so a method with more than one argument panicked
+// with "index out of range" and the caller saw the connection simply close.
+func TestThriftJSONBodyNamesArguments(t *testing.T) {
+	httpPort := "8106"
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, httpPort, "50086", "development")
+
+	s := turbo.NewThriftServer(&testInitializer{}, cfg)
+	s.StartThriftService(timpl.TProcessor)
+	time.Sleep(time.Millisecond * 500)
+	s.StartHTTPServer(tcompoent.ThriftClient, gen.ThriftSwitcher)
+	time.Sleep(time.Millisecond * 500)
+	defer s.Stop()
+
+	base := "http://localhost:" + httpPort
+	post := func(url, body string) (int, string) {
+		resp, err := http.Post(base+url, "application/json", strings.NewReader(body))
+		assert.Nil(t, err)
+		defer resp.Body.Close()
+		return resp.StatusCode, readResp(resp)
+	}
+
+	// a single argument method takes the body as that argument, which is how it
+	// has always been called
+	status, body := post("/testjson", `{"stringValue":"x","int32Value":7}`)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Contains(t, body, "StringValue:x")
+	assert.Contains(t, body, "Int32Value:7")
+
+	// wrapping it in the argument name is refused: the body is the argument, and
+	// "request" is not a field of it
+	status, body = post("/testjson", `{"request":{"stringValue":"x"}}`)
+	assert.Equal(t, http.StatusBadRequest, status)
+	assert.Contains(t, body, "not fields of the argument Request")
+
+	// a twelve argument method now works, by argument name and by spelling
+	// variant, and an absent argument keeps its zero value
+	status, body = post("/hello", `{"yourName":"from-json","int64Value":7}`)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Contains(t, body, "Hello, from-json")
+
+	status, body = post("/hello", `{"your_name":"snake"}`)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Contains(t, body, "Hello, snake")
+
+	status, _ = post("/hello", `{}`)
+	assert.Equal(t, http.StatusOK, status)
+
+	// a key that names no argument is refused, listing the ones that exist
+	status, body = post("/hello", `{"yournameTypo":"x"}`)
+	assert.Equal(t, http.StatusBadRequest, status)
+	assert.Contains(t, body, "yournameTypo")
+	assert.Contains(t, body, "YourName")
 }
 
 // TestInterceptorChainRunsGlobalAndRouteLevel pins T4①. A route that declares an

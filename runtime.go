@@ -10,7 +10,6 @@ import (
 	// TODO support logging levels, log file path, etc.
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -567,26 +566,18 @@ func BuildThriftRequest(s Servable, args interface{}, req *http.Request, buildSt
 	if contentTypes, ok := req.Header["Content-Type"]; ok && strings.Contains(contentTypes[0], "application/json") {
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(req.Body)
-		v := reflect.New(reflect.ValueOf(args).Field(0).Type().Elem()).Interface()
-		err := json.Unmarshal(buf.Bytes(), v)
-		// TODO [2] refactor error, define own errors?
-		if err != nil {
-			// TODO use fmt.Errorf()
-			return params, WithStatus(fmt.Errorf("turbo: failed to BuildThriftRequest for json api, "+
-				"request body: %s, error: %s", buf.String(), err), http.StatusBadRequest)
+		// every argument of the method is built from the body; the generated
+		// switcher indexes one value per argument, and returning fewer used to
+		// panic inside the handler
+		argsValue := reflect.New(reflect.TypeOf(args))
+		if err := bindThriftArgsFromJSON(argsValue.Elem(), buf.Bytes(), req); err != nil {
+			return nil, err
 		}
-		rawBody := jsonObjectKeys(buf.String())
-		if err := bindJSONGaps(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody); err != nil {
-			return params, err
+		params = make([]reflect.Value, argsValue.Elem().NumField())
+		for i := range params {
+			params[i] = argsValue.Elem().Field(i)
 		}
-		if err := setPathParams(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req); err != nil {
-			return params, err
-		}
-		if err := bindJSONInjected(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody); err != nil {
-			return params, err
-		}
-		params = make([]reflect.Value, 1)
-		params[0] = reflect.ValueOf(v)
+		return params, nil
 	} else {
 		params, err = BuildArgs(s, reflect.TypeOf(args), reflect.ValueOf(args), req, buildStructArg)
 	}

@@ -6,6 +6,7 @@
 package turbo
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -326,4 +327,275 @@ func bindingErrorFor(fieldName, value string, req *http.Request, cause error) er
 		source = "path parameter"
 	}
 	return WithStatus(fmt.Errorf("turbo: cannot bind %s from %s %q: %w", fieldName, source, value, cause), status)
+}
+
+// A thrift method takes a list of arguments rather than one request message, so
+// a JSON body names them:
+//
+//	{"values": {...}, "yourName": "a name", "int64Value": 7}
+//
+// Those are the names the generated Args struct already carries in its json and
+// thrift tags, and the same ones the form branch binds to. Building every
+// argument from the body is what the generated switcher expects; the old code
+// unmarshalled the whole body into the first argument and returned one value, so
+// any method with more than one argument panicked with an index out of range.
+type thriftBody struct {
+	raw   map[string]json.RawMessage
+	byKey map[string]string // normalised name -> the key the caller wrote
+	used  map[string]bool
+}
+
+func decodeThriftBody(body []byte) (*thriftBody, error) {
+	b := &thriftBody{
+		raw:   map[string]json.RawMessage{},
+		byKey: map[string]string{},
+		used:  map[string]bool{},
+	}
+	if len(bytes.TrimSpace(body)) == 0 {
+		// an empty body names no argument at all
+		return b, nil
+	}
+	if err := json.Unmarshal(body, &b.raw); err != nil {
+		return nil, err
+	}
+	for key := range b.raw {
+		b.byKey[normalizeKey(key)] = key
+	}
+	return b, nil
+}
+
+// argumentNames lists the names one argument may be called by, including the
+// spelling variants normaliseKey makes equivalent.
+func argumentNames(field reflect.StructField) []string {
+	names := []string{field.Name}
+	for _, tag := range []string{"json", "thrift"} {
+		if value := field.Tag.Get(tag); value != "" {
+			names = append(names, strings.Split(value, ",")[0])
+		}
+	}
+	return names
+}
+
+// take returns the body member naming this argument and marks it as consumed.
+func (b *thriftBody) take(field reflect.StructField) (json.RawMessage, bool) {
+	for _, name := range argumentNames(field) {
+		key, ok := b.byKey[normalizeKey(name)]
+		if !ok {
+			continue
+		}
+		b.used[key] = true
+		return b.raw[key], true
+	}
+	return nil, false
+}
+
+// unused lists the keys that name no argument of the method.
+func (b *thriftBody) unused() []string {
+	var left []string
+	for key := range b.raw {
+		if !b.used[key] {
+			left = append(left, key)
+		}
+	}
+	sort.Strings(left)
+	return left
+}
+
+func argumentNameList(theType reflect.Type) []string {
+	names := make([]string, 0, theType.NumField())
+	for i := 0; i < theType.NumField(); i++ {
+		names = append(names, theType.Field(i).Name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// bindThriftArgsFromJSON fills a thrift Args struct from a JSON body, then from
+// the sources that are not the body, in the order the grpc path uses: query/form
+// fills what the body did not name, the path overrides it, and an injected value
+// overrides everything.
+//
+// A thrift method takes a list of arguments rather than one request message, so
+// a body with more than one argument to fill names them:
+//
+//	{"values": {...}, "yourName": "a name", "int64Value": 7}
+//
+// A method with a single argument has no other sensible reading: there the body
+// is that argument, which is what it has always been for a single argument
+// method. The rule depends only on the method signature, never on the content of
+// the body, so there is nothing to guess.
+//
+// An argument the body does not name keeps its zero value. A key that names no
+// argument, or no field of the single argument, is refused rather than ignored:
+// a misspelling would otherwise look exactly like a caller who sent nothing,
+// which is the failure mode T3 removed from the other binding path.
+func bindThriftArgsFromJSON(args reflect.Value, body []byte, req *http.Request) error {
+	theType := args.Type()
+	if theType.NumField() == 1 {
+		return bindSingleThriftArg(args.Field(0), theType.Field(0), body, req)
+	}
+
+	parsed, err := decodeThriftBody(body)
+	if err != nil {
+		return WithStatus(fmt.Errorf("turbo: the request body is not a JSON object naming the arguments of "+
+			"this method (%v): %w", argumentNameList(theType), err), http.StatusBadRequest)
+	}
+	fromBody := make([]bool, theType.NumField())
+	left, err := bindStructFieldsFromBody(args, parsed, fromBody)
+	if err != nil {
+		return err
+	}
+	if len(left) > 0 {
+		return WithStatus(fmt.Errorf("turbo: the request body names %v, which are not arguments of this method (%v)",
+			left, argumentNameList(theType)), http.StatusBadRequest)
+	}
+
+	for i := 0; i < theType.NumField(); i++ {
+		name := theType.Field(i).Name
+		field := args.Field(i)
+		if isNestedArgument(field) {
+			// the argument is a message of its own: bind inside it, skipping a
+			// pointer the body did not provide rather than inventing one
+			if field.IsNil() {
+				continue
+			}
+			if err := bindThriftArgSources(field.Type().Elem(), field.Elem(), req,
+				lowerKeys(mustObject(bodyKeyFor(parsed, theType.Field(i)))), nil); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := bindScalarArg(field, name, fromBody[i], req); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// bindSingleThriftArg fills the one argument of a single argument method. The
+// body is that argument: an object when the argument is a message, a bare JSON
+// value when it is not.
+func bindSingleThriftArg(field reflect.Value, structField reflect.StructField, body []byte, req *http.Request) error {
+	if !isNestedArgument(field) {
+		if err := json.Unmarshal(body, field.Addr().Interface()); err != nil {
+			return WithStatus(fmt.Errorf("turbo: cannot read thrift argument %s from the request body: %w",
+				structField.Name, err), http.StatusBadRequest)
+		}
+		return bindScalarArg(field, structField.Name, true, req)
+	}
+
+	parsed, err := decodeThriftBody(body)
+	if err != nil {
+		return WithStatus(fmt.Errorf("turbo: the request body is not a JSON object holding the fields of %s: %w",
+			structField.Name, err), http.StatusBadRequest)
+	}
+	argument := reflect.New(field.Type().Elem())
+	left, err := bindStructFieldsFromBody(argument.Elem(), parsed, nil)
+	if err != nil {
+		return err
+	}
+	if len(left) > 0 {
+		return WithStatus(fmt.Errorf("turbo: the request body names %v, which are not fields of the "+
+			"argument %s (%v)", left, structField.Name, fieldNameList(field.Type().Elem())), http.StatusBadRequest)
+	}
+	field.Set(argument)
+
+	return bindThriftArgSources(field.Type().Elem(), field.Elem(), req, lowerKeys(mustObject(body)), nil)
+}
+
+// bindThriftArgSources applies the sources that are not the body to a message
+// argument: query/form fills what the body did not name, then the path, then an
+// injected value.
+func bindThriftArgSources(theType reflect.Type, theValue reflect.Value, req *http.Request,
+	raw map[string]json.RawMessage, _ []bool) error {
+	if err := bindJSONGaps(theType, theValue, req, raw); err != nil {
+		return err
+	}
+	if err := setPathParams(theType, theValue, req); err != nil {
+		return err
+	}
+	return bindJSONInjected(theType, theValue, req, raw)
+}
+
+// bindScalarArg fills an argument that is a value rather than a message: query
+// and form values name the argument itself, then the path overrides it, then an
+// injected value overrides everything.
+func bindScalarArg(field reflect.Value, name string, fromBody bool, req *http.Request) error {
+	if !fromBody {
+		if value, ok := formValue(name, req); ok {
+			if err := setValue(field.Type(), field, value); err != nil {
+				return bindingErrorFor(name, value, req, err)
+			}
+		}
+	}
+	if value, ok := pathValue(name, req); ok {
+		if err := setValue(field.Type(), field, value); err != nil {
+			return bindingErrorFor(name, value, req, err)
+		}
+	}
+	if value, ok := InjectedValue(name, req); ok {
+		if err := setValue(field.Type(), field, value); err != nil {
+			return bindingErrorFor(name, value, req, err)
+		}
+	}
+	return nil
+}
+
+// bindStructFieldsFromBody fills the fields of a struct from a decoded body,
+// recording which of them the body named and returning the keys that name no
+// field at all.
+func bindStructFieldsFromBody(structValue reflect.Value, parsed *thriftBody, named []bool) ([]string, error) {
+	theType := structValue.Type()
+	for i := 0; i < theType.NumField(); i++ {
+		raw, ok := parsed.take(theType.Field(i))
+		if !ok {
+			continue
+		}
+		if err := json.Unmarshal(raw, structValue.Field(i).Addr().Interface()); err != nil {
+			return nil, WithStatus(fmt.Errorf("turbo: cannot read %s from the request body: %w",
+				theType.Field(i).Name, err), http.StatusBadRequest)
+		}
+		if named != nil {
+			named[i] = true
+		}
+	}
+	return parsed.unused(), nil
+}
+
+// bodyKeyFor returns the body member an argument was read from.
+func bodyKeyFor(parsed *thriftBody, field reflect.StructField) json.RawMessage {
+	for _, name := range argumentNames(field) {
+		if key, ok := parsed.byKey[normalizeKey(name)]; ok {
+			return parsed.raw[key]
+		}
+	}
+	return nil
+}
+
+func fieldNameList(theType reflect.Type) []string {
+	names := make([]string, 0, theType.NumField())
+	for i := 0; i < theType.NumField(); i++ {
+		names = append(names, theType.Field(i).Name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// isNestedArgument reports whether an argument is a message of its own rather
+// than a value the request can spell out directly.
+func isNestedArgument(field reflect.Value) bool {
+	return field.Kind() == reflect.Ptr && field.Type().Elem().Kind() == reflect.Struct
+}
+
+// mustObject decodes a raw JSON object, returning nil when it is absent or is
+// not an object.
+func mustObject(raw json.RawMessage) map[string]json.RawMessage {
+	if len(raw) == 0 {
+		return nil
+	}
+	var members map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &members); err != nil {
+		return nil
+	}
+	return members
 }
