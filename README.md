@@ -23,6 +23,31 @@ Please create an issue if you have encountered any problems or have any new idea
  * [Hijacker](https://vaporz.github.io/master/en/hijacker.html#hijacker): Take over requests, do anything you want!
  * [Convertor](https://vaporz.github.io/master/en/convertor.html#convertor): Tell Turbo how to set a struct.
  * [Service Multiplexing](https://vaporz.github.io/master/en/multiplexing.html)
+## Components are singletons, and what a reload covers
+
+Two things bite people who come from other frameworks, so they are written down here.
+
+**A component is one instance, shared by every request.** `RegisterComponent` keeps
+one value per name and turbo calls it concurrently, so a field written in `Before`
+and read in `After` belongs to whichever requests overlap. Keep per request state in
+the request context instead.
+
+**A configuration change does not restart everything.** Reloading a `service.yaml`
+takes effect for:
+
+| Reloaded | Needs a restart |
+|---|---|
+| `urlmapping` (the routes) | `http_port` |
+| `interceptor` / `preprocessor` / `postprocessor` / `hijacker` / `convertor` / `errorhandler` | `grpc_service_port`, `thrift_service_port` |
+| `filter_proto_json` and its sub options | `environment`, `turbo_log_path` |
+| `json_field_names`, `auth` | `file_root_path`, `package_path` (code generation only) |
+
+A reload that cannot be loaded is refused: at startup it stops the server, and while
+running it is logged and the previous configuration keeps serving. A route audit
+reports every route and the interceptors behind it, and refuses a configuration that
+would leave one of them without a declared auth interceptor (see `auth.interceptors`
+and `auth.public_routes`).
+
 ## Index
  * [Create a service on the fly](https://vaporz.github.io/master/en/create.html)
  * [Command line tools](https://vaporz.github.io/master/en/command.html)

@@ -860,6 +860,85 @@ func TestInterceptorChainRunsGlobalAndRouteLevel(t *testing.T) {
 		`common-before,route-before,{"message":"[grpc server]Hello, name"}route-after,common-after,`)
 }
 
+// setJSONFieldNames inserts the json_field_names key into a config file, so a test
+// can start a server with the option without a second template.
+func setJSONFieldNames(t *testing.T, path, value string) {
+	t.Helper()
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("cannot read %s: %v", path, err)
+	}
+	lines := strings.SplitN(string(content), "\n", 2)
+	updated := lines[0] + "\n  json_field_names: " + value + "\n"
+	if len(lines) > 1 {
+		updated += lines[1]
+	}
+	if err := os.WriteFile(path, []byte(updated), 0644); err != nil {
+		t.Fatalf("cannot write %s: %v", path, err)
+	}
+}
+
+// TestJSONFieldNamesIntegration pins T11 on a running server. The key spelling
+// itself is asserted where it is observable -- a response message that carries a
+// field whose proto name differs from its JSON name; the test service has none,
+// so the integration level checks what it can: the option is accepted, it does
+// not change the request path, and a value it cannot understand is refused
+// rather than guessed at.
+func TestJSONFieldNamesIntegration(t *testing.T) {
+	httpPort := "8109"
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, httpPort, freePort(t), "development")
+	setJSONFieldNames(t, cfg, "camel")
+
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
+	s.StartGrpcService(gimpl.RegisterServer)
+	time.Sleep(time.Millisecond * 300)
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Millisecond * 300)
+	defer s.Stop()
+
+	// the option does not disturb the normal path
+	testGet(t, "http://localhost:"+httpPort+"/hello?your_name=ok", `{"message":"[grpc server]Hello, ok"}`)
+}
+
+// TestInvalidJSONFieldNamesIsRefused pins the other half of T11: a value turbo
+// cannot understand stops the server instead of quietly picking one spelling.
+func TestInvalidJSONFieldNamesIsRefused(t *testing.T) {
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, freePort(t), freePort(t), "development")
+	setJSONFieldNames(t, cfg, "camelCase")
+
+	assert.Panics(t, func() { turbo.NewGrpcServer(&testInitializer{}, cfg) })
+}
+
+// TestJSONFieldNamesReloadKeepsThePreviousConfig covers the reload path: a change
+// that cannot be loaded is refused and the running server keeps what it had.
+func TestJSONFieldNamesReloadKeepsThePreviousConfig(t *testing.T) {
+	httpPort := "8110"
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, httpPort, freePort(t), "development")
+
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
+	s.StartGrpcService(gimpl.RegisterServer)
+	time.Sleep(time.Millisecond * 300)
+
+	logged := &syncBuffer{}
+	turbo.SetOutput(logged)
+	defer turbo.SetOutput(os.Stdout)
+
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Millisecond * 300)
+	defer s.Stop()
+
+	setJSONFieldNames(t, cfg, "camelCase")
+	time.Sleep(time.Millisecond * 800)
+
+	// the server never stopped serving the configuration it already had
+	testGet(t, "http://localhost:"+httpPort+"/hello?your_name=ok", `{"message":"[grpc server]Hello, ok"}`)
+	assert.Contains(t, logged.String(), "ignoring configuration change")
+	assert.Contains(t, logged.String(), "json_field_names")
+}
+
 // TestRouteTableAndNotFoundAreObservable pins T12. Two things used to be
 // invisible: which routes a router actually serves, and a request that matched
 // none of them. Both matter exactly when something in front of the service is

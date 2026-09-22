@@ -227,6 +227,7 @@ func writeResponse(s Servable, resp http.ResponseWriter, req *http.Request, serv
 		FilterProtoJson: config.FilterProtoJson(),
 		EmitZeroValues:  config.FilterProtoJsonEmitZeroValues(),
 		Int64AsNumber:   config.FilterProtoJsonInt64AsNumber(),
+		UseJSONNames:    config.JSONFieldNames() == jsonFieldNamesCamel,
 	}
 	jsonBytes, err := m.JSON(serviceResponse)
 	if err == nil {

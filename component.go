@@ -39,6 +39,13 @@ const (
 // Interceptor -----------------
 
 // Interceptor intercepts requests, can run a func before and after a request
+// An Interceptor runs around a request.
+//
+// A component is a single instance shared by every request: turbo registers one
+// value per name (see RegisterComponent) and calls it concurrently. Do not keep
+// request state in one -- a field written in Before and read in After belongs to
+// whichever requests happen to overlap, which shows up as rare, unreproducible
+// cross talk. Put per request state in the request context instead.
 type Interceptor interface {
 	Before(http.ResponseWriter, *http.Request) error
 	After(http.ResponseWriter, *http.Request) error
