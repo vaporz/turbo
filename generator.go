@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"text/template"
 )
@@ -54,15 +55,37 @@ func findFileIn(filePaths []string, file string) string {
 	panic("can not find " + file + " in any:\n" + pathsStr)
 }
 
+// writeFileWithTemplate writes a generated file atomically: the content goes to a
+// temporary file beside the target and is renamed over it only once it is
+// complete. os.Create used to truncate the target first, so a template that
+// failed halfway -- or a generator that died -- left a half written file where a
+// working one used to be, and nothing said so.
 func writeFileWithTemplate(filePath string, data interface{}, text string) {
-	f, err := os.Create(filePath)
-	panicIf(err)
-
 	tmpl, err := template.New("").Parse(text)
 	panicIf(err)
 
-	err = tmpl.Execute(f, data)
+	dir := filepath.Dir(filePath)
+	f, err := os.CreateTemp(dir, filepath.Base(filePath)+".tmp")
 	panicIf(err)
+	temporary := f.Name()
+
+	if err := tmpl.Execute(f, data); err != nil {
+		f.Close()
+		os.Remove(temporary)
+		panic(err)
+	}
+	if err := f.Close(); err != nil {
+		os.Remove(temporary)
+		panic(err)
+	}
+	if err := os.Chmod(temporary, 0644); err != nil {
+		os.Remove(temporary)
+		panic(err)
+	}
+	if err := os.Rename(temporary, filePath); err != nil {
+		os.Remove(temporary)
+		panic(err)
+	}
 }
 
 // GenerateGrpcSwitcher generates "grpcswither.go"
