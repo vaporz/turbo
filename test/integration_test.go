@@ -701,6 +701,78 @@ func testRejectedParameter(t *testing.T, url string) string {
 	return body
 }
 
+// TestRequestsDuringReloadAreRaceFree pins T16. A reload replaces the routing
+// table and the components while requests are reading them, and it used to write
+// http.Server.Handler -- a field net/http reads for every request. Run with -race.
+func TestRequestsDuringReloadAreRaceFree(t *testing.T) {
+	httpPort := "8107"
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, httpPort, "50087", "development")
+
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
+	s.StartGrpcService(gimpl.RegisterServer)
+	time.Sleep(time.Millisecond * 300)
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Millisecond * 300)
+	defer s.Stop()
+
+	base := "http://localhost:" + httpPort
+	stop := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+				}
+				resp, err := http.Get(base + "/hello?your_name=x")
+				if err == nil {
+					resp.Body.Close()
+				}
+			}
+		}()
+	}
+
+	for i := 0; i < 4; i++ {
+		changeServiceYamlWithGrpcComponents(cfg, httpPort, "50087", "production")
+		time.Sleep(time.Millisecond * 150)
+		overwriteServiceYaml(cfg, httpPort, "50087", "development")
+		time.Sleep(time.Millisecond * 150)
+	}
+	close(stop)
+	wg.Wait()
+}
+
+// TestStoppedServerIgnoresConfigChanges pins T15. Stop used to leave the reload
+// goroutine and the configuration watcher behind, so a stopped server kept
+// reacting to a file nobody was serving any more.
+func TestStoppedServerIgnoresConfigChanges(t *testing.T) {
+	httpPort := "8108"
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, httpPort, "50088", "development")
+
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
+	s.StartGrpcService(gimpl.RegisterServer)
+	time.Sleep(time.Millisecond * 300)
+
+	logged := &syncBuffer{}
+	turbo.SetOutput(logged)
+	defer turbo.SetOutput(os.Stdout)
+
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Millisecond * 300)
+	s.Stop()
+	time.Sleep(time.Millisecond * 200)
+
+	changeServiceYamlWithGrpcComponents(cfg, httpPort, "50088", "production")
+	time.Sleep(time.Millisecond * 800)
+	assert.NotContains(t, logged.String(), "Reloading configuration...")
+}
+
 // TestThriftJSONBodyNamesArguments pins T17. A thrift method takes a list of
 // arguments, so its JSON body names them -- the same names the generated Args
 // struct carries in its tags, and the same ones the form branch binds to. The

@@ -13,6 +13,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
@@ -39,7 +40,18 @@ type Server struct {
 	// Config holds data read from config file
 	Config *Config
 	// Components holds the mappings of url to component
-	Components   *Components
+	Components *Components
+	// componentsLock guards Components and currentRouter: a request reads them
+	// while a configuration reload replaces them.
+	componentsLock sync.RWMutex
+	// currentRouter is what the HTTP server is serving. net/http reads
+	// http.Server.Handler for every request, so a reload must never write that
+	// field; it swaps this value instead.
+	currentRouter http.Handler
+	// done is closed by Stop. After that no reload is started, and the reload
+	// goroutine returns instead of waiting for a signal nobody will send.
+	done         chan struct{}
+	stopOnce     sync.Once
 	reloadConfig chan *Config
 	exit         chan os.Signal
 	// Initializer implements Initializable
@@ -54,7 +66,17 @@ func (s *Server) Service() interface{} {
 func (s *Server) ServerField() *Server { return s }
 
 // Stop stops the server gracefully
-func (s *Server) Stop() { return }
+func (s *Server) Stop() { s.shutdown() }
+
+// shutdown closes done once, which stops the reload goroutine and keeps the
+// configuration watcher from handing it any more work.
+func (s *Server) shutdown() {
+	s.stopOnce.Do(func() {
+		if s.done != nil {
+			close(s.done)
+		}
+	})
+}
 
 // RegisterComponent registers a component,
 // The convention is to register with the name of that component,
@@ -79,6 +101,8 @@ func watchConfigReload(s Servable) {
 	go func() {
 		for {
 			select {
+			case <-s.ServerField().done:
+				return
 			case previous := <-s.ServerField().reloadConfig:
 				if s.ServerField().httpServer == nil {
 					continue
@@ -93,8 +117,10 @@ func watchConfigReload(s Servable) {
 					log.Error("turbo: configuration reload failed, keeping the running configuration: ", err)
 					continue
 				}
-				s.ServerField().httpServer.Handler = router(s)
+				s.ServerField().componentsLock.Lock()
+				s.ServerField().currentRouter = router(s)
 				s.ServerField().Components = newComponents
+				s.ServerField().componentsLock.Unlock()
 				log.Info("Configuration reloaded")
 			}
 		}
@@ -115,22 +141,41 @@ func (s *Server) watchConfig() {
 			log.Error("turbo: ignoring configuration change, it cannot be loaded: ", err)
 			return
 		}
+		select {
+		case <-s.done:
+			// the server has been stopped: there is no reloader left to hand
+			// this change to
+			return
+		default:
+		}
+		s.componentsLock.Lock()
 		previous := s.Config
 		s.Config = c
-		s.reloadConfig <- previous
+		s.componentsLock.Unlock()
+		select {
+		case s.reloadConfig <- previous:
+		default:
+			// a reload is already pending; it will read the newest config
+		}
 	})
 }
 
 func (s *Server) initChans() {
-	s.reloadConfig = make(chan *Config)
+	// buffered and sent to without blocking: after Stop nobody is receiving, and
+	// the callback that watches the file must not be left blocked on a send
+	s.reloadConfig = make(chan *Config, 1)
+	s.done = make(chan struct{})
 	s.exit = make(chan os.Signal, 1)
 }
 
 func startHTTPServer(s Servable) *http.Server {
+	s.ServerField().componentsLock.Lock()
 	s.ServerField().Components = s.ServerField().loadComponents()
+	s.ServerField().currentRouter = router(s)
+	s.ServerField().componentsLock.Unlock()
 	hs := &http.Server{
 		Addr:    ":" + strconv.FormatInt(s.ServerField().Config.HTTPPort(), 10),
-		Handler: router(s),
+		Handler: currentHandler(s),
 	}
 	go func() {
 		if err := hs.ListenAndServe(); err != nil {
@@ -199,7 +244,23 @@ func getComponentByName(s *Server, name string) interface{} {
 	return com
 }
 
+// currentHandler serves whatever router is in effect. It exists so that a reload
+// never writes http.Server.Handler, which net/http reads for every request.
+func currentHandler(s Servable) http.Handler {
+	return http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+		s.ServerField().componentsLock.RLock()
+		handler := s.ServerField().currentRouter
+		s.ServerField().componentsLock.RUnlock()
+		if handler == nil {
+			http.NotFound(resp, req)
+			return
+		}
+		handler.ServeHTTP(resp, req)
+	})
+}
+
 func stop(s Servable, httpServer *http.Server, grpcServer *grpc.Server, thriftServer *thrift.TSimpleServer) {
+	s.ServerField().shutdown()
 	s.ServerField().Initializer.StopService(s)
 	// if s.ServerField().exit is not closed, close it, return directly
 	if httpServer != nil {
