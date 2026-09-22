@@ -8,11 +8,13 @@ package turbo
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"text/template"
 )
 
@@ -281,12 +283,7 @@ func (g *Generator) GenerateBuildThriftParameters() {
 }
 
 func (g *Generator) runBuildThriftFields() {
-	cmd := "go run " + g.c.ServiceRootPath() + "/gen/thrift/build.go"
-	c := exec.Command("bash", "-c", cmd)
-	c.Stdin = os.Stdin
-	c.Stderr = os.Stderr
-	c.Stdout = os.Stdout
-	panicIf(c.Run())
+	executeCmd("bash", "-c", "go run "+g.c.ServiceRootPath()+"/gen/thrift/build.go")
 }
 
 var buildThriftParameters = `package main
@@ -467,7 +464,11 @@ func (g *Generator) thriftParameters(serviceName, methodName string) string {
 	c.Stdin = os.Stdin
 	c.Stderr = os.Stderr
 	c.Stdout = buf
-	panicIf(c.Run())
+	// this output is parsed, so it cannot be streamed as it is produced; a failure
+	// carries it in the panic instead, where it explains what went wrong
+	if err := c.Run(); err != nil {
+		panic(commandError(cmd, err, buf.String()))
+	}
 	return buf.String() + " "
 }
 
@@ -556,10 +557,55 @@ func (g *Generator) GenerateThriftStub() {
 	executeCmd("bash", "-c", cmd)
 }
 
+// outputTailBytes bounds how much of a failing command's output is quoted back to
+// the reader: enough to carry the tool's own explanation, small enough to read.
+const outputTailBytes = 2048
+
+// outputTail remembers the end of what a command printed while passing it on, so
+// the output is still visible as it is produced. Only the end is kept: a failing
+// protoc or thrift can print a lot, and the reason is the last thing it says.
+type outputTail struct {
+	mu   sync.Mutex
+	data []byte
+}
+
+func (t *outputTail) Write(p []byte) (int, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.data = append(t.data, p...)
+	if len(t.data) > outputTailBytes {
+		t.data = t.data[len(t.data)-outputTailBytes:]
+	}
+	return len(p), nil
+}
+
+func (t *outputTail) String() string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return string(t.data)
+}
+
+// commandError says what turbo ran and what came back. A tool that fails on its
+// own terms explains itself, and that explanation is the only actionable part:
+// reporting a bare "exit status 1" leaves the reader hunting for it above.
+func commandError(cmd string, err error, output string) error {
+	if tail := strings.TrimSpace(output); tail != "" {
+		return fmt.Errorf("turbo: %s failed: %w\nturbo: last lines it printed:\n%s", cmd, err, tail)
+	}
+	return fmt.Errorf("turbo: %s failed: %w", cmd, err)
+}
+
+// executeCmd runs a generation tool, streaming its output, and panics with the
+// command and the tail of its output when it fails (see commandError). Generation
+// depends on external tools -- protoc, its plugins, the thrift compiler -- whose
+// messages are worth more than the exit status turbo used to be left with.
 func executeCmd(cmd string, args ...string) {
 	c := exec.Command(cmd, args...)
+	tail := &outputTail{}
 	c.Stdin = os.Stdin
-	c.Stderr = os.Stderr
-	c.Stdout = os.Stdout
-	panicIf(c.Run())
+	c.Stderr = io.MultiWriter(os.Stderr, tail)
+	c.Stdout = io.MultiWriter(os.Stdout, tail)
+	if err := c.Run(); err != nil {
+		panic(commandError(cmd+" "+strings.Join(args, " "), err, tail.String()))
+	}
 }

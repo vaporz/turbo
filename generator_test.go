@@ -1,6 +1,7 @@
 package turbo
 
 import (
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -9,6 +10,47 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+// TestFailingCommandExplainsItself pins what a reader gets when a generation tool
+// fails. protoc and the thrift compiler explain themselves on their own terms --
+// for instance "plugins are not supported; use 'protoc --go-grpc_out=...'" -- and
+// a bare "exit status 1" used to throw that away, sending the reader looking for
+// it somewhere above in the terminal.
+func TestFailingCommandExplainsItself(t *testing.T) {
+	var recovered interface{}
+	func() {
+		defer func() { recovered = recover() }()
+		executeCmd("bash", "-c", "echo the-reason >&2; exit 3")
+	}()
+
+	err, ok := recovered.(error)
+	assert.True(t, ok, "a failing command must panic with an error, got %v", recovered)
+	assert.Contains(t, err.Error(), "bash -c echo the-reason")
+	assert.Contains(t, err.Error(), "the-reason")
+	assert.Contains(t, err.Error(), "exit status 3")
+}
+
+// TestSuccessfulCommandDoesNotPanic is the other half: the helper sits on the
+// normal generation path, so it must stay quiet when the tool succeeds.
+func TestSuccessfulCommandDoesNotPanic(t *testing.T) {
+	executeCmd("bash", "-c", "echo fine")
+}
+
+func TestCommandErrorWithoutOutput(t *testing.T) {
+	err := commandError("thrift -r --gen go x.thrift", errors.New("exit status 1"), "  \n ")
+	assert.Equal(t, "turbo: thrift -r --gen go x.thrift failed: exit status 1", err.Error())
+}
+
+// TestOutputTailKeepsTheEnd keeps the tail bounded: a long generation must not
+// grow the panic message with output nobody reads.
+func TestOutputTailKeepsTheEnd(t *testing.T) {
+	tail := &outputTail{}
+	tail.Write([]byte("FIRST-MARKER" + strings.Repeat("x", outputTailBytes) + "THE-END"))
+
+	assert.Len(t, tail.String(), outputTailBytes)
+	assert.True(t, strings.HasSuffix(tail.String(), "THE-END"))
+	assert.NotContains(t, tail.String(), "FIRST-MARKER")
+}
 
 // TestMethodNamesAreSorted pins the order of the method list a generated switcher
 // is written from. The names are collected in a map, so without an explicit sort
