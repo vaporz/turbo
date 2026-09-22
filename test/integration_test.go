@@ -669,9 +669,13 @@ func TestInvalidParameterIsRejected(t *testing.T) {
 
 	// int64_value is an int64; "abc" used to become 0, with a 200 response
 	body := testRejectedParameter(t, base+"/hello?int64_value=abc")
-	// the message names the field and the value, which is all a caller needs
+	// the message names the field and the reason, which is what a caller needs.
+	// The value itself is left out: this text is written to the service log too,
+	// and a parameter may carry a token (T26).
 	assert.Contains(t, body, "Int64Value")
-	assert.Contains(t, body, `"abc"`)
+	assert.Contains(t, body, "query/form parameter")
+	assert.Contains(t, body, "invalid syntax")
+	assert.NotContains(t, body, "abc", "a request value must not be echoed back into the log")
 
 	// a usable value still binds, and the request succeeds
 	testGet(t, base+"/hello?your_name=ok&int64_value=64", `{"message":"[grpc server]Hello, ok"}`)
@@ -950,12 +954,20 @@ func TestCommonInterceptorsSurviveAConfigReload(t *testing.T) {
 // can start a server with the option without a second template.
 func setJSONFieldNames(t *testing.T, path, value string) {
 	t.Helper()
+	setConfigKey(t, path, "json_field_names", value)
+}
+
+// setConfigKey puts one more key into the config section of a generated test
+// configuration: the templates start with "config:", so the second line is where
+// a key under it belongs.
+func setConfigKey(t *testing.T, path, key, value string) {
+	t.Helper()
 	content, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("cannot read %s: %v", path, err)
 	}
 	lines := strings.SplitN(string(content), "\n", 2)
-	updated := lines[0] + "\n  json_field_names: " + value + "\n"
+	updated := lines[0] + "\n  " + key + ": " + value + "\n"
 	if len(lines) > 1 {
 		updated += lines[1]
 	}
@@ -987,6 +999,44 @@ func TestJSONFieldNamesIntegration(t *testing.T) {
 
 	// the option does not disturb the normal path
 	testGet(t, "http://localhost:"+httpPort+"/hello?your_name=ok", `{"message":"[grpc server]Hello, ok"}`)
+}
+
+// TestConfiguredLogLevelIsUsed pins T27 end to end. turbo's log level used to be
+// decided by "environment" alone, so asking for a quieter log meant also changing
+// the format and the destination -- which is why a service that wants readable
+// logs in production could not have either.
+func TestConfiguredLogLevelIsUsed(t *testing.T) {
+	httpPort := freePort(t)
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, httpPort, freePort(t), "development")
+	setConfigKey(t, cfg, "log_level", "warn")
+
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
+	s.StartGrpcService(gimpl.RegisterServer)
+	time.Sleep(time.Millisecond * 300)
+
+	logged := &syncBuffer{}
+	turbo.SetOutput(logged)
+	defer turbo.SetOutput(os.Stdout)
+
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Millisecond * 300)
+	defer s.Stop()
+
+	// the route audit summary is info, and the per route detail is debug: at warn
+	// neither is written
+	assert.Empty(t, logged.String())
+	testGet(t, "http://localhost:"+httpPort+"/hello?your_name=ok", `{"message":"[grpc server]Hello, ok"}`)
+}
+
+// TestInvalidLogLevelIsRefused pins the other half: a level turbo cannot parse
+// stops the server instead of quietly logging at whatever the default was.
+func TestInvalidLogLevelIsRefused(t *testing.T) {
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, freePort(t), freePort(t), "development")
+	setConfigKey(t, cfg, "log_level", "verbose")
+
+	assert.Panics(t, func() { turbo.NewGrpcServer(&testInitializer{}, cfg) })
 }
 
 // TestInvalidJSONFieldNamesIsRefused pins the other half of T11: a value turbo

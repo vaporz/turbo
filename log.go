@@ -89,6 +89,16 @@ func initLogger(c *Config) {
 		logger.AddHook(ContextHook{})
 	}
 
+	// What the environment picked is only a default: a service that says which
+	// level it wants gets it, without having to describe itself as "production"
+	// (which also decides the format and the destination). validate() refused a
+	// value turbo cannot parse, so the level below is one logrus knows.
+	if value := c.LogLevel(); value != "" {
+		if level, err := logger.ParseLevel(value); err == nil {
+			logger.SetLevel(level)
+		}
+	}
+
 	log = logger.StandardLogger()
 }
 

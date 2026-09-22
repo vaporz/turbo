@@ -39,8 +39,14 @@ takes effect for:
 |---|---|
 | `urlmapping` (the routes) | `http_port` |
 | `interceptor` / `preprocessor` / `postprocessor` / `hijacker` / `convertor` / `errorhandler` | `grpc_service_port`, `thrift_service_port` |
-| `filter_proto_json` and its sub options | `environment`, `turbo_log_path` |
+| `filter_proto_json` and its sub options | `environment`, `turbo_log_path`, `log_level` |
 | `json_field_names`, `auth` | `file_root_path`, `package_path` (code generation only) |
+
+`config.log_level` picks the level of turbo's own log (`panic`, `fatal`, `error`,
+`warn`, `info`, `debug` or `trace`). Without it the environment decides: `production`
+logs at `info`, anything else at `debug`. It is separate from a service's own
+top level `log_level`, and it does not change where the log is written or in which
+format.
 
 A reload that cannot be loaded is refused: at startup it stops the server, and while
 running it is logged and the previous configuration keeps serving. A route audit

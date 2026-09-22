@@ -556,7 +556,8 @@ func BuildRequest(s Servable, v proto.Message, req *http.Request) error {
 			// "nothing arrived" from "arrived and unusable", and the parse error from
 			// encoding/json already quotes the character that broke it.
 			return WithStatus(fmt.Errorf("turbo: failed to BuildRequest for json api, "+
-				"request body: %d bytes, error: %s", len(bodyStr), err), http.StatusBadRequest)
+				"request body: %d bytes, error: %s", len(bodyStr), withoutRequestValues(err, "")),
+				http.StatusBadRequest)
 		}
 		rawBody := jsonObjectKeys(bodyStr)
 		if err := bindJSONGaps(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody); err != nil {

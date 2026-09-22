@@ -34,3 +34,22 @@ func TestAnUnusableBodyIsNotEchoed(t *testing.T) {
 	assert.Contains(t, err.Error(), fmt.Sprintf("request body: %d bytes", len(body)))
 	assert.Contains(t, err.Error(), "invalid character")
 }
+
+// TestANumberTheBodyCannotGiveIsNotEchoed pins the rest of T26. A body that
+// parses can still carry a value the field cannot hold, and the message
+// encoding/json builds for that quotes the number -- which used to reach the log
+// with the rest of the parse error. Numbers are not tokens, but they are still
+// request content.
+func TestANumberTheBodyCannotGiveIsNotEchoed(t *testing.T) {
+	const number = "99999999999999999999999"
+	body := `{"int64Value":` + number + `}`
+	req := httptest.NewRequest(http.MethodPost, "/hello", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	err := BuildRequest(reloadServable{&Server{}}, &TestPrimitives{}, req)
+
+	assert.Error(t, err)
+	assert.NotContains(t, err.Error(), number, "the value must not reach the log")
+	assert.Contains(t, err.Error(), "number "+redactedValue)
+	assert.Contains(t, err.Error(), "int64", "the reason has to survive")
+}

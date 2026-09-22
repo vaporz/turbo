@@ -12,7 +12,9 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -317,6 +319,8 @@ func bindJSONInjected(theType reflect.Type, theValue reflect.Value, req *http.Re
 // bindingErrorFor describes a value the request carries but the field cannot
 // take. The status says whose mistake it is: a value the server injected is the
 // server's, everything else came from the caller.
+//
+// The value itself is left out: see withoutRequestValues.
 func bindingErrorFor(fieldName, value string, req *http.Request, cause error) error {
 	status := http.StatusBadRequest
 	source := "query/form parameter"
@@ -326,7 +330,40 @@ func bindingErrorFor(fieldName, value string, req *http.Request, cause error) er
 	} else if _, ok := pathValue(fieldName, req); ok {
 		source = "path parameter"
 	}
-	return WithStatus(fmt.Errorf("turbo: cannot bind %s from %s %q: %w", fieldName, source, value, cause), status)
+	return WithStatus(fmt.Errorf("turbo: cannot bind %s from %s: %s", fieldName, source,
+		withoutRequestValues(cause, value)), status)
+}
+
+// redactedValue stands in for a request value that has been taken out of a
+// message.
+const redactedValue = "<redacted>"
+
+// jsonNumber matches the number encoding/json writes into the error it returns
+// for a value that does not fit: "cannot unmarshal number 1.5 into Go value of
+// type int64". The word before the digits keeps it from touching anything else.
+var jsonNumber = regexp.MustCompile(`\bnumber [0-9][0-9.eE+-]*`)
+
+// withoutRequestValues returns the message of a binding or parsing failure with
+// the value the request carried taken out of it.
+//
+// That message is returned to the caller and written to the service log, and a
+// value may be a token, a code or a signature; the caller already knows what it
+// sent, so the reason is what has to survive. The libraries underneath quote
+// what they could not parse, so the value is replaced rather than dropped along
+// with the message:
+//
+//	strconv quotes it        parsing "abc": invalid syntax
+//	encoding/json writes it  cannot unmarshal number 1.5 into Go value of type int64
+//
+// An empty value means the failure did not single one out, which is the case for
+// a body that could not be parsed at all: the message is then scrubbed of every
+// number it quotes.
+func withoutRequestValues(cause error, value string) string {
+	message := cause.Error()
+	if value != "" {
+		message = strings.ReplaceAll(message, strconv.Quote(value), strconv.Quote(redactedValue))
+	}
+	return jsonNumber.ReplaceAllString(message, "number "+redactedValue)
 }
 
 // A thrift method takes a list of arguments rather than one request message, so
@@ -438,7 +475,8 @@ func bindThriftArgsFromJSON(args reflect.Value, body []byte, req *http.Request) 
 	parsed, err := decodeThriftBody(body)
 	if err != nil {
 		return WithStatus(fmt.Errorf("turbo: the request body is not a JSON object naming the arguments of "+
-			"this method (%v): %w", argumentNameList(theType), err), http.StatusBadRequest)
+			"this method (%v): %s", argumentNameList(theType), withoutRequestValues(err, "")),
+			http.StatusBadRequest)
 	}
 	fromBody := make([]bool, theType.NumField())
 	left, err := bindStructFieldsFromBody(args, parsed, fromBody)
@@ -478,16 +516,16 @@ func bindThriftArgsFromJSON(args reflect.Value, body []byte, req *http.Request) 
 func bindSingleThriftArg(field reflect.Value, structField reflect.StructField, body []byte, req *http.Request) error {
 	if !isNestedArgument(field) {
 		if err := json.Unmarshal(body, field.Addr().Interface()); err != nil {
-			return WithStatus(fmt.Errorf("turbo: cannot read thrift argument %s from the request body: %w",
-				structField.Name, err), http.StatusBadRequest)
+			return WithStatus(fmt.Errorf("turbo: cannot read thrift argument %s from the request body: %s",
+				structField.Name, withoutRequestValues(err, "")), http.StatusBadRequest)
 		}
 		return bindScalarArg(field, structField.Name, true, req)
 	}
 
 	parsed, err := decodeThriftBody(body)
 	if err != nil {
-		return WithStatus(fmt.Errorf("turbo: the request body is not a JSON object holding the fields of %s: %w",
-			structField.Name, err), http.StatusBadRequest)
+		return WithStatus(fmt.Errorf("turbo: the request body is not a JSON object holding the fields of %s: %s",
+			structField.Name, withoutRequestValues(err, "")), http.StatusBadRequest)
 	}
 	argument := reflect.New(field.Type().Elem())
 	left, err := bindStructFieldsFromBody(argument.Elem(), parsed, nil)
@@ -552,8 +590,8 @@ func bindStructFieldsFromBody(structValue reflect.Value, parsed *thriftBody, nam
 			continue
 		}
 		if err := json.Unmarshal(raw, structValue.Field(i).Addr().Interface()); err != nil {
-			return nil, WithStatus(fmt.Errorf("turbo: cannot read %s from the request body: %w",
-				theType.Field(i).Name, err), http.StatusBadRequest)
+			return nil, WithStatus(fmt.Errorf("turbo: cannot read %s from the request body: %s",
+				theType.Field(i).Name, withoutRequestValues(err, "")), http.StatusBadRequest)
 		}
 		if named != nil {
 			named[i] = true
