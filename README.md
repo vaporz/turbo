@@ -1,4 +1,4 @@
-# Turbo  [![Build Status](https://travis-ci.org/vaporz/turbo.svg?branch=master)](https://travis-ci.org/vaporz/turbo) [![Coverage Status](https://coveralls.io/repos/github/vaporz/turbo/badge.svg?branch=master)](https://coveralls.io/github/vaporz/turbo?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/vaporz/turbo)](https://goreportcard.com/report/github.com/vaporz/turbo) [![codebeat badge](https://codebeat.co/badges/7a166e48-dae1-454c-b925-4fbcd3f1f461)](https://codebeat.co/projects/github-com-vaporz-turbo-master)
+# Turbo  [![Coverage Status](https://coveralls.io/repos/github/vaporz/turbo/badge.svg?branch=master)](https://coveralls.io/github/vaporz/turbo?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/vaporz/turbo)](https://goreportcard.com/report/github.com/vaporz/turbo) [![codebeat badge](https://codebeat.co/badges/7a166e48-dae1-454c-b925-4fbcd3f1f461)](https://codebeat.co/projects/github-com-vaporz-turbo-master)
 
 最新版本 | Latest Release: 0.5.0
 
@@ -64,9 +64,17 @@ and `auth.public_routes`).
  * [Configs in service.yaml](https://vaporz.github.io/master/en/config.html#config)
  * [Service Multiplexing](https://vaporz.github.io/master/en/multiplexing.html)
 ## Requirements
-Golang version: >= 1.21.3 
+Golang version: >= 1.27.1 
 
 Thrift version: 0.19.0  
+
+### Building where downloading a toolchain is not possible
+
+The `go` directive in `go.mod` is the minimum toolchain, and `GOTOOLCHAIN` defaults to
+`auto`: a build machine whose Go is older than that directive tries to **download** the
+required toolchain, which fails on an isolated network. Install Go 1.27.1 or newer on such
+a machine, or set `GOTOOLCHAIN=local` and make sure the toolchain that is installed is new
+enough.
 
 ### Code generation needs the legacy protoc-gen-go first in PATH
 
@@ -98,4 +106,6 @@ runs [govulncheck](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck), which 
 the known vulnerabilities this code can actually reach, and separates them from the ones
 that merely sit in the dependency list. It downloads the vulnerability database, so it
 needs the network and is kept out of `make test`; it exits non-zero when it finds
-something, so it also works as a check.
+something, so it also works as a check. Use govulncheck v1.8.0 or later: older
+releases carry their own copy of `x/tools`, which cannot read the standard library of
+Go 1.27 and panics instead of reporting.

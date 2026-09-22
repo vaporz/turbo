@@ -1,6 +1,6 @@
 module github.com/vaporz/turbo
 
-go 1.21.3
+go 1.27.1
 
 require (
 	github.com/apache/thrift v0.19.0
