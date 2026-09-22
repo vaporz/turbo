@@ -32,29 +32,38 @@ func authFor(names ...string) authConfig {
 	return authConfig{interceptors: names, publicRoutes: map[string]bool{}}
 }
 
-func TestPatternMatchesPath(t *testing.T) {
-	// a pattern ending in "/" is a path prefix, exactly as setComponent does it
-	assert.True(t, patternMatchesPath("/", "/anything/at/all"))
-	assert.True(t, patternMatchesPath("/api/", "/api/v1/thing"))
-	assert.False(t, patternMatchesPath("/api/", "/other/thing"))
+func TestMatchPattern(t *testing.T) {
+	// a pattern is literal unless it says otherwise: "/" is the root, not
+	// everything. It used to be a prefix, which made `- GET / X` global.
+	assert.True(t, matchPattern("/", "/"))
+	assert.False(t, matchPattern("/", "/anything"))
+	assert.False(t, matchPattern("/", "/hello/world"))
 
-	assert.True(t, patternMatchesPath("/hello", "/hello"))
-	assert.False(t, patternMatchesPath("/hello", "/hello/world"))
-	assert.False(t, patternMatchesPath("/hello", "/other"))
+	// an explicit wildcard covers the path itself and everything below it
+	assert.True(t, matchPattern("/*", "/"))
+	assert.True(t, matchPattern("/*", "/anything/at/all"))
+	assert.True(t, matchPattern("/api/*", "/api"))
+	assert.True(t, matchPattern("/api/*", "/api/v1/thing"))
+	assert.False(t, matchPattern("/api/*", "/apix"))
+	assert.False(t, matchPattern("/api/*", "/other"))
+
+	assert.True(t, matchPattern("/hello", "/hello"))
+	assert.False(t, matchPattern("/hello", "/hello/world"))
+	assert.False(t, matchPattern("/hello", "/other"))
 
 	// a "{...}" segment stands for exactly one segment of the request path
-	assert.True(t, patternMatchesPath("/hello/{your_Name:[a-zA-Z0-9]+}", "/hello/vaporz"))
-	assert.True(t, patternMatchesPath("/q/{code}", "/q/A3"))
-	assert.False(t, patternMatchesPath("/q/{code}", "/q/A3/extra"))
-	assert.False(t, patternMatchesPath("/q/{code}/x", "/q/A3"))
-	assert.False(t, patternMatchesPath("/hello/{name}", "/other/vaporz"))
+	assert.True(t, matchPattern("/hello/{your_Name:[a-zA-Z0-9]+}", "/hello/vaporz"))
+	assert.True(t, matchPattern("/q/{code}", "/q/A3"))
+	assert.False(t, matchPattern("/q/{code}", "/q/A3/extra"))
+	assert.False(t, matchPattern("/q/{code}/x", "/q/A3"))
+	assert.False(t, matchPattern("/hello/{name}", "/other/vaporz"))
 }
 
 func TestInterceptorChainUsesTheFirstMatchingDeclaration(t *testing.T) {
 	// the first declaration that matches is the one whose chain runs, so it is
 	// also the one the audit has to judge
 	declarations := [][4]string{
-		{"GET", "/", "BaseInterceptor", ""},
+		{"GET", "/*", "BaseInterceptor", ""},
 		{"GET", "/hello", "TestInterceptor", ""},
 	}
 	assert.Equal(t, []string{"BaseInterceptor"}, interceptorChain(declarations, "GET", "/hello"))
@@ -104,7 +113,7 @@ func TestAuditRoutesVerdicts(t *testing.T) {
 			mappings:     auditMappings("OtherInterceptor"),
 			auth:         authFor("AuthInterceptor"),
 			expectRefuse: true,
-			expectText:   "declares no auth interceptor",
+			expectText:   "declare an auth interceptor",
 		},
 		{
 			name:         "a route nobody declared an interceptor for is unprotected",
@@ -126,6 +135,13 @@ func TestAuditRoutesVerdicts(t *testing.T) {
 		{
 			name:       "a common interceptor counts once it can be named",
 			mappings:   auditMappings(),
+			common:     []Interceptor{named},
+			registered: registered,
+			auth:       authFor("AuthInterceptor"),
+		},
+		{
+			name:       "a common auth interceptor covers a route whose own interceptor is not auth",
+			mappings:   auditMappings("OtherInterceptor"),
 			common:     []Interceptor{named},
 			registered: registered,
 			auth:       authFor("AuthInterceptor"),

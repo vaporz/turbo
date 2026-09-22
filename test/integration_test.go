@@ -472,14 +472,22 @@ func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
 		`test1_intercepted:{"message":"[`+rpcType+` server]Hello, testtest"}`)
 
 	s.Components.Reset()
-	s.Components.Intercept([]string{"GET"}, "/", component(s, "TestInterceptor").(turbo.Interceptor))
+	// "/*" is how a declaration says "every path" now; "/" used to mean it, but
+	// then the file could not tell you whether an interceptor was global
+	s.Components.Intercept([]string{"GET"}, "/*", component(s, "TestInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?yourName=testname",
 		`intercepted:{"message":"[`+rpcType+` server]Hello, testtest"}`)
 
 	s.Components.Reset()
-	s.Components.Intercept([]string{"GET"}, "/", component(s, "TestInterceptor").(turbo.Interceptor))
+	s.Components.Intercept([]string{"GET"}, "/*", component(s, "TestInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		`intercepted:{"message":"[`+rpcType+` server]Hello, testtest"}`)
+
+	// "/" is the root and nothing else: this declaration must not run here
+	s.Components.Reset()
+	s.Components.Intercept([]string{"GET"}, "/", component(s, "TestInterceptor").(turbo.Interceptor))
+	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
+		`{"message":"[`+rpcType+` server]Hello, testtest"}`)
 
 	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", component(s, "BeforeErrorInterceptor").(turbo.Interceptor))
@@ -689,6 +697,31 @@ func testRejectedParameter(t *testing.T, url string) string {
 	resp.Body.Close()
 	assert.Contains(t, body, "turbo: cannot bind")
 	return body
+}
+
+// TestInterceptorChainRunsGlobalAndRouteLevel pins T4①. A route that declares an
+// interceptor of its own used to replace the ones installed globally, so adding
+// one line of configuration silently switched off logging, metrics, tracing or
+// authentication for that route.
+func TestInterceptorChainRunsGlobalAndRouteLevel(t *testing.T) {
+	httpPort := "8102"
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, httpPort, "50082", "development")
+
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
+	s.StartGrpcService(gimpl.RegisterServer)
+	time.Sleep(time.Millisecond * 300)
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Millisecond * 300)
+	defer s.Stop()
+
+	s.Components.SetCommonInterceptor(&CommonMarkerInterceptor{})
+	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", &RouteMarkerInterceptor{})
+
+	// the global one runs first, the route's own follows, the service answers,
+	// and then the chain unwinds in reverse order
+	testGet(t, "http://localhost:"+httpPort+"/hello/name",
+		`common-before,route-before,{"message":"[grpc server]Hello, name"}route-after,common-after,`)
 }
 
 // TestRouteTableAndNotFoundAreObservable pins T12. Two things used to be
@@ -1043,6 +1076,37 @@ type InjectInterceptor struct {
 
 func (i *InjectInterceptor) Before(resp http.ResponseWriter, req *http.Request) error {
 	turbo.InjectParam(req, "your_Name", "from-server")
+	return nil
+}
+
+// CommonMarkerInterceptor and RouteMarkerInterceptor make the order a chain runs
+// in visible in the response body, which is the only place an After() can still
+// write to.
+type CommonMarkerInterceptor struct {
+	turbo.BaseInterceptor
+}
+
+func (i *CommonMarkerInterceptor) Before(resp http.ResponseWriter, req *http.Request) error {
+	resp.Write([]byte("common-before,"))
+	return nil
+}
+
+func (i *CommonMarkerInterceptor) After(resp http.ResponseWriter, req *http.Request) error {
+	resp.Write([]byte("common-after,"))
+	return nil
+}
+
+type RouteMarkerInterceptor struct {
+	turbo.BaseInterceptor
+}
+
+func (i *RouteMarkerInterceptor) Before(resp http.ResponseWriter, req *http.Request) error {
+	resp.Write([]byte("route-before,"))
+	return nil
+}
+
+func (i *RouteMarkerInterceptor) After(resp http.ResponseWriter, req *http.Request) error {
+	resp.Write([]byte("route-after,"))
 	return nil
 }
 

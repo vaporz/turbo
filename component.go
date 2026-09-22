@@ -8,7 +8,6 @@ package turbo
 import (
 	"net/http"
 	"reflect"
-	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -140,14 +139,10 @@ func setComponent(m *mux.Router, methods []string, urlPattern string, handler ht
 	if m == nil {
 		m = mux.NewRouter()
 	}
-	var route *mux.Route
-	if strings.HasSuffix(urlPattern, "/") {
-		route = m.PathPrefix(urlPattern).Handler(handler)
-	} else {
-		route = m.Handle(urlPattern, handler)
-	}
-	if len(methods) > 0 {
-		route.Methods(methods...)
+	for _, route := range registerPattern(m, urlPattern, handler) {
+		if len(methods) > 0 {
+			route.Methods(methods...)
+		}
 	}
 	return m
 }
