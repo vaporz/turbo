@@ -155,6 +155,11 @@ type Marshaler struct {
 	FilterProtoJson bool
 	EmitZeroValues  bool
 	Int64AsNumber   bool
+	// UseJSONNames writes the JSON names protobuf defines (ownerOpenid) instead of
+	// the proto field names (owner_openid). The zero value keeps the historical
+	// behaviour, so a Marshaler a caller builds for itself is unaffected;
+	// json_field_names: camel is what switches this on.
+	UseJSONNames bool
 }
 
 // JSON returns the json encoding of v,
@@ -164,7 +169,7 @@ func (m *Marshaler) JSON(v interface{}) ([]byte, error) {
 	if _, ok := v.(proto.Message); ok {
 		var buf bytes.Buffer
 		jm := &jsonpb.Marshaler{}
-		jm.OrigName = true
+		jm.OrigName = !m.UseJSONNames
 		if err := jm.Marshal(&buf, v.(proto.Message)); err != nil {
 			return []byte{}, err
 		}
@@ -364,7 +369,14 @@ func (m *Marshaler) jsonFieldName(structJson *sjson.Json, field reflect.StructFi
 	}
 	nameInTag, ok = m.lookupOrigNameInProtoTag(field)
 	if ok {
-		defaultName = nameInTag
+		// The proto naming mode has always let the proto name win over the json
+		// one. The JSON naming mode keeps the json name instead, because that is
+		// the spelling it writes: otherwise a field the message did not carry
+		// would come back under the proto name, half in one mode and half in the
+		// other.
+		if defaultName == "" || !m.UseJSONNames {
+			defaultName = nameInTag
+		}
 		if _, ok = structJson.CheckGet(nameInTag); ok {
 			return nameInTag, true
 		}
@@ -379,9 +391,28 @@ func (m *Marshaler) jsonFieldName(structJson *sjson.Json, field reflect.StructFi
 		}
 	}
 	if defaultName == "" {
-		defaultName = fieldName
+		defaultName = m.fallbackFieldName(fieldName)
 	}
 	return defaultName, false
+}
+
+// lowerCamel turns a Go field name into the JSON name protobuf gives its field:
+// YourName and Int64Value become yourName and int64Value.
+func lowerCamel(name string) string {
+	if name == "" {
+		return name
+	}
+	return strings.ToLower(name[:1]) + name[1:]
+}
+
+// fallbackFieldName is the key a field with no usable tag gets when it has to be
+// written into a JSON body that did not carry it. The historical answer is the Go
+// field name, which is what the proto naming mode keeps.
+func (m *Marshaler) fallbackFieldName(fieldName string) string {
+	if m.UseJSONNames {
+		return lowerCamel(fieldName)
+	}
+	return fieldName
 }
 
 func (m *Marshaler) lookupJSONNameInProtoTag(field reflect.StructField) (string, bool) {

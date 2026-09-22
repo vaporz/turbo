@@ -17,6 +17,8 @@ import (
 )
 
 const (
+	jsonFieldNamesProto           = "proto"
+	jsonFieldNamesCamel           = "camel"
 	grpcServiceName               = "grpc_service_name"
 	grpcServiceHost               = "grpc_service_host"
 	grpcServicePort               = "grpc_service_port"
@@ -32,6 +34,7 @@ const (
 	fileRootPath                  = "file_root_path"
 	packagePath                   = "package_path"
 
+	jsonFieldNames = "json_field_names"
 	urlServiceMaps = "urlServiceMaps"
 	interceptors   = "interceptors"
 	preprocessors  = "preprocessors"
@@ -106,6 +109,17 @@ func (c *Config) loadServiceConfigErr() (err error) {
 	c.loadUrlMap()
 	c.loadConfigs()
 	c.loadComponents()
+	return c.validate()
+}
+
+// validate refuses a configuration whose values turbo would otherwise have to
+// guess at.
+func (c *Config) validate() error {
+	if value := strings.TrimSpace(c.configs[jsonFieldNames]); value != "" &&
+		!strings.EqualFold(value, jsonFieldNamesProto) && !strings.EqualFold(value, jsonFieldNamesCamel) {
+		return fmt.Errorf("invalid %s: %q, expected %q or %q",
+			jsonFieldNames, value, jsonFieldNamesProto, jsonFieldNamesCamel)
+	}
 	return nil
 }
 
@@ -263,6 +277,17 @@ func (c *Config) HTTPPort() int64 {
 	i, err := strconv.ParseInt(p, 10, 64)
 	logErrorIf(err)
 	return i
+}
+
+// JSONFieldNames reports whether proto JSON should use the proto field names
+// ("proto", owner_openid) or the JSON names protobuf defines ("camel",
+// ownerOpenid). Anything unrecognised is refused when the configuration loads,
+// rather than quietly falling back to one of them.
+func (c *Config) JSONFieldNames() string {
+	if strings.EqualFold(strings.TrimSpace(c.configs[jsonFieldNames]), jsonFieldNamesCamel) {
+		return jsonFieldNamesCamel
+	}
+	return jsonFieldNamesProto
 }
 
 func (c *Config) FilterProtoJson() bool {

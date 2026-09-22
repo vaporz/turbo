@@ -78,9 +78,13 @@ func (s *Server) shutdown() {
 	})
 }
 
-// RegisterComponent registers a component,
-// The convention is to register with the name of that component,
-// the name is used in config file to look up for a component.
+// RegisterComponent registers a component.
+//
+// The convention is to register with the name of that component, the name is
+// used in config file to look up for a component.
+//
+// One instance serves every request, and it is called concurrently: see the note
+// on Interceptor about request state.
 func (s *Server) RegisterComponent(name string, component interface{}) {
 	if s.Components.registeredComponents == nil {
 		s.Components.registeredComponents = make(map[string]interface{})
@@ -97,6 +101,11 @@ func (s *Server) Component(name string) (interface{}, error) {
 }
 
 func watchConfigReload(s Servable) {
+	// say it once, where somebody looks when they change a setting and wonder why
+	// nothing happened
+	log.Info("turbo: a configuration change reloads urlmapping, components and " +
+		"filter_proto_json; http_port, grpc_service_port, thrift_service_port, " +
+		"environment and turbo_log_path need a restart")
 	s.ServerField().watchConfig()
 	go func() {
 		for {
