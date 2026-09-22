@@ -7,6 +7,7 @@ package turbo
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,11 +26,83 @@ type Generator struct {
 }
 
 // Generate proto/thrift code
+
+// ValidateIncludePaths checks the -I paths a caller passed. The flag takes the
+// directory that holds the .proto or .thrift files; passing a file instead made
+// the generator build a path like service.proto/*.proto, and protoc then
+// complained about a file nobody had mentioned.
+func ValidateIncludePaths(paths []string) error {
+	for _, path := range paths {
+		info, err := os.Stat(path)
+		if err != nil {
+			return fmt.Errorf("turbo: -I %s cannot be read: %w", path, err)
+		}
+		if !info.IsDir() {
+			return fmt.Errorf("turbo: -I %s is a file, but -I takes the directory that contains your "+
+				".proto or .thrift files; pass %s instead", path, filepath.Dir(path))
+		}
+	}
+	return nil
+}
+
+// legacyProtocGenGo reports whether the installed protoc-gen-go still supports
+// --go_out=plugins=grpc, which is what turbo generates with. protoc-gen-go
+// removed that option in v1.4, and what a caller then sees is a protoc error far
+// away from the cause.
+//
+// A legacy plugin answers --version with "this program should be run by protoc";
+// a modern one prints "protoc-gen-go v1.x.y".
+func legacyProtocGenGo(versionOutput string) bool {
+	return !strings.Contains(versionOutput, "protoc-gen-go v")
+}
+
+// checkToolchain reports what generation needs before it writes anything, so a
+// missing or incompatible tool produces one clear sentence instead of a wall of
+// output from protoc -- and, together with the atomic writes, leaves every
+// existing artifact untouched.
+func (g *Generator) checkToolchain() {
+	if err := ValidateIncludePaths(g.FilePaths); err != nil {
+		panic(err)
+	}
+	tools := []string{"protoc", "protoc-gen-go", "protoc-gen-buildfields"}
+	if g.RpcType == "thrift" {
+		tools = []string{"thrift"}
+	}
+	for _, tool := range tools {
+		if _, err := exec.LookPath(tool); err != nil {
+			panic(fmt.Errorf("turbo: %s is not in PATH, install it before generating (%w)", tool, err))
+		}
+	}
+	if g.RpcType != "grpc" {
+		return
+	}
+
+	version, err := exec.Command("protoc", "--version").CombinedOutput()
+	if err != nil {
+		panic(fmt.Errorf("turbo: cannot run protoc --version: %w", err))
+	}
+	log.Infof("turbo: generating with %s", strings.TrimSpace(string(version)))
+
+	pluginVersion, _ := exec.Command("protoc-gen-go", "--version").CombinedOutput()
+	if !legacyProtocGenGo(string(pluginVersion)) {
+		panic(fmt.Errorf("turbo: the installed protoc-gen-go is too new (%s). turbo generates with "+
+			"--go_out=plugins=grpc, which protoc-gen-go removed in v1.4; install v1.3.5 "+
+			"(go install github.com/golang/protobuf/protoc-gen-go@v1.3.5)",
+			strings.TrimSpace(string(pluginVersion))))
+	}
+}
+
 func (g *Generator) Generate() {
 	if g.RpcType != "grpc" && g.RpcType != "thrift" {
 		panic("Invalid server type, should be (grpc|thrift)")
 	}
 	g.c = NewConfig(g.RpcType, findFileIn(g.FilePaths, g.ConfigFileName+".yaml"))
+	// generating runs without a server, and the package logger is only set up
+	// when one is created -- so without this every log call on this path is a
+	// nil dereference. NewConfig above only reads, so anything checkToolchain
+	// refuses is still refused before a file is written.
+	initLogger(g.c)
+	g.checkToolchain()
 	if g.RpcType == "grpc" {
 		g.GenerateProtobufStub()
 		g.c.loadFieldMapping()
