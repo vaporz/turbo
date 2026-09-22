@@ -112,9 +112,19 @@ func (c *Config) loadServiceConfigErr() (err error) {
 	return c.validate()
 }
 
-// validate refuses a configuration whose values turbo would otherwise have to
-// guess at.
+// validate refuses a configuration turbo cannot work with: one whose values it
+// would have to guess at, and one that lists no route at all.
 func (c *Config) validate() error {
+	if len(c.mappings[urlServiceMaps]) == 0 {
+		// A gateway with no route cannot serve anything, so this is never a
+		// configuration somebody meant to use. It is, however, exactly what a
+		// reload reads when it catches the file while it is being written: the
+		// writer truncates first, and an empty file is valid YAML. Accepting it
+		// would replace a working routing table with an empty one, and every
+		// request would answer 404 while the process still looked healthy.
+		return fmt.Errorf("urlmapping is empty, so no route would be served at all " +
+			"(a configuration file read while it is being written looks like this)")
+	}
 	if value := strings.TrimSpace(c.configs[jsonFieldNames]); value != "" &&
 		!strings.EqualFold(value, jsonFieldNamesProto) && !strings.EqualFold(value, jsonFieldNamesCamel) {
 		return fmt.Errorf("invalid %s: %q, expected %q or %q",
