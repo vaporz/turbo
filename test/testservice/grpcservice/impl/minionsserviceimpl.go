@@ -10,7 +10,7 @@ type MinionsService struct {
 
 func (s *MinionsService) Eat(ctx context.Context, req *proto.EatRequest) (*proto.EatResponse, error) {
 	if req.Food != "banana" {
-		return &proto.EatResponse{Message: "Uh..."}, nil
+		return &proto.EatResponse{Message: "Uh...", OwnerOpenid: "openid-1"}, nil
 	}
-	return &proto.EatResponse{Message: "Yummy!"}, nil
+	return &proto.EatResponse{Message: "Yummy!", OwnerOpenid: "openid-1"}, nil
 }

@@ -38,6 +38,9 @@ message EatRequest {
 
 message EatResponse {
     string message = 1;
+    // proto name and JSON name differ on purpose: json_field_names is observable
+    // through this field, and it is what the end to end test asserts on
+    string owner_openid = 2;
 }
 
 service MinionsService {
