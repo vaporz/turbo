@@ -194,7 +194,11 @@ func (c *Components) WithErrorHandler(e ErrorHandlerFunc) {
 	c.errorHandler = e
 }
 
-// SetCommonInterceptor assigns Interceptors to all URLs, if the URL has no other Interceptors assigned
+// SetCommonInterceptor assigns Interceptors to every URL: they run first, and the
+// interceptors a route declares itself follow them.
+//
+// They are held by the Components, so a configuration reload keeps them (see
+// loadComponents); call it before the server starts.
 func (c *Components) SetCommonInterceptor(interceptors ...Interceptor) {
 	c.setCommonInterceptor(interceptors)
 }

@@ -209,7 +209,16 @@ func (s *Server) loadComponentsErr() (components *Components, err error) {
 }
 
 func (s *Server) loadComponents() *Components {
-	c := &Components{routers: make(map[int]*mux.Router), registeredComponents: s.Components.registeredComponents}
+	// Common interceptors are installed in code (SetCommonInterceptor), typically
+	// before the server starts, while this rebuild runs at startup and on every
+	// successful reload. Carrying the registered components over but not these
+	// turned every cross-cutting interceptor off on the first configuration change
+	// -- logging, metrics and, worst of all, a global authentication interceptor.
+	c := &Components{
+		routers:              make(map[int]*mux.Router),
+		registeredComponents: s.Components.registeredComponents,
+		commonInterceptors:   s.Components.commonInterceptors,
+	}
 	for _, m := range s.Config.mappings[interceptors] {
 		names := strings.Split(m[2], ",")
 		components := make([]Interceptor, 0)
