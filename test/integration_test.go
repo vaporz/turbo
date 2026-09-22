@@ -866,6 +866,43 @@ func TestInterceptorChainRunsGlobalAndRouteLevel(t *testing.T) {
 		`common-before,route-before,{"message":"[grpc server]Hello, name"}route-after,common-after,`)
 }
 
+// TestCommonInterceptorsSurviveAConfigReload pins the other half of T4①: a common
+// interceptor is installed in code (SetCommonInterceptor), while loadComponents
+// rebuilds the Components on every successful reload. It carried the registered
+// components over but not the common interceptors, so one configuration change
+// silently turned every cross-cutting interceptor off -- logging, metrics, and,
+// worst of all, a global authentication interceptor.
+func TestCommonInterceptorsSurviveAConfigReload(t *testing.T) {
+	httpPort := freePort(t)
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, httpPort, freePort(t), "development")
+
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
+	s.StartGrpcService(gimpl.RegisterServer)
+	time.Sleep(time.Millisecond * 300)
+
+	logged := &syncBuffer{}
+	turbo.SetOutput(logged)
+	defer turbo.SetOutput(os.Stdout)
+
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Millisecond * 300)
+	defer s.Stop()
+
+	s.Components.SetCommonInterceptor(&CommonMarkerInterceptor{})
+
+	const want = `common-before,{"message":"[grpc server]Hello, name"}common-after,`
+	testGet(t, "http://localhost:"+httpPort+"/hello/name", want)
+
+	// a reload that succeeds: a valid value for a key that is reloaded
+	setJSONFieldNames(t, cfg, "proto")
+	time.Sleep(time.Millisecond * 900)
+	assert.Contains(t, logged.String(), "Configuration reloaded", "the reload must have happened")
+
+	// the rebuild must keep the common interceptor in the chain
+	testGet(t, "http://localhost:"+httpPort+"/hello/name", want)
+}
+
 // setJSONFieldNames inserts the json_field_names key into a config file, so a test
 // can start a server with the option without a second template.
 func setJSONFieldNames(t *testing.T, path, value string) {
