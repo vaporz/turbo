@@ -76,6 +76,32 @@ and `auth.public_routes`).
  * [版本与行为变更（升级前必读）](docs/20-migration.md)
  * 附录：[配置全例](docs/appendix-config-example.md) · [速查表](docs/appendix-cheatsheet.md) · [API 索引](docs/appendix-api-index.md)
 
+## Known Issues
+
+写 `docs/` 时对照 **v0.6.2** 源码发现、**尚未修**的四处。四条都能在源码里核实，欢迎开 issue 或 PR。
+每一条都给了当下的规避方式。
+
+1. **Thrift 多服务客户端只生成一个 key。** `creator.go` 的 thrift 组件模板取的是
+   `GrpcServiceNames()[0]`，所以 `config.thrift_service_name` 写成 `A,B` 时，生成的
+   `thriftapi/component/components.go` 里 `ThriftClient` 只有 `A` 一个键，其余服务在网关侧
+   拿不到客户端。规避：照 `test/testservice/thriftapi/component/components.go` 的写法，把其余
+   服务名手写进那个 map。
+
+2. **`Convertor` 对 `application/json` 请求不生效。** `BuildRequest`（`runtime.go`）的 JSON 分支
+   不查 convertor，只有表单 / query / path 的绑定路径（`BuildStructErr`、`BuildArgs`）会用它，
+   所以为某个结构体注册了 convertor 之后，用 JSON body 调同一个方法不会有任何效果。
+   规避：需要 convertor 的接口不要用 JSON body 调用。完整说明见
+   [docs/09-convertor.md](docs/09-convertor.md)。
+
+3. **`errorhandler:` 写成 YAML 列表会被静默忽略。** 这一项必须是标量
+   （`errorhandler: MyHandler`）；写成列表时 `Config.ErrorHandler()` 取到空串，于是悄悄用默认
+   handler —— 既不报错也不警告。确认方式：启动日志里应该出现 `errorhandler: <name>` 这一行，
+   没有就是没生效。
+
+4. **`SetConvertor` 的注释与实际签名不一致。** 注释写的是
+   `usage: SetConvertor(new(SomeInterface), convertorFunc)`，实际签名是
+   `SetConvertor(field string, convertorFunc Convertor)`，按**类型名**注册。以代码为准。
+
 ## Requirements
 Golang version: >= 1.27.1 
 
