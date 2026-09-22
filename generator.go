@@ -60,6 +60,21 @@ func legacyProtocGenGo(versionOutput string) bool {
 	return !strings.Contains(versionOutput, "protoc-gen-go v")
 }
 
+// modernProtocGenGoRefusal is what a protoc-gen-go that dropped plugins=grpc
+// answers turbo's --go_out=plugins=grpc with. The wording is identical from
+// v1.31.0 on, so it is the signal a failure is recognised by.
+const modernProtocGenGoRefusal = "plugins are not supported"
+
+// legacyProtocGenGoFix is the way out when protoc refuses that option. Which
+// release still accepts plugins=grpc cannot be told from the version string --
+// v1.26.0 accepts it, v1.31.0 refuses it -- so the fix is spelled out wherever
+// the failure can be seen rather than guessed at from a version number.
+const legacyProtocGenGoFix = "install a plugin that accepts it and make sure protoc finds " +
+	"that one first in PATH:\n" +
+	"\tgo install github.com/golang/protobuf/protoc-gen-go@v1.5.1\n" +
+	"\texport PATH=\"$GOPATH/bin:$PATH\"\n" +
+	"see the README, \"Code generation needs the legacy protoc-gen-go first in PATH\""
+
 // checkToolchain reports what generation needs before it writes anything, so a
 // missing or incompatible tool produces one clear sentence instead of a wall of
 // output from protoc -- and, together with the atomic writes, leaves every
@@ -95,10 +110,8 @@ func (g *Generator) checkToolchain() {
 		// work, so say what to do if protoc objects instead of standing in the way.
 		log.Warnf("turbo: protoc-gen-go reports %s. turbo generates with --go_out=plugins=grpc, "+
 			"and releases differ on whether they still accept it (v1.26.0 does, v1.31.0 answers "+
-			"'plugins are not supported'). If protoc fails on that option, install v1.3.5 "+
-			"(go install github.com/golang/protobuf/protoc-gen-go@v1.3.5) or generate the stubs "+
-			"with protoc-gen-go-grpc yourself",
-			strings.TrimSpace(string(pluginVersion)))
+			"'%s'). If protoc fails on that option, %s",
+			strings.TrimSpace(string(pluginVersion)), modernProtocGenGoRefusal, legacyProtocGenGoFix)
 	}
 }
 
@@ -588,11 +601,20 @@ func (t *outputTail) String() string {
 // commandError says what turbo ran and what came back. A tool that fails on its
 // own terms explains itself, and that explanation is the only actionable part:
 // reporting a bare "exit status 1" leaves the reader hunting for it above.
+//
+// One of those explanations has a fix the reader is unlikely to guess -- protoc
+// refusing plugins=grpc -- so it is added to the message rather than left in the
+// output, which is where it went missing the three times this project hit it.
 func commandError(cmd string, err error, output string) error {
-	if tail := strings.TrimSpace(output); tail != "" {
-		return fmt.Errorf("turbo: %s failed: %w\nturbo: last lines it printed:\n%s", cmd, err, tail)
+	tail := strings.TrimSpace(output)
+	hint := ""
+	if strings.Contains(tail, modernProtocGenGoRefusal) {
+		hint = "\nturbo: " + legacyProtocGenGoFix
 	}
-	return fmt.Errorf("turbo: %s failed: %w", cmd, err)
+	if tail != "" {
+		return fmt.Errorf("turbo: %s failed: %w\nturbo: last lines it printed:\n%s%s", cmd, err, tail, hint)
+	}
+	return fmt.Errorf("turbo: %s failed: %w%s", cmd, err, hint)
 }
 
 // executeCmd runs a generation tool, streaming its output, and panics with the

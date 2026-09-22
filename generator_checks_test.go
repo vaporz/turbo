@@ -63,5 +63,9 @@ func TestCheckToolchainWarnsAboutAModernProtocGenGo(t *testing.T) {
 	g := &Generator{RpcType: "grpc", FilePaths: []string{t.TempDir()}}
 	assert.NotPanics(t, func() { g.checkToolchain() })
 	assert.Contains(t, logged.String(), "protoc-gen-go reports protoc-gen-go v1.31.0")
-	assert.Contains(t, logged.String(), "v1.3.5")
+	// The warning is only useful if it carries the way out, including the part
+	// that is easy to miss: installing a legacy plugin is not enough when a
+	// modern one still comes first in PATH.
+	assert.Contains(t, logged.String(), "protoc-gen-go@v1.5.1")
+	assert.Contains(t, logged.String(), "first in PATH")
 }
