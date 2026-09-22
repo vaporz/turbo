@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	logger "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -30,6 +31,7 @@ const (
 	filterProtoJsonEmitZeroValues = "filter_proto_json_emit_zerovalues"
 	filterProtoJsonInt64AsNumber  = "filter_proto_json_int64_as_number"
 	turboLogPath                  = "turbo_log_path"
+	logLevel                      = "log_level"
 	environment                   = "environment"
 	fileRootPath                  = "file_root_path"
 	packagePath                   = "package_path"
@@ -130,7 +132,21 @@ func (c *Config) validate() error {
 		return fmt.Errorf("invalid %s: %q, expected %q or %q",
 			jsonFieldNames, value, jsonFieldNamesProto, jsonFieldNamesCamel)
 	}
+	if value := c.LogLevel(); value != "" {
+		if _, err := logger.ParseLevel(value); err != nil {
+			return fmt.Errorf("invalid %s: %q, expected one of panic, fatal, error, warn, info, debug, trace",
+				logLevel, value)
+		}
+	}
 	return nil
+}
+
+// LogLevel returns the level turbo's own log should use, or "" when the
+// configuration leaves the choice to the environment. It lives under "config"
+// with the other server settings, which also keeps it apart from a service's own
+// top level log_level.
+func (c *Config) LogLevel() string {
+	return strings.TrimSpace(c.configs[logLevel])
 }
 
 func (c *Config) loadComponents() {

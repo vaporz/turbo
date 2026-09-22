@@ -106,7 +106,7 @@ func watchConfigReload(s Servable) {
 	// nothing happened
 	log.Info("turbo: a configuration change reloads urlmapping, components and " +
 		"filter_proto_json; http_port, grpc_service_port, thrift_service_port, " +
-		"environment and turbo_log_path need a restart")
+		"environment, turbo_log_path and log_level need a restart")
 	s.ServerField().watchConfig()
 	go func() {
 		for {

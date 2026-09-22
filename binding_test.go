@@ -142,3 +142,25 @@ func TestFindValuePrefersThePathWhateverTheSpelling(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, "from-query", value)
 }
+
+// TestARejectedParameterValueIsNotEchoed pins T26. A parameter the server cannot
+// use is the caller's mistake, and the message that says so is returned to the
+// caller *and* written to the service log -- so the value it quotes must not be
+// the value that arrived, which may be a token, a code or a signature. What stays
+// is the field, the source and the reason, which is what makes it actionable.
+func TestARejectedParameterValueIsNotEchoed(t *testing.T) {
+	const secret = "SECRET-TOKEN-ABC"
+	req := httptest.NewRequest(http.MethodPost, "/hello?int64Value="+secret, nil)
+	req.Form = req.URL.Query()
+	components := &Components{registeredComponents: map[string]interface{}{}}
+	req = req.WithContext(context.WithValue(req.Context(), componentsKey, components))
+
+	err := BuildRequest(reloadServable{&Server{Components: components}}, &TestPrimitives{}, req)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot bind Int64Value")
+	assert.Contains(t, err.Error(), "query/form parameter")
+	assert.NotContains(t, err.Error(), secret, "the value must not reach the log")
+	assert.Contains(t, err.Error(), redactedValue)
+	assert.Contains(t, err.Error(), "invalid syntax", "the reason has to survive")
+}

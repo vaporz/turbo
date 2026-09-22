@@ -37,10 +37,12 @@ func TestBuildStructErrRefusesAValueItCannotBind(t *testing.T) {
 
 	err := BuildStructErr(nil, reflect.TypeOf(payload), reflect.ValueOf(&payload).Elem(), req)
 	assert.Error(t, err)
-	// the message has to name the field and the offending value, because that is
-	// all a caller needs to fix the request
+	// the message has to name the field and the reason, because that is what a
+	// caller needs to fix the request. The value itself stays out of it: the same
+	// text is written to the service log, and a parameter may carry a token (T26).
 	assert.Contains(t, err.Error(), "Int64Value")
-	assert.Contains(t, err.Error(), `"abc"`)
+	assert.Contains(t, err.Error(), "invalid syntax")
+	assert.NotContains(t, err.Error(), "abc")
 	assert.Equal(t, http.StatusBadRequest, StatusOf(err))
 }
 
