@@ -8,12 +8,81 @@ package turbo
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
+	logger "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
+
+// reloadServable is a Servable whose server field a test drives directly. The
+// concrete servers need a running rpc client, which a rebuild test does not.
+type reloadServable struct {
+	*Server
+}
+
+func (s reloadServable) Service(string) interface{} { return nil }
+
+// TestARebuildReadsTheConfigurationUnderTheLock pins T23: a rebuild reads the
+// configuration and the registered components, and the watcher replaces the
+// configuration while requests are served. Without the lock the two overlap and
+// -race reports it -- and a change landing in the middle of a rebuild could even
+// be read half way, giving a routing table built from two configurations. Run
+// this test with -race.
+func TestARebuildReadsTheConfigurationUnderTheLock(t *testing.T) {
+	// The rebuild has to succeed, so the configuration names a component that is
+	// registered. Its output is not interesting here: the reads it makes are.
+	level := log.Level
+	log.SetLevel(logger.PanicLevel)
+	defer log.SetLevel(level)
+
+	config := func() *Config {
+		return &Config{
+			File: "service.yaml",
+			mappings: map[string][][4]string{
+				urlServiceMaps: {{"GET", "/hello", "TestService", "SayHello"}},
+				interceptors:   {{"GET", "/hello", "TestInterceptor", ""}},
+			},
+		}
+	}
+	first, second := config(), config()
+	s := reloadServable{&Server{
+		Config:     first,
+		Components: &Components{registeredComponents: map[string]interface{}{"TestInterceptor": &auditStub{}}},
+	}}
+
+	stop := make(chan struct{})
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+			}
+			// what the watcher does when the configuration changes
+			s.componentsLock.Lock()
+			if s.Config == first {
+				s.Config = second
+			} else {
+				s.Config = first
+			}
+			s.componentsLock.Unlock()
+		}
+	}()
+
+	for i := 0; i < 200; i++ {
+		// what the reload path does
+		_ = reloadComponents(s, first)
+	}
+
+	close(stop)
+	wg.Wait()
+}
 
 // T22: a configuration file is commonly written in place, which means it is
 // truncated before the new content arrives -- and the watcher reacts to the

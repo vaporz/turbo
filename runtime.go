@@ -548,9 +548,15 @@ func BuildRequest(s Servable, v proto.Message, req *http.Request) error {
 		unmarshaler := &jsonpb.Unmarshaler{AllowUnknownFields: true}
 		err = unmarshaler.Unmarshal(strings.NewReader(bodyStr), v)
 		if err != nil {
-			// the caller sent a body that cannot be used, which is a client error
+			// the caller sent a body that cannot be used, which is a client error.
+			//
+			// The body itself is deliberately left out: this text is written to the
+			// service log and returned to the caller, and a body may carry a token,
+			// a code or a signature. Its size and the parse error are enough to tell
+			// "nothing arrived" from "arrived and unusable", and the parse error from
+			// encoding/json already quotes the character that broke it.
 			return WithStatus(fmt.Errorf("turbo: failed to BuildRequest for json api, "+
-				"request body: %s, error: %s", bodyStr, err), http.StatusBadRequest)
+				"request body: %d bytes, error: %s", len(bodyStr), err), http.StatusBadRequest)
 		}
 		rawBody := jsonObjectKeys(bodyStr)
 		if err := bindJSONGaps(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody); err != nil {

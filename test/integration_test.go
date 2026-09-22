@@ -131,7 +131,7 @@ func TestGrpcService(t *testing.T) {
 
 	body = strings.NewReader(`{aaaaa`)
 	testPostWithContentType(t, "http://localhost:"+httpPort+"/hello", "application/json", body,
-		"turbo: failed to BuildRequest for json api, request body: {aaaaa, error: invalid character 'a' looking for beginning of object key string\n")
+		"turbo: failed to BuildRequest for json api, request body: 6 bytes, error: invalid character 'a' looking for beginning of object key string\n")
 
 	s.Stop()
 }

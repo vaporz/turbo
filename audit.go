@@ -144,15 +144,21 @@ func hasAuthInterceptor(chain, auth []string) bool {
 // authenticate a request, refuses a configuration that would leave a route
 // unprotected. Being refused at startup is the point: it is the only mechanism
 // that survives somebody adding a route and forgetting its interceptor line.
+//
+// What it found is logged at two levels: one summary line at info, which is what
+// a production log keeps, and the per-route detail at debug, because one line per
+// route is noise until somebody has to ask which chain a particular route has.
 func auditRoutes(mappings map[string][][4]string, common []Interceptor,
 	registered map[string]interface{}, auth authConfig) error {
 	commonNames, commonNamed := namesOf(registered, common)
 	var violations []string
+	var total, publicRoutes, authenticated, unverifiable int
 
 	for _, route := range mappings[urlServiceMaps] {
 		for _, method := range strings.Split(route[0], ",") {
 			method = strings.ToUpper(strings.TrimSpace(method))
 			path, serviceName, methodName := route[1], route[2], route[3]
+			total++
 
 			// The common interceptors run for every request, and the route's own
 			// declarations follow them, so the effective chain is both.
@@ -168,17 +174,23 @@ func auditRoutes(mappings map[string][][4]string, common []Interceptor,
 			authLabel := fmt.Sprintf("common:%v + route:%v", commonNames, chain)
 			public := auth.publicRoutes[method+" "+path]
 
+			// "authenticated" is reported whether or not the audit enforces: a
+			// deployment that has not declared its auth interceptors should still
+			// see which routes have one.
 			switch {
 			case public:
-				log.Infof("route audit: %s %s -> %s.%s [public, auth=%s]",
-					method, path, serviceName, methodName, authLabel)
-				continue
-			case !auth.enforcing():
-				log.Infof("route audit: %s %s -> %s.%s [auth=%s]",
+				publicRoutes++
+				log.Debugf("route audit: %s %s -> %s.%s [public, auth=%s]",
 					method, path, serviceName, methodName, authLabel)
 				continue
 			case hasAuthInterceptor(effective, auth.interceptors):
-				log.Infof("route audit: %s %s -> %s.%s [auth=%s, authenticated]",
+				authenticated++
+				log.Debugf("route audit: %s %s -> %s.%s [auth=%s, authenticated]",
+					method, path, serviceName, methodName, authLabel)
+				continue
+			case !auth.enforcing():
+				// Nothing was declared to check against, so the audit only reports.
+				log.Debugf("route audit: %s %s -> %s.%s [auth=%s]",
 					method, path, serviceName, methodName, authLabel)
 				continue
 			}
@@ -191,6 +203,7 @@ func auditRoutes(mappings map[string][][4]string, common []Interceptor,
 			case !commonNamed && len(chain) == 0:
 				// The server does have common interceptors, but at least one of
 				// them was registered anonymously, so nothing can be checked.
+				unverifiable++
 				log.Warnf("route audit: %s %s -> %s.%s [auth=%s, cannot be verified: "+
 					"a common interceptor is not registered under a name]",
 					method, path, serviceName, methodName, authLabel)
@@ -202,6 +215,17 @@ func auditRoutes(mappings map[string][][4]string, common []Interceptor,
 				method, path, serviceName, methodName, reason))
 		}
 	}
+
+	summary := fmt.Sprintf("route audit: %d route(s), %d authenticated, %d public, %d unprotected",
+		total, authenticated, publicRoutes, len(violations))
+	if unverifiable > 0 {
+		summary += fmt.Sprintf(", %d unverifiable (a common interceptor is not registered under a name)",
+			unverifiable)
+	}
+	if !auth.enforcing() {
+		summary += fmt.Sprintf(" (no %s declared, so the audit only reports)", authInterceptorsKey)
+	}
+	log.Info(summary)
 
 	if len(violations) == 0 {
 		return nil

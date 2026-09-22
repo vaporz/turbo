@@ -118,19 +118,13 @@ func watchConfigReload(s Servable) {
 					continue
 				}
 				log.Info("Reloading configuration...")
-				newComponents, err := s.ServerField().loadComponentsErr()
-				if err != nil {
+				if err := reloadComponents(s, previous); err != nil {
 					// Never install a routing table that could not be built: the
 					// server keeps serving the configuration already in effect,
 					// and keeps watching for the next change.
-					s.ServerField().Config = previous
 					log.Error("turbo: configuration reload failed, keeping the running configuration: ", err)
 					continue
 				}
-				s.ServerField().componentsLock.Lock()
-				s.ServerField().currentRouter = router(s)
-				s.ServerField().Components = newComponents
-				s.ServerField().componentsLock.Unlock()
 				log.Info("Configuration reloaded")
 			}
 		}
@@ -188,11 +182,18 @@ func waitForStableFile(path string) {
 func (s *Server) watchConfig() {
 	s.Config.WatchConfig()
 	s.Config.OnConfigChange(func(e fsnotify.Event) {
+		// Read the path under the lock and let it go before waiting: the wait can
+		// last, and the reload path replaces this configuration while a request is
+		// being served.
+		s.componentsLock.RLock()
+		path := s.Config.File
+		s.componentsLock.RUnlock()
+
 		// Never read a file somebody is still writing: see waitForStableFile.
-		waitForStableFile(s.Config.File)
+		waitForStableFile(path)
 		c := &Config{
 			Viper:    *viper.New(),
-			File:     s.Config.File,
+			File:     path,
 			mappings: make(map[string][][4]string)}
 		if err := c.loadServiceConfigErr(); err != nil {
 			// The change is ignored rather than fatal. It used to panic here, in
@@ -257,6 +258,36 @@ func (s *Server) loadComponentsErr() (components *Components, err error) {
 		}
 	}()
 	return s.loadComponents(), nil
+}
+
+// reloadComponents builds the components the configuration in effect describes,
+// installs them together with the routing table built from that same
+// configuration, and reports what stopped it when the configuration cannot be
+// turned into components. previous is the configuration that was in effect before
+// the change: a failed rebuild leaves it in place, so the server keeps serving
+// what its components were built from.
+//
+// The rebuild runs under the write lock. It reads the configuration and the
+// components the service registered, and both are written while the server serves
+// requests -- the watcher replaces the configuration, and a service registers a
+// component or installs a common interceptor. Without the lock those reads race
+// with the writes, and a change arriving in the middle could be read half way:
+// part of the routing table built from one configuration, the rest from another.
+// A request takes the same lock only to look the handler up and releases it before
+// serving, so holding it here costs one rebuild per configuration change.
+func reloadComponents(s Servable, previous *Config) error {
+	server := s.ServerField()
+	server.componentsLock.Lock()
+	defer server.componentsLock.Unlock()
+
+	newComponents, err := server.loadComponentsErr()
+	if err != nil {
+		server.Config = previous
+		return err
+	}
+	server.currentRouter = router(s)
+	server.Components = newComponents
+	return nil
 }
 
 func (s *Server) loadComponents() *Components {

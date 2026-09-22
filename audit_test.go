@@ -6,8 +6,10 @@
 package turbo
 
 import (
+	"bytes"
 	"testing"
 
+	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -170,4 +172,35 @@ func TestAuditRoutesVerdicts(t *testing.T) {
 			assert.Contains(t, err.Error(), authPublicRoutesKey)
 		})
 	}
+}
+
+// TestTheAuditLogsOneSummaryAtInfoAndTheDetailAtDebug pins T24. The per-route
+// verdicts are what a service author wants when asking which chain a route has,
+// and noise in a production log that carries one line per route; the summary keeps
+// the fact that the audit ran, and what it found, visible without them.
+func TestTheAuditLogsOneSummaryAtInfoAndTheDetailAtDebug(t *testing.T) {
+	level := log.Level
+	out := log.Out
+	defer func() {
+		log.SetLevel(level)
+		log.SetOutput(out)
+	}()
+
+	logged := &bytes.Buffer{}
+	log.SetOutput(logged)
+	log.SetLevel(logger.InfoLevel)
+
+	mappings := auditMappings("AuthInterceptor")
+	registered := map[string]interface{}{"AuthInterceptor": &auditStub{}}
+	assert.NoError(t, auditRoutes(mappings, nil, registered, authFor("AuthInterceptor")))
+
+	assert.Contains(t, logged.String(), "route audit: 1 route(s), 1 authenticated, 0 public, 0 unprotected")
+	assert.NotContains(t, logged.String(), "route audit: GET /hello -> ",
+		"a production log must not carry one line per route")
+
+	logged.Reset()
+	log.SetLevel(logger.DebugLevel)
+	assert.NoError(t, auditRoutes(mappings, nil, registered, authFor("AuthInterceptor")))
+	assert.Contains(t, logged.String(), "route audit: GET /hello -> TestService.SayHello")
+	assert.Contains(t, logged.String(), "authenticated]")
 }
