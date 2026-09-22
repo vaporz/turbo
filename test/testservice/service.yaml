@@ -1,3 +1,19 @@
+# Regenerating this fixture
+#
+#   turbo generate github.com/vaporz/turbo/test/testservice -r grpc   -I $PWD/test/testservice
+#   turbo generate github.com/vaporz/turbo/test/testservice -r thrift -I $PWD/test/testservice
+#
+# file_root_path is joined with package_path, so it must point at a directory that
+# contains package_path. This fixture was generated inside a GOPATH-like tree at
+# /src. From a plain checkout, point it at a temporary one instead:
+#
+#   mkdir -p /tmp/gopath/src/github.com/vaporz
+#   ln -sfn $PWD /tmp/gopath/src/github.com/vaporz/turbo
+#   # set file_root_path to /tmp/gopath/src, run the two commands above, restore it
+#
+# The urlmapping below is the input the switchers are generated from: a service
+# with no route here gets no branch in grpcswitcher.go. That is why /eat is listed
+# even though no test drives it through this file.
 config:
   file_root_path: /src
   package_path: github.com/vaporz/turbo/test/testservice
@@ -21,6 +37,7 @@ urlmapping:
   - GET /hello_convertor TestService SayHello
   - POST /testjson TestService TestJson
   - POST /testjson/{StringValue:[a-zA-Z0-9]+}/{int32_value:[a-zA-Z0-9]+} TestService TestJson
+  - POST /eat MinionsService Eat
 
 interceptor:
   - GET /hello Test1Interceptor
