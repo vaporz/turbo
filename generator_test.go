@@ -41,6 +41,31 @@ func TestCommandErrorWithoutOutput(t *testing.T) {
 	assert.Equal(t, "turbo: thrift -r --gen go x.thrift failed: exit status 1", err.Error())
 }
 
+// TestCommandErrorNamesTheLegacyPluginFix pins the fix for the failure this
+// project has hit three times: a modern protoc-gen-go refuses the
+// --go_out=plugins=grpc option turbo generates with. The tool says so, but the
+// way out -- which plugin to install, and that it has to come first in PATH -- is
+// not something a reader can guess, so it travels with the error.
+func TestCommandErrorNamesTheLegacyPluginFix(t *testing.T) {
+	output := "--go_out: protoc-gen-go: plugins are not supported; use " +
+		"'protoc --go-grpc_out=...' to generate gRPC"
+	err := commandError("bash -c protoc -I x --go_out=plugins=grpc:y x.proto", errors.New("exit status 1"), output)
+
+	assert.Contains(t, err.Error(), "plugins are not supported", "the tool's own words are kept")
+	assert.Contains(t, err.Error(), "protoc-gen-go@v1.5.1", "the fix names a plugin to install")
+	assert.Contains(t, err.Error(), "first in PATH", "and the part that is easy to miss")
+}
+
+// TestCommandErrorDoesNotInventAHint is the other side: a failure that has
+// nothing to do with that option must not be decorated with its advice.
+func TestCommandErrorDoesNotInventAHint(t *testing.T) {
+	err := commandError("bash -c thrift -r --gen go x.thrift", errors.New("exit status 1"),
+		"Error: Could not find or load main class x")
+
+	assert.NotContains(t, err.Error(), "protoc-gen-go@")
+	assert.NotContains(t, err.Error(), "first in PATH")
+}
+
 // TestOutputTailKeepsTheEnd keeps the tail bounded: a long generation must not
 // grow the panic message with output nobody reads.
 func TestOutputTailKeepsTheEnd(t *testing.T) {

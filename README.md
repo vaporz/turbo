@@ -87,13 +87,14 @@ prints:
 Both are often installed at once, and protoc runs the **first one in PATH**, so put the
 legacy plugin in front:
 
-    go install github.com/golang/protobuf/protoc-gen-go@v1.3.5
+    go install github.com/golang/protobuf/protoc-gen-go@v1.5.1
     export PATH="$GOPATH/bin:$PATH"
 
 `protoc-gen-go --version` tells the two apart: the legacy one answers "this program
 should be run by protoc", the modern one prints "protoc-gen-go v1.x.y". turbo warns when
 it finds a modern one rather than refusing to generate: whether the option is accepted
-depends on the plugin build, not on the version alone.
+depends on the plugin build, not on the version alone. When protoc does refuse the option,
+turbo adds the fix above to the error it reports.
 
 Regenerating the test fixture also needs a GOPATH-shaped `file_root_path`; the comment at
 the top of `test/testservice/service.yaml` has the exact recipe.
