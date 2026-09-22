@@ -782,6 +782,49 @@ func TestStoppedServerIgnoresConfigChanges(t *testing.T) {
 	assert.NotContains(t, logged.String(), "Reloading configuration...")
 }
 
+// TestTruncatedConfigNeverBecomesTheRoutingTable pins T22. Writing a
+// configuration happens in place, which means the file is truncated before the
+// new content arrives, and that truncation is what the watcher reacts to first.
+// An empty file is valid YAML, so it used to load as a configuration with no
+// route at all: one truncated write replaced every route with nothing, and the
+// process went on answering 404 to everything while still looking healthy.
+func TestTruncatedConfigNeverBecomesTheRoutingTable(t *testing.T) {
+	httpPort := freePort(t)
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, httpPort, freePort(t), "development")
+
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
+	s.StartGrpcService(gimpl.RegisterServer)
+	time.Sleep(time.Millisecond * 300)
+
+	logged := &syncBuffer{}
+	turbo.SetOutput(logged)
+	defer turbo.SetOutput(os.Stdout)
+
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Millisecond * 300)
+	defer s.Stop()
+
+	const want = `{"message":"[grpc server]Hello, ok"}`
+	testGet(t, "http://localhost:"+httpPort+"/hello?your_name=ok", want)
+
+	// somebody truncates the file before writing the new content
+	assert.NoError(t, os.Truncate(cfg, 0))
+	time.Sleep(time.Millisecond * 200)
+
+	// the routing table in effect is untouched, and stays untouched once the
+	// truncated file has been read and refused
+	testGet(t, "http://localhost:"+httpPort+"/hello?your_name=ok", want)
+	assert.Eventually(t, func() bool {
+		return strings.Contains(logged.String(), "ignoring configuration change")
+	}, 6*time.Second, 100*time.Millisecond)
+	assert.Contains(t, logged.String(), "urlmapping")
+	testGet(t, "http://localhost:"+httpPort+"/hello?your_name=ok", want)
+
+	assert.NotContains(t, logged.String(), "Configuration reloaded",
+		"an empty file must never be installed as the routing table")
+}
+
 // TestThriftJSONBodyNamesArguments pins T17. A thrift method takes a list of
 // arguments, so its JSON body names them -- the same names the generated Args
 // struct carries in its tags, and the same ones the form branch binds to. The

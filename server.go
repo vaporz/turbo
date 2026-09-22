@@ -6,6 +6,7 @@
 package turbo
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -136,9 +137,59 @@ func watchConfigReload(s Servable) {
 	}()
 }
 
+// How long a reload waits for a configuration file to stop changing, and how
+// often it looks. See waitForStableFile.
+const (
+	fileSettlePoll  = 20 * time.Millisecond  // how often the file is looked at
+	fileSettleQuiet = 100 * time.Millisecond // how long it has to hold still
+	fileSettleWait  = 3 * time.Second        // the longest a reload waits
+)
+
+// waitForStableFile waits until a configuration file stops changing, so that a
+// reload never reads one that is still being written.
+//
+// A configuration file is usually written in place: the writer truncates it and
+// writes the new content after that, and the filesystem reports the truncation
+// at once. A reader that reacts to that first event gets an empty or half
+// written file, which is how one configuration change can replace a working
+// routing table with an empty one.
+//
+// Two reads that return the same bytes, fileSettleQuiet apart, mean the writer
+// has finished. An empty file does not count as settled, because a writer needs
+// a moment to produce its first bytes -- a copy over a slow or remote path
+// writes its first block only after a round trip. The wait is bounded, so a
+// writer that never finishes cannot keep the reload from happening; whatever the
+// file holds by then goes through the normal validation, which refuses a
+// configuration with no route.
+func waitForStableFile(path string) {
+	deadline := time.Now().Add(fileSettleWait)
+	var previous []byte
+	var previousAt time.Time
+	for {
+		current, err := os.ReadFile(path)
+		if err != nil {
+			// there is no file to wait for; the loader reports what is wrong
+			return
+		}
+		now := time.Now()
+		if len(current) > 0 && bytes.Equal(current, previous) && now.Sub(previousAt) >= fileSettleQuiet {
+			return
+		}
+		if !bytes.Equal(current, previous) {
+			previous, previousAt = current, now
+		}
+		if !now.Before(deadline) {
+			return
+		}
+		time.Sleep(fileSettlePoll)
+	}
+}
+
 func (s *Server) watchConfig() {
 	s.Config.WatchConfig()
 	s.Config.OnConfigChange(func(e fsnotify.Event) {
+		// Never read a file somebody is still writing: see waitForStableFile.
+		waitForStableFile(s.Config.File)
 		c := &Config{
 			Viper:    *viper.New(),
 			File:     s.Config.File,

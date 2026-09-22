@@ -46,8 +46,12 @@ func TestFilterProtoJsonKeepsWorkingWithJSONNames(t *testing.T) {
 }
 
 func TestJSONFieldNamesConfig(t *testing.T) {
+	// a configuration turbo accepts needs a route: see Config.validate
 	config := func(value string) *Config {
-		return &Config{configs: map[string]string{jsonFieldNames: value}}
+		return &Config{
+			configs:  map[string]string{jsonFieldNames: value},
+			mappings: map[string][][4]string{urlServiceMaps: {{"GET", "/hello", "TestService", "SayHello"}}},
+		}
 	}
 
 	// unset means the historical behaviour
