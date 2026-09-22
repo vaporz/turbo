@@ -2,7 +2,9 @@
 
 最新版本 | Latest Release: 0.6.2
 
-文档地址 | Documentation: https://vaporz.github.io
+文档 | Documentation: [docs/](docs/README.md) —— 完整中文教程（安装、配置、组件、绑定、热重载、部署、排查）
+
+旧版英文文档 | Legacy English documentation: https://vaporz.github.io （停留在 v0.5.x，与 `docs/` 冲突时以 `docs/` 为准）
 
 -------------------------
 
@@ -55,20 +57,25 @@ would leave one of them without a declared auth interceptor (see `auth.intercept
 and `auth.public_routes`).
 
 ## Index
- * [Create a service on the fly](https://vaporz.github.io/master/en/create.html)
- * [Command line tools](https://vaporz.github.io/master/en/command.html)
- * [Rules and Conventions](https://vaporz.github.io/master/en/rules.html)
- * [How to add a new API](https://vaporz.github.io/master/en/add.html)
- * [Use a shared struct](https://vaporz.github.io/master/en/shared.html)
- * [Support RESTFUL JSON API](https://vaporz.github.io/master/en/json.html)
- * [Interceptor](https://vaporz.github.io/master/en/interceptor.html)
- * [PreProcessor](https://vaporz.github.io/master/en/preprocessor.html#preprocessor) and [PostProcessor](https://vaporz.github.io/master/en/postprocessor.html#postprocessor)
- * [Hijacker](https://vaporz.github.io/master/en/hijacker.html#hijacker)
- * [Convertor](https://vaporz.github.io/master/en/convertor.html#convertor)
- * [Error Handler](https://vaporz.github.io/master/en/errorhandler.html)
- * [Thrift support](https://vaporz.github.io/master/en/thrift.html)
- * [Configs in service.yaml](https://vaporz.github.io/master/en/config.html#config)
- * [Service Multiplexing](https://vaporz.github.io/master/en/multiplexing.html)
+
+完整教程在 [`docs/`](docs/README.md)，建议按顺序读；只想先跑起来就看
+[docs/02-getting-started.md](docs/02-getting-started.md)。
+
+ * [总览：Turbo 是什么、一次请求的生命周期](docs/01-overview.md)
+ * [快速上手：安装、`turbo create`、第一个请求、加一个新 API](docs/02-getting-started.md)
+ * [配置参考：`service.yaml` 逐键说明](docs/03-service-yaml.md)
+ * [路由与 urlmapping](docs/04-routing.md)
+ * [组件总览与执行顺序](docs/05-components.md)
+ * [拦截器](docs/06-interceptor.md) · [前后处理器](docs/07-preprocessor-postprocessor.md) · [劫持器](docs/08-hijacker.md) · [转换器](docs/09-convertor.md)
+ * [错误与状态码](docs/10-errors.md)
+ * [参数绑定：来源与优先级、`InjectParam`](docs/11-binding.md)
+ * [CLI 与代码生成](docs/12-code-generation.md)
+ * [gRPC 与 Thrift](docs/13-grpc-thrift.md)
+ * [日志](docs/14-logging.md) · [热重载](docs/15-hot-reload.md) · [鉴权与路由审计](docs/16-auth-and-route-audit.md)
+ * [测试自己的服务](docs/17-testing.md) · [部署与运维](docs/18-deployment.md) · [排查手册](docs/19-troubleshooting.md)
+ * [版本与行为变更（升级前必读）](docs/20-migration.md)
+ * 附录：[配置全例](docs/appendix-config-example.md) · [速查表](docs/appendix-cheatsheet.md) · [API 索引](docs/appendix-api-index.md)
+
 ## Requirements
 Golang version: >= 1.27.1 
 

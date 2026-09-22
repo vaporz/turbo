@@ -9,9 +9,12 @@ test:
 	@cd test/testcreateservice && go build ./...
 	@cd test/testservice && go build ./...
 
+# The tutorials are plain markdown, so there is nothing to build: point at the index.
+# (This used to run "make html" in ./doc, a sphinx tree that is not part of this
+# repository.)
 .PHONY: doc
 doc:
-	@cd doc && make html
+	@echo "Turbo documentation: docs/README.md (start there, it links the rest)"
 
 # The integration tests generate test/testcreateservice and leave it behind. It is
 # part of this module, so "go mod tidy" counts what it imports, and a dependency
