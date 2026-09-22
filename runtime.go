@@ -227,15 +227,30 @@ func doAfter(interceptors []Interceptor, resp http.ResponseWriter, req *http.Req
 	return nil
 }
 
-// BuildStruct finds values from request, and set them to struct fields recursively
+// BuildStruct finds values from request, and set them to struct fields recursively.
+//
+// Deprecated: it logs a value it cannot bind and leaves the field at its zero
+// value. Use BuildStructErr to find out about it; the generated code does.
 func BuildStruct(s Servable, theType reflect.Type, theValue reflect.Value, req *http.Request) {
+	logErrorIf(BuildStructErr(s, theType, theValue, req))
+}
+
+// BuildStructErr is BuildStruct, reporting a value it cannot bind instead of
+// leaving the field at its zero value.
+//
+// A parameter the request does not carry keeps its zero value: absence is not an
+// error, and the field may well be optional. A parameter that is present and
+// unusable is an error, because a field left at zero after "abc" was passed to an
+// integer is indistinguishable from a caller who sent nothing at all -- the
+// request looks successful, and only the caller could have fixed it.
+func BuildStructErr(s Servable, theType reflect.Type, theValue reflect.Value, req *http.Request) error {
 	if theValue.Kind() == reflect.Invalid {
 		log.Info("value is invalid, please check grpc-fieldmapping")
 	}
 	convertor := components(req).Convertor(theValue.Type().Name())
 	if convertor != nil {
 		theValue.Set(convertor(req).Elem())
-		return
+		return nil
 	}
 
 	fieldNum := theType.NumField()
@@ -251,16 +266,20 @@ func BuildStruct(s Servable, theType reflect.Type, theValue reflect.Value, req *
 				fieldValue.Set(convertor(req))
 				continue
 			}
-			BuildStruct(s, fieldValue.Type().Elem(), fieldValue.Elem(), req)
+			if err := BuildStructErr(s, fieldValue.Type().Elem(), fieldValue.Elem(), req); err != nil {
+				return err
+			}
 			continue
 		}
 		v, ok := findValue(fieldName, req)
 		if !ok {
 			continue
 		}
-		err := setValue(theType.Field(i).Type, fieldValue, v)
-		logErrorIf(err)
+		if err := setValue(theType.Field(i).Type, fieldValue, v); err != nil {
+			return bindingErrorFor(fieldName, v, req, err)
+		}
 	}
+	return nil
 }
 
 // setValue sets v to fieldValue according to fieldValue's Kind
@@ -393,7 +412,9 @@ func BuildArgs(s Servable, argsType reflect.Type, argsValue reflect.Value, req *
 		}
 		v, _ := findValue(fieldName, req)
 		value, err := reflectValue(field.Type, argsValue.FieldByName(fieldName), v)
-		logErrorIf(err)
+		if err != nil {
+			return nil, bindingErrorFor(fieldName, v, req, err)
+		}
 		params[i] = value
 	}
 	return params, nil
@@ -401,6 +422,12 @@ func BuildArgs(s Servable, argsType reflect.Type, argsValue reflect.Value, req *
 
 // reflectValue returns a reflect.Value with v according to fieldValue's Kind
 func reflectValue(fieldType reflect.Type, fieldValue reflect.Value, v string) (reflect.Value, error) {
+	// An absent parameter keeps the zero value: absence is not an error. Without
+	// this the thrift path reported a conversion failure for every argument a
+	// request did not carry -- which used to be logged and then ignored.
+	if len(v) == 0 {
+		return reflect.Zero(fieldValue.Type()), nil
+	}
 	switch k := fieldValue.Kind(); k {
 	case reflect.Int16:
 		i, err := strconv.ParseInt(v, 10, 16)
@@ -502,11 +529,19 @@ func BuildRequest(s Servable, v proto.Message, req *http.Request) error {
 				"request body: %s, error: %s", bodyStr, err), http.StatusBadRequest)
 		}
 		rawBody := jsonObjectKeys(bodyStr)
-		bindJSONGaps(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody)
-		setPathParams(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
-		bindJSONInjected(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody)
+		if err := bindJSONGaps(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody); err != nil {
+			return err
+		}
+		if err := setPathParams(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req); err != nil {
+			return err
+		}
+		if err := bindJSONInjected(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody); err != nil {
+			return err
+		}
 	} else {
-		BuildStruct(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
+		if err := BuildStructErr(s, reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req); err != nil {
+			return err
+		}
 	}
 	return err
 }
@@ -526,9 +561,15 @@ func BuildThriftRequest(s Servable, args interface{}, req *http.Request, buildSt
 				"request body: %s, error: %s", buf.String(), err), http.StatusBadRequest)
 		}
 		rawBody := jsonObjectKeys(buf.String())
-		bindJSONGaps(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody)
-		setPathParams(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req)
-		bindJSONInjected(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody)
+		if err := bindJSONGaps(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody); err != nil {
+			return params, err
+		}
+		if err := setPathParams(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req); err != nil {
+			return params, err
+		}
+		if err := bindJSONInjected(reflect.TypeOf(v).Elem(), reflect.ValueOf(v).Elem(), req, rawBody); err != nil {
+			return params, err
+		}
 		params = make([]reflect.Value, 1)
 		params[0] = reflect.ValueOf(v)
 	} else {
@@ -537,23 +578,27 @@ func BuildThriftRequest(s Servable, args interface{}, req *http.Request, buildSt
 	return params, err
 }
 
-func setPathParams(theType reflect.Type, theValue reflect.Value, req *http.Request) {
+func setPathParams(theType reflect.Type, theValue reflect.Value, req *http.Request) error {
 	fieldNum := theType.NumField()
 	pathParams := mux.Vars(req)
 	for i := 0; i < fieldNum; i++ {
 		fieldName := theType.Field(i).Name
 		fieldValue := theValue.FieldByName(fieldName)
 		if fieldValue.Kind() == reflect.Ptr && fieldValue.Type().Elem().Kind() == reflect.Struct {
-			setPathParams(fieldValue.Type().Elem(), fieldValue.Elem(), req)
+			if err := setPathParams(fieldValue.Type().Elem(), fieldValue.Elem(), req); err != nil {
+				return err
+			}
 			continue
 		}
 		v, ok := findPathParamValue(fieldName, pathParams)
 		if !ok {
 			continue
 		}
-		err := setValue(theType.Field(i).Type, fieldValue, v)
-		logErrorIf(err)
+		if err := setValue(theType.Field(i).Type, fieldValue, v); err != nil {
+			return bindingErrorFor(fieldName, v, req, err)
+		}
 	}
+	return nil
 }
 
 // findPathParamValue looks a field up in the route variables. The lookup is

@@ -8,6 +8,7 @@ package turbo
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"reflect"
 	"sort"
@@ -271,22 +272,33 @@ func walkFields(theType reflect.Type, theValue reflect.Value, raw map[string]jso
 // caller put in the query is no longer silently dropped; the body still wins for
 // the fields it carries.
 func bindJSONGaps(theType reflect.Type, theValue reflect.Value, req *http.Request,
-	raw map[string]json.RawMessage) {
+	raw map[string]json.RawMessage) error {
+	var failure error
 	walkFields(theType, theValue, raw, func(index int, name string, fieldValue reflect.Value, raw map[string]json.RawMessage) {
+		if failure != nil {
+			return
+		}
 		value, ok := formValue(name, req)
 		if !ok || rawHas(raw, name) {
 			return
 		}
-		logErrorIf(setValue(theType.Field(index).Type, fieldValue, value))
+		if err := setValue(theType.Field(index).Type, fieldValue, value); err != nil {
+			failure = bindingErrorFor(name, value, req, err)
+		}
 	})
+	return failure
 }
 
 // bindJSONInjected applies injected values last, so that they win over the body
 // and over every path parameter. A body that carried the same field is reported:
 // that is a caller trying to override something the server verified.
 func bindJSONInjected(theType reflect.Type, theValue reflect.Value, req *http.Request,
-	raw map[string]json.RawMessage) {
+	raw map[string]json.RawMessage) error {
+	var failure error
 	walkFields(theType, theValue, raw, func(index int, name string, fieldValue reflect.Value, raw map[string]json.RawMessage) {
+		if failure != nil {
+			return
+		}
 		value, ok := InjectedValue(name, req)
 		if !ok {
 			return
@@ -294,6 +306,24 @@ func bindJSONInjected(theType reflect.Type, theValue reflect.Value, req *http.Re
 		if rawHas(raw, name) {
 			log.Warnf("binding: %s <- injected %q, overriding the request body value", name, value)
 		}
-		logErrorIf(setValue(theType.Field(index).Type, fieldValue, value))
+		if err := setValue(theType.Field(index).Type, fieldValue, value); err != nil {
+			failure = bindingErrorFor(name, value, req, err)
+		}
 	})
+	return failure
+}
+
+// bindingErrorFor describes a value the request carries but the field cannot
+// take. The status says whose mistake it is: a value the server injected is the
+// server's, everything else came from the caller.
+func bindingErrorFor(fieldName, value string, req *http.Request, cause error) error {
+	status := http.StatusBadRequest
+	source := "query/form parameter"
+	if _, ok := InjectedValue(fieldName, req); ok {
+		status = http.StatusInternalServerError
+		source = "injected value"
+	} else if _, ok := pathValue(fieldName, req); ok {
+		source = "path parameter"
+	}
+	return WithStatus(fmt.Errorf("turbo: cannot bind %s from %s %q: %w", fieldName, source, value, cause), status)
 }

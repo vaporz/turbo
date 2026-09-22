@@ -78,24 +78,21 @@ func TestGrpcService(t *testing.T) {
 		"&doubleList=1.1,2.2&uint64_list=3,4",
 		`{"message":"{\"values\":{},\"yourName\":\"name\",\"boolValue\":true,\"stringList\":[\"a\",\"b\"],\"int64List\":[1,2],\"boolList\":[true,false],\"doubleList\":[1.1,2.2],\"uint64List\":[3,4]}"}`)
 
-	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&string_list=a,b&int64_list=1,a,2&bool_list=true,a,false"+
-		"&doubleList=1.1,a,2.2&uint64_list=3,a,4",
-		`{"message":"{\"values\":{},\"yourName\":\"name\",\"boolValue\":true,\"stringList\":[\"a\",\"b\"]}"}`)
+	// a list carrying an element the server cannot read is refused as a client
+	// error; it used to be dropped whole, with a 200 response
+	testRejectedParameter(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&string_list=a,b&int64_list=1,a,2"+
+		"&bool_list=true,a,false&doubleList=1.1,a,2.2&uint64_list=3,a,4")
 
+	// an empty list is not the same thing as an unreadable one
 	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&string_list=",
 		`{"message":"{\"values\":{},\"yourName\":\"name\",\"boolValue\":true}"}`)
 
-	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&int64_list=1-2",
-		`{"message":"{\"values\":{},\"yourName\":\"name\",\"boolValue\":true}"}`)
+	testRejectedParameter(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&int64_list=1-2")
+	testRejectedParameter(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&bool_list=aaa")
+	// doublelist normalises to the same parameter as double_list
+	testRejectedParameter(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&doublelist=aaa")
 
-	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&bool_list=aaa",
-		`{"message":"{\"values\":{},\"yourName\":\"name\",\"boolValue\":true}"}`)
-
-	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&doublelist=aaa",
-		`{"message":"{\"values\":{},\"yourName\":\"name\",\"boolValue\":true}"}`)
-
-	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&uint64_list=aaa",
-		`{"message":"{\"values\":{},\"yourName\":\"name\",\"boolValue\":true}"}`)
+	testRejectedParameter(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&uint64_list=aaa")
 
 	s.Components.WithErrorHandler(component(s.Server, "errorHandler").(turbo.ErrorHandlerFunc))
 	testGet(t, "http://localhost:"+httpPort+"/hello/error",
@@ -157,8 +154,10 @@ func TestThriftService(t *testing.T) {
 	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&stringlist=a,b&i32_list=1,2,3&boolList=true,false,true&doubleList=1.1,2.2",
 		`{"message":"[thrift server]values.TransactionId=0, yourName=name,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0, stringList=[a b], i32List=[1 2 3], boolList=[true false true], doubleList=[1.1 2.2]"}`)
 
-	testGet(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&stringlist=a,b&i32_list=1,a,3&boolList=true,a,true&doubleList=1.1,a,2.2",
-		`{"message":"[thrift server]values.TransactionId=0, yourName=name,int64Value=0, boolValue=true, float64Value=0.000000, uint64Value=0, int32Value=0, int16Value=0, stringList=[a b], i32List=[], boolList=[], doubleList=[]"}`)
+	// as on the grpc path, a list with an element the server cannot read is
+	// refused instead of being dropped silently
+	testRejectedParameter(t, "http://localhost:"+httpPort+"/hello/name?bool_value=true&stringlist=a,b&i32_list=1,a,3"+
+		"&boolList=true,a,true&doubleList=1.1,a,2.2")
 
 	s.Components.WithErrorHandler(component(s.Server, "errorHandler").(turbo.ErrorHandlerFunc))
 	testGet(t, "http://localhost:"+httpPort+"/hello/error",
@@ -629,6 +628,67 @@ func TestPathWinsOverQueryWhateverTheSpelling(t *testing.T) {
 		assert.Equal(t, greeting+`vaporz"}`, readResp(resp))
 		resp.Body.Close()
 	}
+}
+
+// TestInvalidParameterIsRejected pins T3. A parameter that is present but cannot
+// be used is the caller's mistake: leaving the field at its zero value and
+// answering 200 makes that request indistinguishable from one that never carried
+// the parameter, so the caller has no way to learn.
+func TestInvalidParameterIsRejected(t *testing.T) {
+	httpPort := "8096"
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, httpPort, "50076", "development")
+
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
+	s.StartGrpcService(gimpl.RegisterServer)
+	time.Sleep(time.Millisecond * 300)
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Millisecond * 300)
+	defer s.Stop()
+
+	base := "http://localhost:" + httpPort
+
+	// int64_value is an int64; "abc" used to become 0, with a 200 response
+	body := testRejectedParameter(t, base+"/hello?int64_value=abc")
+	// the message names the field and the value, which is all a caller needs
+	assert.Contains(t, body, "Int64Value")
+	assert.Contains(t, body, `"abc"`)
+
+	// a usable value still binds, and the request succeeds
+	testGet(t, base+"/hello?your_name=ok&int64_value=64", `{"message":"[grpc server]Hello, ok"}`)
+}
+
+// TestInvalidParameterIsRejectedThrift covers the thrift binding path, which
+// swallowed the same failure inside BuildArgs.
+func TestInvalidParameterIsRejectedThrift(t *testing.T) {
+	httpPort := "8097"
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, httpPort, "50077", "development")
+
+	s := turbo.NewThriftServer(&testInitializer{}, cfg)
+	s.StartThriftService(timpl.TProcessor)
+	time.Sleep(time.Millisecond * 500)
+	s.StartHTTPServer(tcompoent.ThriftClient, gen.ThriftSwitcher)
+	time.Sleep(time.Millisecond * 500)
+	defer s.Stop()
+
+	base := "http://localhost:" + httpPort
+	testRejectedParameter(t, base+"/hello?int64_value=abc")
+	testGet(t, base+"/hello?your_name=ok&int64_value=64", `{"message":"[thrift server]Hello, ok"}`)
+}
+
+// testRejectedParameter asserts that a parameter the server cannot use is refused
+// as a client error, and returns the message so a caller can check that it says
+// enough to fix the request.
+func testRejectedParameter(t *testing.T, url string) string {
+	t.Helper()
+	resp, err := http.Get(url)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	body := readResp(resp)
+	resp.Body.Close()
+	assert.Contains(t, body, "turbo: cannot bind")
+	return body
 }
 
 // TestRouteTableAndNotFoundAreObservable pins T12. Two things used to be

@@ -426,7 +426,9 @@ func buildStructArg(s turbo.Servable, typeName string, req *http.Request) (v ref
 {{range $i, $StructName := .StructNames}}
 	case "{{$StructName}}":
 		request := &gen.{{$StructName}}{ {{index $.StructFields $i}} }
-		turbo.BuildStruct(s, reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req)
+		if err := turbo.BuildStructErr(s, reflect.TypeOf(request).Elem(), reflect.ValueOf(request).Elem(), req); err != nil {
+			return v, err
+		}
 		return reflect.ValueOf(request), nil
 {{end}}
 	default:
