@@ -40,7 +40,7 @@ func generateBuildFields(req *plugin_go.CodeGeneratorRequest, resp *plugin_go.Co
 			if strings.HasSuffix(argStr, "Request") {
 				arr := strings.Split(argStr, ".")
 				name := arr[len(arr)-1:][0]
-				items = findItem(items, name, *m)
+				items = findItem(items, name, m)
 			}
 		}
 	}
@@ -66,7 +66,10 @@ func parameterMap(parameter string) map[string]string {
 	return m
 }
 
-func findItem(items []string, name string, structType descriptor.DescriptorProto) []string {
+// findItem reads the message only, so it takes the pointer: a DescriptorProto
+// carries a protoimpl.MessageState, and copying it by value copies that state --
+// which contains a mutex, so go vet objects and the copy is wasted work anyway.
+func findItem(items []string, name string, structType *descriptor.DescriptorProto) []string {
 	numField := len(structType.Field)
 	item := "  - " + name + "["
 	for i := 0; i < numField; i++ {

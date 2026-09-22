@@ -13,6 +13,19 @@ test:
 doc:
 	@cd doc && make html
 
+# The integration tests generate test/testcreateservice and leave it behind. It is
+# part of this module, so "go mod tidy" counts what it imports, and a dependency
+# that only the generated tree still uses is classified as direct -- which flips
+# depending on whether the tests have run. Clear it first, so the answer is the
+# same every time.
+.PHONY: clean-gen
+clean-gen:
+	@rm -rf test/testcreateservice
+
+.PHONY: tidy
+tidy: clean-gen
+	@go mod tidy
+
 # govulncheck answers a different question from the dependency list: which known
 # vulnerabilities this code can actually reach. It reads the vulnerability database
 # over the network, so it is deliberately not part of "make test", which has to
