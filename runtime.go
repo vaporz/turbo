@@ -93,12 +93,27 @@ func handler(s Servable, serviceName, methodName string) func(http.ResponseWrite
 	}
 }
 
+// getInterceptors returns the interceptors that run for a request: the common
+// ones first, then the ones the route declares.
+//
+// The route's own interceptors used to replace the common ones instead of
+// following them, so adding one line of configuration to a route silently turned
+// off every cross-cutting interceptor the service had installed globally --
+// logging, metrics, tracing, authentication -- and nothing reported it.
 func getInterceptors(req *http.Request) []Interceptor {
-	interceptors := components(req).Interceptors(req)
-	if len(interceptors) == 0 {
-		interceptors = components(req).CommonInterceptors()
+	common := components(req).CommonInterceptors()
+	routeLevel := components(req).Interceptors(req)
+	switch {
+	case len(common) == 0:
+		return routeLevel
+	case len(routeLevel) == 0:
+		return common
 	}
-	return interceptors
+	// CommonInterceptors and Interceptors hand back the slices the Components
+	// holds, so build a new one rather than appending into theirs.
+	chain := make([]Interceptor, 0, len(common)+len(routeLevel))
+	chain = append(chain, common...)
+	return append(chain, routeLevel...)
 }
 
 func doBefore(interceptors *[]Interceptor, resp http.ResponseWriter, req *http.Request) (request *http.Request, err error) {

@@ -691,6 +691,31 @@ func testRejectedParameter(t *testing.T, url string) string {
 	return body
 }
 
+// TestInterceptorChainRunsGlobalAndRouteLevel pins T4①. A route that declares an
+// interceptor of its own used to replace the ones installed globally, so adding
+// one line of configuration silently switched off logging, metrics, tracing or
+// authentication for that route.
+func TestInterceptorChainRunsGlobalAndRouteLevel(t *testing.T) {
+	httpPort := "8102"
+	cfg := testConfigPath(t)
+	overwriteServiceYaml(cfg, httpPort, "50082", "development")
+
+	s := turbo.NewGrpcServer(&testInitializer{}, cfg)
+	s.StartGrpcService(gimpl.RegisterServer)
+	time.Sleep(time.Millisecond * 300)
+	s.StartHTTPServer(gcomponent.GrpcClient, gen.GrpcSwitcher)
+	time.Sleep(time.Millisecond * 300)
+	defer s.Stop()
+
+	s.Components.SetCommonInterceptor(&CommonMarkerInterceptor{})
+	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", &RouteMarkerInterceptor{})
+
+	// the global one runs first, the route's own follows, the service answers,
+	// and then the chain unwinds in reverse order
+	testGet(t, "http://localhost:"+httpPort+"/hello/name",
+		`common-before,route-before,{"message":"[grpc server]Hello, name"}route-after,common-after,`)
+}
+
 // TestRouteTableAndNotFoundAreObservable pins T12. Two things used to be
 // invisible: which routes a router actually serves, and a request that matched
 // none of them. Both matter exactly when something in front of the service is
@@ -1043,6 +1068,37 @@ type InjectInterceptor struct {
 
 func (i *InjectInterceptor) Before(resp http.ResponseWriter, req *http.Request) error {
 	turbo.InjectParam(req, "your_Name", "from-server")
+	return nil
+}
+
+// CommonMarkerInterceptor and RouteMarkerInterceptor make the order a chain runs
+// in visible in the response body, which is the only place an After() can still
+// write to.
+type CommonMarkerInterceptor struct {
+	turbo.BaseInterceptor
+}
+
+func (i *CommonMarkerInterceptor) Before(resp http.ResponseWriter, req *http.Request) error {
+	resp.Write([]byte("common-before,"))
+	return nil
+}
+
+func (i *CommonMarkerInterceptor) After(resp http.ResponseWriter, req *http.Request) error {
+	resp.Write([]byte("common-after,"))
+	return nil
+}
+
+type RouteMarkerInterceptor struct {
+	turbo.BaseInterceptor
+}
+
+func (i *RouteMarkerInterceptor) Before(resp http.ResponseWriter, req *http.Request) error {
+	resp.Write([]byte("route-before,"))
+	return nil
+}
+
+func (i *RouteMarkerInterceptor) After(resp http.ResponseWriter, req *http.Request) error {
+	resp.Write([]byte("route-after,"))
 	return nil
 }
 

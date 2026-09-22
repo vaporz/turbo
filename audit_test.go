@@ -104,7 +104,7 @@ func TestAuditRoutesVerdicts(t *testing.T) {
 			mappings:     auditMappings("OtherInterceptor"),
 			auth:         authFor("AuthInterceptor"),
 			expectRefuse: true,
-			expectText:   "declares no auth interceptor",
+			expectText:   "declare an auth interceptor",
 		},
 		{
 			name:         "a route nobody declared an interceptor for is unprotected",
@@ -126,6 +126,13 @@ func TestAuditRoutesVerdicts(t *testing.T) {
 		{
 			name:       "a common interceptor counts once it can be named",
 			mappings:   auditMappings(),
+			common:     []Interceptor{named},
+			registered: registered,
+			auth:       authFor("AuthInterceptor"),
+		},
+		{
+			name:       "a common auth interceptor covers a route whose own interceptor is not auth",
+			mappings:   auditMappings("OtherInterceptor"),
 			common:     []Interceptor{named},
 			registered: registered,
 			auth:       authFor("AuthInterceptor"),

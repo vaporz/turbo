@@ -103,10 +103,14 @@ func methodMatches(declared []string, method string) bool {
 	return false
 }
 
-// interceptorChain returns the names of the interceptors that actually run for a
-// route: the first declaration matching it, or nil when the configuration
-// declares none and the common interceptors apply instead.
-func interceptorChain(declarations [][4]string, method, path string) []string {
+// matchingInterceptorChains returns the interceptor list of every declaration
+// that applies to a route, in the order they were declared.
+//
+// Only the first one runs -- that is how the component router has always
+// resolved a request -- but the audit reports the others so that an overlapping
+// configuration is visible rather than silently halved.
+func matchingInterceptorChains(declarations [][4]string, method, path string) [][]string {
+	var chains [][]string
 	for _, declaration := range declarations {
 		if !methodMatches(strings.Split(declaration[0], ","), method) {
 			continue
@@ -120,9 +124,19 @@ func interceptorChain(declarations [][4]string, method, path string) []string {
 				names = append(names, name)
 			}
 		}
-		return names
+		chains = append(chains, names)
 	}
-	return nil
+	return chains
+}
+
+// interceptorChain returns the names of the interceptors the route itself
+// declares: the first declaration that matches it, or nil when none does.
+func interceptorChain(declarations [][4]string, method, path string) []string {
+	chains := matchingInterceptorChains(declarations, method, path)
+	if len(chains) == 0 {
+		return nil
+	}
+	return chains[0]
 }
 
 // namesOf maps components back to the names they were registered under, so that
@@ -171,40 +185,47 @@ func auditRoutes(mappings map[string][][4]string, common []Interceptor,
 		for _, method := range strings.Split(route[0], ",") {
 			method = strings.ToUpper(strings.TrimSpace(method))
 			path, serviceName, methodName := route[1], route[2], route[3]
+
+			// The common interceptors run for every request, and the route's own
+			// declarations follow them, so the effective chain is both.
+			all := matchingInterceptorChains(mappings[interceptors], method, path)
 			chain := interceptorChain(mappings[interceptors], method, path)
-			effective, source := chain, "declared"
-			if len(chain) == 0 {
-				effective, source = commonNames, "common"
+			if len(all) > 1 {
+				log.Warnf("route audit: %s %s is matched by %d interceptor declarations %v, "+
+					"only the first one runs", method, path, len(all), all)
 			}
+			effective := make([]string, 0, len(commonNames)+len(chain))
+			effective = append(effective, commonNames...)
+			effective = append(effective, chain...)
+			authLabel := fmt.Sprintf("common:%v + route:%v", commonNames, chain)
 			public := auth.publicRoutes[method+" "+path]
 
 			switch {
 			case public:
-				log.Infof("route audit: %s %s -> %s.%s [public, auth=%s:%v]",
-					method, path, serviceName, methodName, source, effective)
+				log.Infof("route audit: %s %s -> %s.%s [public, auth=%s]",
+					method, path, serviceName, methodName, authLabel)
 				continue
 			case !auth.enforcing():
-				log.Infof("route audit: %s %s -> %s.%s [auth=%s:%v]",
-					method, path, serviceName, methodName, source, effective)
+				log.Infof("route audit: %s %s -> %s.%s [auth=%s]",
+					method, path, serviceName, methodName, authLabel)
 				continue
 			case hasAuthInterceptor(effective, auth.interceptors):
-				log.Infof("route audit: %s %s -> %s.%s [auth=%s:%v, authenticated]",
-					method, path, serviceName, methodName, source, effective)
+				log.Infof("route audit: %s %s -> %s.%s [auth=%s, authenticated]",
+					method, path, serviceName, methodName, authLabel)
 				continue
 			}
 
-			reason := fmt.Sprintf("no interceptor is declared for it (auth=%s:%v)", source, effective)
+			reason := fmt.Sprintf("neither its route interceptors %v nor the common ones %v "+
+				"declare an auth interceptor", chain, commonNames)
 			switch {
-			case len(chain) > 0:
-				reason = fmt.Sprintf("its interceptor chain %v declares no auth interceptor", chain)
-			case len(common) == 0:
+			case len(chain) == 0 && len(common) == 0:
 				reason = "it declares no interceptor and the server has no common interceptor"
-			case !commonNamed:
+			case !commonNamed && len(chain) == 0:
 				// The server does have common interceptors, but at least one of
 				// them was registered anonymously, so nothing can be checked.
-				log.Warnf("route audit: %s %s -> %s.%s [auth=common:%v, cannot be verified: "+
+				log.Warnf("route audit: %s %s -> %s.%s [auth=%s, cannot be verified: "+
 					"a common interceptor is not registered under a name]",
-					method, path, serviceName, methodName, commonNames)
+					method, path, serviceName, methodName, authLabel)
 				continue
 			}
 			log.Errorf("route audit: %s %s -> %s.%s [UNPROTECTED: %s]",
