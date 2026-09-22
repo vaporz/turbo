@@ -31,6 +31,13 @@ var generateCmd = &cobra.Command{
 		if RpcType == "grpc" && len(FilePaths) == 0 {
 			return errors.New("missing .proto file path (-I)")
 		}
+		if len(FilePaths) > 0 {
+			// the generator checks this too, but a command should answer with a
+			// sentence rather than a panic
+			if err := turbo.ValidateIncludePaths(FilePaths); err != nil {
+				return err
+			}
+		}
 		var options string
 		if RpcType == "grpc" {
 			for _, p := range FilePaths {
