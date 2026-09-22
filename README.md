@@ -99,6 +99,15 @@ turbo adds the fix above to the error it reports.
 Regenerating the test fixture also needs a GOPATH-shaped `file_root_path`; the comment at
 the top of `test/testservice/service.yaml` has the exact recipe.
 
+### Keeping go.mod tidy
+
+    make tidy
+
+runs `go mod tidy` after removing `test/testcreateservice`, which the integration tests
+generate and leave behind. That directory is part of this module, so `go mod tidy` counts
+what it imports: run tidy by hand and a dependency that only the generated tree uses is
+recorded as direct -- a different answer from the one a fresh checkout gives.
+
 ### Checking dependencies for known vulnerabilities
 
     make vuln
