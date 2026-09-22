@@ -67,3 +67,35 @@ and `auth.public_routes`).
 Golang version: >= 1.21.3 
 
 Thrift version: 0.19.0  
+
+### Code generation needs the legacy protoc-gen-go first in PATH
+
+`turbo generate -r grpc` asks protoc for `--go_out=plugins=grpc:...`. The legacy
+`protoc-gen-go` understands that option (up to v1.26.x); the modern one refuses it and
+prints:
+
+    --go_out: protoc-gen-go: plugins are not supported; use 'protoc --go-grpc_out=...'
+
+Both are often installed at once, and protoc runs the **first one in PATH**, so put the
+legacy plugin in front:
+
+    go install github.com/golang/protobuf/protoc-gen-go@v1.3.5
+    export PATH="$GOPATH/bin:$PATH"
+
+`protoc-gen-go --version` tells the two apart: the legacy one answers "this program
+should be run by protoc", the modern one prints "protoc-gen-go v1.x.y". turbo warns when
+it finds a modern one rather than refusing to generate: whether the option is accepted
+depends on the plugin build, not on the version alone.
+
+Regenerating the test fixture also needs a GOPATH-shaped `file_root_path`; the comment at
+the top of `test/testservice/service.yaml` has the exact recipe.
+
+### Checking dependencies for known vulnerabilities
+
+    make vuln
+
+runs [govulncheck](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck), which reports
+the known vulnerabilities this code can actually reach, and separates them from the ones
+that merely sit in the dependency list. It downloads the vulnerability database, so it
+needs the network and is kept out of `make test`; it exits non-zero when it finds
+something, so it also works as a check.
