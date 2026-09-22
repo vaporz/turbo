@@ -472,14 +472,22 @@ func runCommonTests(t *testing.T, s *turbo.Server, httpPort, rpcType string) {
 		`test1_intercepted:{"message":"[`+rpcType+` server]Hello, testtest"}`)
 
 	s.Components.Reset()
-	s.Components.Intercept([]string{"GET"}, "/", component(s, "TestInterceptor").(turbo.Interceptor))
+	// "/*" is how a declaration says "every path" now; "/" used to mean it, but
+	// then the file could not tell you whether an interceptor was global
+	s.Components.Intercept([]string{"GET"}, "/*", component(s, "TestInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest?yourName=testname",
 		`intercepted:{"message":"[`+rpcType+` server]Hello, testtest"}`)
 
 	s.Components.Reset()
-	s.Components.Intercept([]string{"GET"}, "/", component(s, "TestInterceptor").(turbo.Interceptor))
+	s.Components.Intercept([]string{"GET"}, "/*", component(s, "TestInterceptor").(turbo.Interceptor))
 	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
 		`intercepted:{"message":"[`+rpcType+` server]Hello, testtest"}`)
+
+	// "/" is the root and nothing else: this declaration must not run here
+	s.Components.Reset()
+	s.Components.Intercept([]string{"GET"}, "/", component(s, "TestInterceptor").(turbo.Interceptor))
+	testGet(t, "http://localhost:"+httpPort+"/hello/testtest",
+		`{"message":"[`+rpcType+` server]Hello, testtest"}`)
 
 	s.Components.Reset()
 	s.Components.Intercept([]string{"GET"}, "/hello/{your_name:[a-zA-Z0-9]+}", component(s, "BeforeErrorInterceptor").(turbo.Interceptor))

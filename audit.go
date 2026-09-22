@@ -59,38 +59,6 @@ func routeKey(route string) string {
 	return strings.ToUpper(fields[0]) + " " + fields[1]
 }
 
-// pathSegments splits a url pattern or a path into segments.
-func pathSegments(path string) []string {
-	trimmed := strings.Trim(path, "/")
-	if trimmed == "" {
-		return nil
-	}
-	return strings.Split(trimmed, "/")
-}
-
-// patternMatchesPath mirrors setComponent: a pattern ending in "/" is a path
-// prefix, and any other pattern matches a path of the same shape, where a
-// "{...}" segment stands for exactly one segment of the request path.
-func patternMatchesPath(pattern, path string) bool {
-	if strings.HasSuffix(pattern, "/") {
-		return strings.HasPrefix(path, pattern)
-	}
-	patternParts := pathSegments(pattern)
-	pathParts := pathSegments(path)
-	if len(patternParts) != len(pathParts) {
-		return false
-	}
-	for i := range patternParts {
-		if strings.HasPrefix(patternParts[i], "{") {
-			continue
-		}
-		if patternParts[i] != pathParts[i] {
-			return false
-		}
-	}
-	return true
-}
-
 func methodMatches(declared []string, method string) bool {
 	if len(declared) == 0 {
 		return true
@@ -115,7 +83,7 @@ func matchingInterceptorChains(declarations [][4]string, method, path string) []
 		if !methodMatches(strings.Split(declaration[0], ","), method) {
 			continue
 		}
-		if !patternMatchesPath(declaration[1], path) {
+		if !matchPattern(declaration[1], path) {
 			continue
 		}
 		names := make([]string, 0, 1)

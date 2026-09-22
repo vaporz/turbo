@@ -75,7 +75,7 @@ func TestGetInterceptorsWithNeither(t *testing.T) {
 
 func TestMatchingInterceptorChainsReportsEveryMatch(t *testing.T) {
 	declarations := [][4]string{
-		{"GET", "/", "PrefixInterceptor", ""},
+		{"GET", "/*", "PrefixInterceptor", ""},
 		{"GET", "/hello", "ExactInterceptor", ""},
 	}
 	assert.Equal(t, [][]string{{"PrefixInterceptor"}, {"ExactInterceptor"}},
@@ -94,7 +94,7 @@ func TestAuditWarnsWhenSeveralDeclarationsMatchOneRoute(t *testing.T) {
 	mappings := map[string][][4]string{
 		urlServiceMaps: {{"GET", "/hello", "TestService", "SayHello"}},
 		interceptors: {
-			{"GET", "/", "PrefixInterceptor", ""},
+			{"GET", "/*", "PrefixInterceptor", ""},
 			{"GET", "/hello", "ExactInterceptor", ""},
 		},
 	}
