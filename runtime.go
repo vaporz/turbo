@@ -69,7 +69,12 @@ var componentsKey key = 0
 // we are using the same Components through out one request lifecycle.
 // Server.Components may change on reloading config.
 func copyComponentsPtr(s Servable, req *http.Request) {
-	ctx := context.WithValue(req.Context(), componentsKey, s.ServerField().Components)
+	// read under the same lock a reload writes under: this pointer is replaced
+	// while requests are being served
+	s.ServerField().componentsLock.RLock()
+	c := s.ServerField().Components
+	s.ServerField().componentsLock.RUnlock()
+	ctx := context.WithValue(req.Context(), componentsKey, c)
 	*req = *req.WithContext(ctx)
 }
 
@@ -214,10 +219,14 @@ func doPostprocessor(s Servable, resp http.ResponseWriter, req *http.Request, se
 
 func writeResponse(s Servable, resp http.ResponseWriter, req *http.Request, serviceResponse interface{}) {
 	// return as json
+	// the config pointer is replaced by a reload while requests read it
+	s.ServerField().componentsLock.RLock()
+	config := s.ServerField().Config
+	s.ServerField().componentsLock.RUnlock()
 	m := Marshaler{
-		FilterProtoJson: s.ServerField().Config.FilterProtoJson(),
-		EmitZeroValues:  s.ServerField().Config.FilterProtoJsonEmitZeroValues(),
-		Int64AsNumber:   s.ServerField().Config.FilterProtoJsonInt64AsNumber(),
+		FilterProtoJson: config.FilterProtoJson(),
+		EmitZeroValues:  config.FilterProtoJsonEmitZeroValues(),
+		Int64AsNumber:   config.FilterProtoJsonInt64AsNumber(),
 	}
 	jsonBytes, err := m.JSON(serviceResponse)
 	if err == nil {
