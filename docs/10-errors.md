@@ -30,6 +30,39 @@ return turbo.Errorf(http.StatusForbidden, "user %d may not do that", id)
 - `StatusOf(WithStatus(Errorf(404, "gone"), 400))` 是 `404`，已有的码优先
 - `StatusOf(nil)` 是 `0`，`WithStatus(nil, 400)` 是 `nil`
 
+## 在哪里能用 `turbo.Errorf`
+
+| 位置 | 能不能带状态码 | 说明 |
+|---|---|---|
+| 拦截器 `Before` / `After` | 能 | 鉴权 401、越权 403 就写在这里 |
+| 前处理器 / 后处理器 | 能 | 与拦截器同在 HTTP 层 |
+| Turbo 自己的绑定错误 | 能 | 参数或 body 解析失败本来就在 HTTP 层产生 |
+| RPC 方法实现（impl）里 | **不能** | 见下 |
+
+**为什么 impl 里不行。** HTTP 层到你的 RPC 实现之间是**一次真实的 RPC 调用**（即使两边同进程、
+甚至写在同一个 `main` 里），而 RPC 会把 error 序列化成 gRPC 的 status —— Turbo 自带的
+`statusError` 过不去那一跳。于是 HTTP 层拿到的是一个普通错误，`StatusOf(err)` 返回 `0`，
+最后按 500 回答。
+
+实现里这么写不会生效：
+
+```go
+// 期望 403，实际发出 500 {"code":500,"msg":"内部服务器错误"}
+return nil, turbo.Errorf(http.StatusForbidden, "无权执行退款")
+```
+
+**实现里怎么表达业务错误。** 用**响应消息自己的字段**（示例里是 `code` / `msg`），
+很多服务本来就是这个约定：
+
+```go
+// HTTP 200 + 业务码，调用方按 code != 0 处理
+return &proto.OrderRefundResponse{Code: 403, Msg: "无权执行退款（需要系统管理员）"}, nil
+```
+
+需要真实 HTTP 状态码的判定，放到 HTTP 层（拦截器或处理器）做。
+
+> **版本**：这个边界在 gRPC 链路上实测确认（v0.6.2）；Thrift 链路未验证。
+
 ## turbo 自己产生的错误带什么状态码
 
 ### 绑定失败按来源给码

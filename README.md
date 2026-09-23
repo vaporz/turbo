@@ -98,7 +98,13 @@ and `auth.public_routes`).
    handler —— 既不报错也不警告。确认方式：启动日志里应该出现 `errorhandler: <name>` 这一行，
    没有就是没生效。
 
-4. **`SetConvertor` 的注释与实际签名不一致。** 注释写的是
+4. **`turbo.Errorf` 在 RPC 方法实现里不生效。** HTTP 层与实现之间是一次真实 RPC，而 RPC 会把
+   error 序列化成 status，turbo 的 `statusError` 过不去那一跳 ⇒ `StatusOf(err)` 返回 0 ⇒
+   一律按 500 回答（实测于 gRPC 链路，2026-09-23）。规避：impl 里用响应消息自己的 `code`/`msg`
+   表达业务错误，需要真实 HTTP 状态码的判定放在拦截器里。见
+   [docs/10-errors.md](docs/10-errors.md)。
+
+5. **`SetConvertor` 的注释与实际签名不一致。** 注释写的是
    `usage: SetConvertor(new(SomeInterface), convertorFunc)`，实际签名是
    `SetConvertor(field string, convertorFunc Convertor)`，按**类型名**注册。以代码为准。
 

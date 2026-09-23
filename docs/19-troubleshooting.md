@@ -214,6 +214,17 @@ func (i *timeoutInterceptor) Before(resp http.ResponseWriter, req *http.Request)
 
 `turbo.CallOptions` 也是公开变量，可以覆盖它来加 gRPC 调用选项，但它只影响 `...grpc.CallOption`，不能替代上面的 context 超时。
 
+### impl 里返回的错误一律变成 500
+
+**症状**：RPC 方法实现里 `return nil, turbo.Errorf(http.StatusForbidden, "...")`，客户端却收到
+`500 {"code":500,"msg":"内部服务器错误"}`。
+
+**原因**：HTTP 层与实现之间是一次真实 RPC，RPC 会把 error 序列化成 status，`turbo.StatusOf`
+拿不到状态码，于是按 500 处理。
+
+**修法**：实现里用响应消息自己的 `code` / `msg` 字段表达业务错误；需要真实 HTTP 状态码的判定
+（401/403）放到拦截器里做。机制见 [10-errors.md](10-errors.md) 的「在哪里能用 `turbo.Errorf`」。
+
 ## 相关阅读
 
 - [14-logging.md](14-logging.md)：每条日志的文本与级别
